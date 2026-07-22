@@ -1,0 +1,42 @@
+<header class="header">
+  <!-- Top bar: logo + contact info -->
+  <div class="header__top">
+    <a href="/" class="header__logo-link" [attr.aria-label]="brand.fullName + ' home'">
+      <img
+        [ngSrc]="brand.logoPath"
+        [alt]="brand.fullName + ' logo'"
+        width="200"
+        height="60"
+        priority
+        class="header__logo"
+      />
+    </a>
+
+    <div class="header__contact">
+      <span class="header__product-label">
+        {{ headerTitle() }}
+        @if (headerIcon()) {
+          <i class="fa-solid {{ headerIcon() }}" aria-hidden="true"></i>
+        }
+      </span>
+      <a
+        [href]="headerPhoneLink()"
+        class="header__phone"
+        [attr.aria-label]="'Call us on ' + headerPhone()"
+      >
+        <i class="fa-solid fa-phone" aria-hidden="true"></i>
+        {{ headerPhone() }}
+      </a>
+    </div>
+  </div>
+
+  <!-- Coloured title bar -->
+  <div
+    class="header__bar"
+    [style.background-color]="brand.primaryColor"
+    role="banner"
+    aria-label="Section header"
+  >
+    <span class="header__bar-title">{{ headerTitle() }}</span>
+  </div>
+</header>

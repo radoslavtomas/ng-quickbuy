@@ -1,0 +1,32 @@
+<!-- logo + links -->
+<div class="footer__pre">
+  <div class="footer__pre-inner">
+    <div class="footer__back-to-top">
+      <button type="button" class="footer__back-btn" (click)="scrollToTop()">
+        Back to top
+        <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <a href="/" [attr.aria-label]="brand.fullName + ' home'" class="footer__pre-logo-link">
+      <img
+        [ngSrc]="brand.logoPath"
+        [alt]="brand.fullName + ' logo'"
+        width="160"
+        height="50"
+        class="footer__pre-logo"
+      />
+    </a>
+
+    <nav class="footer__links" aria-label="Footer navigation">
+      @for (link of brand.footer.links; track link.label) {
+        <a [href]="link.url" class="footer__link">{{ link.label }}</a>
+      }
+    </nav>
+
+    <!-- Legal band -->
+    <footer class="footer__legal">
+      <p class="footer__legal-text">{{ brand.footer.text }}</p>
+    </footer>
+  </div>
+</div>

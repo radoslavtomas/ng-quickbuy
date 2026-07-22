@@ -1,0 +1,68 @@
+.header {
+  width: 100%;
+}
+
+.header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background-color: #ffffff;
+}
+
+.header__logo-link {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.header__logo {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+
+.header__contact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.header__product-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333333;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.header__phone {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.header__phone:hover,
+.header__phone:focus-visible {
+  text-decoration: underline;
+  outline-offset: 2px;
+}
+
+.header__bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.5rem;
+}
+
+.header__bar-title {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
