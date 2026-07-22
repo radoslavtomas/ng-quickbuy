@@ -1,19 +1,21 @@
-<header class="header">
+<header class="w-full">
   <!-- Top bar: logo + contact info -->
-  <div class="header__top">
-    <a href="/" class="header__logo-link" [attr.aria-label]="brand.fullName + ' home'">
+  <div
+    class="mx-auto max-w-4xl flex items-center justify-between bg-white px-4 py-3 sm:px-6 sm:py-4"
+  >
+    <a href="/" class="inline-flex shrink-0" [attr.aria-label]="brand.fullName + ' home'">
       <img
         [ngSrc]="brand.logoPath"
         [alt]="brand.fullName + ' logo'"
         width="200"
         height="60"
         priority
-        class="header__logo"
+        class="h-10 w-auto object-contain sm:h-[60px]"
       />
     </a>
 
-    <div class="header__contact">
-      <span class="header__product-label">
+    <div class="flex flex-col items-end gap-1">
+      <span class="flex items-center gap-1.5 text-sm font-semibold text-gray-800 sm:text-base">
         {{ headerTitle() }}
         @if (headerIcon()) {
           <i class="fa-solid {{ headerIcon() }}" aria-hidden="true"></i>
@@ -21,7 +23,7 @@
       </span>
       <a
         [href]="headerPhoneLink()"
-        class="header__phone"
+        class="flex items-center gap-1.5 text-sm font-semibold text-blue-500 hover:underline focus-visible:underline focus-visible:outline-offset-2 sm:text-base"
         [attr.aria-label]="'Call us on ' + headerPhone()"
       >
         <i class="fa-solid fa-phone" aria-hidden="true"></i>
@@ -32,11 +34,11 @@
 
   <!-- Coloured title bar -->
   <div
-    class="header__bar"
+    class="flex items-center justify-center px-4 py-2.5"
     [style.background-color]="brand.primaryColor"
     role="banner"
     aria-label="Section header"
   >
-    <span class="header__bar-title">{{ headerTitle() }}</span>
+    <span class="text-sm font-bold tracking-wide text-white sm:text-lg">{{ headerTitle() }}</span>
   </div>
 </header>

@@ -1,32 +1,42 @@
-<!-- logo + links -->
-<div class="footer__pre">
-  <div class="footer__pre-inner">
-    <div class="footer__back-to-top">
-      <button type="button" class="footer__back-btn" (click)="scrollToTop()">
+<div class="border-t border-gray-200 bg-white px-4 py-5 sm:px-6">
+  <div class="mx-auto flex max-w-4xl flex-col gap-4">
+    <div class="flex justify-end">
+      <button
+        type="button"
+        class="inline-flex cursor-pointer items-center gap-1.5 rounded bg-gray-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600 focus-visible:outline-offset-2"
+        (click)="scrollToTop()"
+      >
         Back to top
         <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
       </button>
     </div>
 
-    <a href="/" [attr.aria-label]="brand.fullName + ' home'" class="footer__pre-logo-link">
+    <a
+      href="/"
+      class="inline-flex self-center sm:self-start"
+      [attr.aria-label]="brand.fullName + ' home'"
+    >
       <img
         [ngSrc]="brand.logoPath"
         [alt]="brand.fullName + ' logo'"
         width="160"
         height="50"
-        class="footer__pre-logo"
+        class="h-[50px] w-auto object-contain"
       />
     </a>
 
-    <nav class="footer__links" aria-label="Footer navigation">
+    <nav class="flex flex-col sm:flex-row items-center" aria-label="Footer navigation">
       @for (link of brand.footer.links; track link.label) {
-        <a [href]="link.url" class="footer__link">{{ link.label }}</a>
+        <a
+          [href]="link.url"
+          class="footer__link text-sm text-gray-700 hover:underline focus-visible:underline focus-visible:outline-offset-2"
+          >{{ link.label }}</a
+        >
       }
     </nav>
 
-    <!-- Legal band -->
-    <footer class="footer__legal">
-      <p class="footer__legal-text">{{ brand.footer.text }}</p>
+    <footer class="py-2">
+      <p class="text-center text-xs leading-relaxed text-gray-500">{{ brand.footer.text }}</p>
     </footer>
   </div>
 </div>
