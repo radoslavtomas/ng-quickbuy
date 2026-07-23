@@ -1,5 +1,305 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { BrandService } from '../../core/services/brand.service';
+import { DynamicFormComponent } from '../../shared/components/dynamic-form/dynamic-form';
+import { FormFieldConfig } from '../../core/models/form-field.model';
+
+const MINIMUM_DRIVER_AGE = 18;
+
+function parseDateInput(value: unknown): Date | null {
+  if (typeof value !== 'string' || !value.trim()) {
+    return null;
+  }
+
+  const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    const [, yearRaw, monthRaw, dayRaw] = isoMatch;
+    const year = Number(yearRaw);
+    const month = Number(monthRaw);
+    const day = Number(dayRaw);
+    return new Date(year, month - 1, day);
+  }
+
+  const slashMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slashMatch) {
+    const [, dayRaw, monthRaw, yearRaw] = slashMatch;
+    const year = Number(yearRaw);
+    const month = Number(monthRaw);
+    const day = Number(dayRaw);
+    return new Date(year, month - 1, day);
+  }
+
+  return null;
+}
+
+function calculateAge(birthDate: Date, today = new Date()): number {
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDelta = today.getMonth() - birthDate.getMonth();
+
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+
+  return age;
+}
+
+const adultOnlyValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const birthDate = parseDateInput(control.value);
+  if (!birthDate) {
+    return null;
+  }
+
+  const age = calculateAge(birthDate);
+  return age >= MINIMUM_DRIVER_AGE ? null : { adultOnly: true };
+};
+
+const licenseYearsByAgeValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const rawYearsHeld = control.value;
+  if (rawYearsHeld === null || rawYearsHeld === undefined || rawYearsHeld === '') {
+    return null;
+  }
+
+  const yearsHeld = Number(rawYearsHeld);
+  if (!Number.isFinite(yearsHeld)) {
+    return null;
+  }
+
+  const birthDateRaw = control.parent?.get('dateOfBirth')?.value;
+  const birthDate = parseDateInput(birthDateRaw);
+  if (!birthDate) {
+    return null;
+  }
+
+  const age = calculateAge(birthDate);
+  const maxPossibleYearsHeld = Math.max(0, age - MINIMUM_DRIVER_AGE);
+  return yearsHeld <= maxPossibleYearsHeld
+    ? null
+    : { licenseYearsByAge: { maxPossibleYearsHeld, age } };
+};
+
+const PC_FORM_FIELDS: readonly FormFieldConfig[] = [
+  {
+    type: 'select',
+    label: 'Title',
+    name: 'title',
+    validators: [{ type: 'required', message: 'Please select a title.' }],
+    options: [
+      { label: 'Mr', value: 'mr' },
+      { label: 'Mrs', value: 'mrs' },
+      { label: 'Ms', value: 'ms' },
+      { label: 'Miss', value: 'miss' },
+      { label: 'Dr', value: 'dr' },
+      { label: 'Mx', value: 'mx' },
+    ],
+  },
+  {
+    type: 'text',
+    label: 'First name',
+    name: 'firstName',
+    helpText: 'Use your legal first name.',
+    validators: [
+      { type: 'required' },
+      { type: 'maxLength', value: 60 },
+      { type: 'pattern', value: /^[A-Za-z .'-]+$/, message: 'First name contains unsupported characters.' },
+    ],
+    normalization: ['trim'],
+    metadata: {
+      autocomplete: 'given-name',
+      placeholder: 'Jane',
+      maxLengthCounter: true,
+    },
+  },
+  {
+    type: 'text',
+    label: 'Surname',
+    name: 'lastName',
+    validators: [
+      { type: 'required' },
+      { type: 'maxLength', value: 60 },
+    ],
+    normalization: ['trim'],
+    metadata: {
+      autocomplete: 'family-name',
+      placeholder: 'Doe',
+      maxLengthCounter: true,
+    },
+  },
+  {
+    type: 'email',
+    label: 'Email',
+    name: 'email',
+    validators: [
+      { type: 'required' },
+      { type: 'email' },
+    ],
+    normalization: ['trim', 'lowercase'],
+    metadata: {
+      autocomplete: 'email',
+      placeholder: 'name@example.com',
+    },
+  },
+  {
+    type: 'tel',
+    label: 'Main number (mobile if possible)',
+    name: 'mainPhone',
+    icon: 'fa-solid fa-mobile-screen-button',
+    validators: [
+      { type: 'required' },
+      { type: 'minLength', value: 10 },
+      { type: 'maxLength', value: 15 },
+    ],
+    normalization: ['trim', 'phone'],
+    metadata: {
+      autocomplete: 'tel',
+      placeholder: '07123456789',
+      maskPattern: '[0-9+ ]*',
+    },
+  },
+  {
+    type: 'tel',
+    label: 'Alternative number (optional)',
+    name: 'altPhone',
+    icon: 'fa-solid fa-phone',
+    validators: [{ type: 'maxLength', value: 15 }],
+    normalization: ['trim', 'phone'],
+    metadata: {
+      autocomplete: 'tel-national',
+      placeholder: 'Optional',
+      maskPattern: '[0-9+ ]*',
+    },
+  },
+  {
+    type: 'date',
+    label: 'Date of birth',
+    name: 'dateOfBirth',
+    validators: [
+      { type: 'required' },
+      {
+        type: 'custom',
+        name: 'adultOnly',
+        message: 'You must be at least 18 years old to continue.',
+        validatorFn: adultOnlyValidator,
+      },
+    ],
+    normalization: ['trim', 'date'],
+    metadata: {
+      autocomplete: 'bday',
+    },
+  },
+  {
+    type: 'radio',
+    label: 'Gender',
+    name: 'gender',
+    validators: [{ type: 'required' }],
+    metadata: {
+      radioLayout: 'row',
+    },
+    options: [
+      { label: 'Male', value: 'male' },
+      { label: 'Female', value: 'female' },
+      { label: 'Unspecified', value: 'unspecified' },
+    ],
+  },
+  {
+    type: 'select',
+    label: 'Marital status',
+    name: 'maritalStatus',
+    validators: [{ type: 'required' }],
+    options: [
+      { label: 'Divorced', value: 'divorced' },
+      { label: 'Married', value: 'married' },
+      { label: 'Single', value: 'single' },
+      { label: 'Widowed', value: 'widowed' },
+      { label: 'Civil Partnered', value: 'civil_partnered' },
+    ],
+  },
+  {
+    type: 'text',
+    label: 'Partner full name',
+    name: 'partnerName',
+    helpText: 'Required when marital status is married or civil partnered.',
+    visibleWhen: [{ field: 'maritalStatus', operator: 'in', value: ['married', 'civil_partnered'] }],
+    enabledWhen: [{ field: 'maritalStatus', operator: 'in', value: ['married', 'civil_partnered'] }],
+    validators: [
+      { type: 'maxLength', value: 80 },
+      { type: 'pattern', value: /^[A-Za-z .'-]+$/, message: 'Partner name contains unsupported characters.' },
+    ],
+    normalization: ['trim'],
+    metadata: {
+      placeholder: 'Partner name',
+      maxLengthCounter: true,
+    },
+  },
+  {
+    type: 'select',
+    label: 'Driving licence type',
+    name: 'drivingLicenseType',
+    validators: [{ type: 'required' }],
+    options: [
+      { label: 'Full UK', value: 'full_uk' },
+      { label: 'Provisional', value: 'provisional' },
+      { label: 'EU', value: 'eu' },
+      { label: 'International', value: 'international' },
+    ],
+  },
+  {
+    type: 'number',
+    label: 'Licence years held',
+    name: 'licenseYearsHeld',
+    validators: [
+      { type: 'required' },
+      { type: 'min', value: 0 },
+      { type: 'max', value: 80 },
+      {
+        type: 'custom',
+        name: 'licenseYearsByAge',
+        message: 'Licence years held cannot exceed the years since you turned 18.',
+        validatorFn: licenseYearsByAgeValidator,
+      },
+    ],
+    normalization: ['currency'],
+    metadata: {
+      placeholder: '0',
+      suffix: 'years',
+    },
+  },
+  {
+    type: 'radio',
+    label: 'Do you own your own home?',
+    name: 'ownsHome',
+    validators: [{ type: 'required' }],
+    metadata: {
+      radioLayout: 'row',
+    },
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+  },
+  {
+    type: 'checkbox',
+    label: 'I confirm the details above are accurate',
+    name: 'declarationAccepted',
+    validators: [{ type: 'required', message: 'You must confirm your details before continuing.' }],
+  },
+  {
+    type: 'toggle',
+    label: 'Contact me with renewal reminders',
+    name: 'renewalReminders',
+    helpText: 'Optional reminder by email before policy renewal.',
+  },
+  {
+    type: 'textarea',
+    label: 'Additional details',
+    name: 'additionalDetails',
+    helpText: 'Optional notes related to your quote.',
+    normalization: ['trim'],
+    metadata: {
+      placeholder: 'Tell us anything that may affect your quote',
+    },
+    reviewFormatter: (value) => (typeof value === 'string' && value.trim().length ? value : 'No additional details provided.'),
+  },
+];
 
 const MODULE_CONTENT_STYLES = `
   .module-page {
@@ -43,16 +343,34 @@ class BaseModuleComponent {
 
 @Component({
   selector: 'app-pc-module',
+  imports: [DynamicFormComponent],
   template: `
     <section class="module-page" [style.--brand-primary]="brand.primaryColor" [style.--brand-secondary]="brand.secondaryColor">
       <h1>Car Insurance</h1>
       <p>Build a tailored private car quote with {{ brand.fullName }}.</p>
       <p class="module-code">Code: {{ module()?.code ?? 'PC' }}</p>
+
+      <app-dynamic-form
+        [fields]="formFields"
+        submitLabel="Save and continue"
+        (submitted)="onSubmitted($event)"
+      />
+
+      @if (lastSubmissionPreview(); as summary) {
+        <p class="module-code">Saved fields: {{ summary }}</p>
+      }
     </section>
   `,
   styles: [MODULE_CONTENT_STYLES],
 })
-export class PcModuleComponent extends BaseModuleComponent {}
+export class PcModuleComponent extends BaseModuleComponent {
+  readonly formFields = PC_FORM_FIELDS;
+  readonly lastSubmissionPreview = signal<string | null>(null);
+
+  onSubmitted(value: Record<string, unknown>): void {
+    this.lastSubmissionPreview.set(Object.keys(value).join(', '));
+  }
+}
 
 @Component({
   selector: 'app-gv-module',
