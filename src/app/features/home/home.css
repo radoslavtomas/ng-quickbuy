@@ -1,0 +1,19 @@
+:host {
+  display: flex;
+  flex: 1;
+}
+
+.home {
+  flex: 1;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--brand-secondary) 24%, transparent), transparent 40%),
+    linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.module-card {
+  border-top: 4px solid var(--brand-primary);
+}
+
+.module-card:focus-visible {
+  border-top-color: var(--brand-secondary);
+}

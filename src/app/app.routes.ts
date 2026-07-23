@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { HomeComponent } from './features/home/home';
+import { ModulePageComponent } from './features/modules/module-page';
 import { NotFoundComponent } from './shared/components/not-found/not-found';
 
 /**
@@ -6,7 +8,7 @@ import { NotFoundComponent } from './shared/components/not-found/not-found';
  * Add feature-level routes inside each module entry as the app grows.
  */
 export const routes: Routes = [
-  { path: ':moduleCode', children: [] },
-  { path: '', children: [] },
+  { path: '', component: HomeComponent },
+  { path: ':moduleCode', component: ModulePageComponent },
   { path: '**', component: NotFoundComponent },
 ];
