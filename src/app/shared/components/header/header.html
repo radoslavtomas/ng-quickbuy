@@ -2,6 +2,7 @@
   <!-- Top bar: logo + contact info -->
   <div
     class="mx-auto max-w-4xl flex items-center justify-between bg-white px-4 py-3 sm:px-6 sm:py-4"
+    [style.--brand-primary]="brand.primaryColor"
   >
     <a href="/" class="inline-flex shrink-0" [attr.aria-label]="brand.fullName + ' home'">
       <img
@@ -15,7 +16,7 @@
     </a>
 
     <div class="flex flex-col items-end gap-1">
-      <span class="flex items-center gap-1.5 text-sm font-semibold text-gray-800 sm:text-base">
+      <span class="flex items-center gap-1.5 text-sm font-semibold text-gray-600 sm:text-xl">
         {{ headerTitle() }}
         @if (headerIcon()) {
           <i class="fa-solid {{ headerIcon() }}" aria-hidden="true"></i>
@@ -23,7 +24,7 @@
       </span>
       <a
         [href]="headerPhoneLink()"
-        class="flex items-center gap-1.5 text-sm font-semibold text-blue-500 hover:underline focus-visible:underline focus-visible:outline-offset-2 sm:text-base"
+        class="flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] hover:underline focus-visible:underline focus-visible:outline-offset-2 sm:text-lg"
         [attr.aria-label]="'Call us on ' + headerPhone()"
       >
         <i class="fa-solid fa-phone" aria-hidden="true"></i>

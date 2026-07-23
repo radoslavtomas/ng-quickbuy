@@ -1,7 +1,7 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { switchMap, of } from 'rxjs';
+import { catchError, of, switchMap } from 'rxjs';
 import { BrandService } from '../../../core/services/brand.service';
 import { ModuleParametersService } from '../../../core/services/module-parameters.service';
 import type { ModuleParametersResponse } from '../../../core/models/module-parameters.model';
@@ -26,6 +26,7 @@ export class HeaderComponent {
           ? this.moduleParamsService.fetchParameters(this.brand.id, code)
           : of(null),
       ),
+      catchError(() => of(null)),
     ),
     { initialValue: null },
   );

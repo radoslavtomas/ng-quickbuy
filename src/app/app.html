@@ -1,5 +1,9 @@
 ﻿<app-header />
 <main class="main-content">
-  <router-outlet />
+  @if (hasInvalidModuleRequest()) {
+    <app-not-found />
+  } @else {
+    <router-outlet />
+  }
 </main>
 <app-footer />

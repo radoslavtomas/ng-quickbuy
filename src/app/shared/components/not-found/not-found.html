@@ -1,0 +1,38 @@
+<section
+  aria-labelledby="not-found-title"
+  class="grid min-h-full place-items-center bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.18),transparent_35%),linear-gradient(180deg,#f8fafc_0%,#e2e8f0_100%)] px-4 py-8 sm:py-12"
+  [style.--brand-primary]="brand.primaryColor"
+  [style.--brand-secondary]="brand.secondaryColor"
+>
+  <div
+    class="w-full max-w-xl overflow-hidden rounded-md border border-slate-300/60 bg-white px-5 py-9 text-center shadow-[0_24px_60px_rgba(15,23,42,0.14)] sm:px-8 sm:py-12"
+  >
+    <p class="mb-3 text-sm font-bold uppercase tracking-[0.12em] text-[var(--brand-primary)]">
+      Error
+    </p>
+    <div
+      class="mb-6 inline-flex min-w-28 items-center justify-center rounded-full bg-[var(--brand-secondary)] px-6 py-4 text-[1.5rem] font-extrabold tracking-[0.08em] text-white shadow-[0_18px_35px_rgba(15,23,42,0.16)]"
+      aria-hidden="true"
+    >
+      404
+    </div>
+    <h1
+      id="not-found-title"
+      class="m-0 text-[clamp(2rem,5vw,3rem)] font-bold leading-tight text-slate-900"
+    >
+      Page not found
+    </h1>
+    <p class="mx-auto mt-4 max-w-md text-[1.05rem] leading-7 text-slate-700">
+      This {{ brand.fullName }} page is not available.
+    </p>
+    <p class="mx-auto mt-3 max-w-md leading-7 text-slate-500">
+      Return to the homepage to choose one of the available products.
+    </p>
+    <a
+      href="/"
+      class="mt-8 inline-flex min-w-44 items-center justify-center rounded-full bg-[var(--brand-primary)] px-6 py-3.5 font-bold text-white no-underline transition duration-150 ease-out hover:-translate-y-px hover:brightness-95 focus-visible:-translate-y-px focus-visible:brightness-95 focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-slate-900/20"
+    >
+      Go back home
+    </a>
+  </div>
+</section>

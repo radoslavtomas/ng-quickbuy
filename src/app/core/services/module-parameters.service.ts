@@ -1,11 +1,11 @@
-import { Injectable } from '@angular/core';
-// import { HttpClient, HttpParams } from '@angular/common/http';  ← enable when API is live
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';  // ← enable when API is live
 import { Observable, of } from 'rxjs';
 import { delay } from 'rxjs/operators';
 import type { ModuleParametersResponse } from '../models/module-parameters.model';
 
 // API_URL to use once the endpoint is live:
-// const API_URL = 'https://myapiexample.test/module-parameters';
+const API_URL = 'https://qld-api.emea.ajgco.com/module/parameters/get';
 
 // ---------------------------------------------------------------------------
 // Mock responses — remove once the API is live and switch to httpClient.get()
@@ -175,7 +175,7 @@ function buildFallbackMock(brandId: string, moduleCode: string, referrer: string
 @Injectable({ providedIn: 'root' })
 export class ModuleParametersService {
   // TODO: uncomment when the API is live
-  // private readonly http = inject(HttpClient);
+  private readonly http = inject(HttpClient);
 
   /**
    * Fetch module parameters for a given brand, module code and optional referrer.
@@ -185,15 +185,15 @@ export class ModuleParametersService {
    */
   fetchParameters(brandId: string, moduleCode: string, referrer = ''): Observable<ModuleParametersResponse> {
     // TODO: switch to real HTTP when API is ready
-    // const params = new HttpParams()
-    //   .set('brand', brandId)
-    //   .set('module', moduleCode)
-    //   .set('referrer', referrer);
-    // return this.http.get<ModuleParametersResponse>(API_URL, { params });
+    const params = new HttpParams()
+      .set('brand', brandId)
+      .set('module', moduleCode)
+      .set('R', referrer);
+    return this.http.get<ModuleParametersResponse>(API_URL, { params });
 
-    const key = buildMockKey(brandId, moduleCode);
-    const mock = MOCK_RESPONSES[key] ?? buildFallbackMock(brandId, moduleCode, referrer);
-    return of(mock).pipe(delay(50));
+    // const key = buildMockKey(brandId, moduleCode);
+    // const mock = MOCK_RESPONSES[key] ?? buildFallbackMock(brandId, moduleCode, referrer);
+    // return of(mock).pipe(delay(50));
   }
 }
 

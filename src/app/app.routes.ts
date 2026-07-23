@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { NotFoundComponent } from './shared/components/not-found/not-found';
 
 /**
  * Module routes use the module code as the first path segment, e.g. /HC, /GV.
@@ -7,4 +8,5 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   { path: ':moduleCode', children: [] },
   { path: '', children: [] },
+  { path: '**', component: NotFoundComponent },
 ];

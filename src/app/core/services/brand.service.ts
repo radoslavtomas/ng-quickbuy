@@ -1,4 +1,4 @@
-import { inject, Injectable, Signal } from '@angular/core';
+import { computed, inject, Injectable, Signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -14,6 +14,15 @@ export class BrandService {
 
   readonly config: BrandConfig = this.detectBrand();
 
+  readonly requestedModuleCode: Signal<string | null> = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(e => this.extractRequestedModuleCode(e.urlAfterRedirects)),
+      startWith(this.extractRequestedModuleCode(this.router.url)),
+    ),
+    { initialValue: this.extractRequestedModuleCode(this.router.url) },
+  );
+
   readonly currentModuleCode: Signal<string | null> = toSignal(
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
@@ -21,6 +30,10 @@ export class BrandService {
       startWith(this.extractModuleCode(this.router.url)),
     ),
     { initialValue: this.extractModuleCode(this.router.url) },
+  );
+
+  readonly hasInvalidModuleRequest = computed(() =>
+    this.requestedModuleCode() !== null && this.currentModuleCode() === null,
   );
 
   private detectBrand(): BrandConfig {
@@ -35,9 +48,19 @@ export class BrandService {
   }
 
   private extractModuleCode(url: string): string | null {
-    const firstSegment = url.split('/')[1]?.toUpperCase() ?? '';
+    const firstSegment = this.extractRequestedModuleCode(url);
+
+    if (!firstSegment) {
+      return null;
+    }
+
     const isValidModule = this.config.modules.some(m => m.code === firstSegment);
     return isValidModule ? firstSegment : null;
+  }
+
+  private extractRequestedModuleCode(url: string): string | null {
+    const firstSegment = url.split('/')[1]?.toUpperCase() ?? '';
+    return firstSegment || null;
   }
 
   getModuleByCode(code: string) {

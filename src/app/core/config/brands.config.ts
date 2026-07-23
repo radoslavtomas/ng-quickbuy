@@ -4,8 +4,8 @@ export const BRAND_CONFIGS: Record<string, BrandConfig> = {
   qld: {
     id: 'qld',
     fullName: 'Quoteline Direct',
-    primaryColor: '#6B4497',
-    secondaryColor: '#1B3C6E',
+    primaryColor: '#624097',
+    secondaryColor: '#942765',
     logoPath: 'img/logos/qld/logo_header.png',
     mainPhone: '0161 874 7710',
     modules: [
@@ -30,15 +30,15 @@ export const BRAND_CONFIGS: Record<string, BrandConfig> = {
   chq: {
     id: 'chq',
     fullName: 'ChoiceQuote',
-    primaryColor: '#1A3F80',
-    secondaryColor: '#1A3F80',
+    primaryColor: '#07419d',
+    secondaryColor: '#8cc63e',
     logoPath: 'img/logos/chq/logo_header.png',
     mainPhone: '0161 929 2837',
     modules: [
       { code: 'TX', description: 'Taxi Insurance', icon: 'fa-taxi' },
     ],
     footer: {
-      text: 'Arthur J. Gallagher Insurance Brokers Limited is authorised and regulated by the Financial Conduct Authority. Registered Office: Spectrum Building, 55, Blythswood Street, Glasgow, G2 7AT. Registered in Scotland. Company Number: SC108909',
+      text: 'ChoiceQuote is a trading name of Arthur J. Gallagher Insurance Brokers Limited, which is authorised and regulated by the Financial Conduct Authority. Registered Office: Spectrum Building, 7th Floor, 55 Blythswood Street, Glasgow, G2. Online sales and quotation service is currently only available to UK mainland customers. Calls may be recorded for training and monitoring purposes.',
       links: [
         { label: 'Contact Us', url: '/contact' },
         { label: 'Cookie Notice', url: '/cookie-notice' },
@@ -49,9 +49,9 @@ export const BRAND_CONFIGS: Record<string, BrandConfig> = {
   },
   ajg: {
     id: 'ajg',
-    fullName: 'Gallagher',
-    primaryColor: '#5BA3CF',
-    secondaryColor: '#1A3F80',
+    fullName: 'Arthur J. Gallagher',
+    primaryColor: '#6FACDE',
+    secondaryColor: '#4e87c6',
     logoPath: 'img/logos/ajg/logo_header.png',
     mainPhone: '0161 874 7710',
     modules: [

@@ -1,3 +1,16 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import 'tailwindcss';
+
+@font-face {
+	font-family: 'ArialCustom';
+	src: url('/fonts/arial/ARIAL.woff') format('woff');
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+}
+
+body {
+	font-family: 'ArialCustom', Arial, sans-serif;
+	font-weight: 400;
+}
