@@ -236,7 +236,9 @@ const PC_FORM_FIELDS: readonly FormFieldConfig[] = [
 
 const MODULE_CONTENT_STYLES = `
   .module-page {
-    border-top: 4px solid var(--brand-primary);
+    border-width: 4px 1px 1px 1px;
+    border-style: solid;
+    border-color: var(--brand-primary);
     border-radius: 0.75rem;
     background: white;
     padding: 1.25rem;

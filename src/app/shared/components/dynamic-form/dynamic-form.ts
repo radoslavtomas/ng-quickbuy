@@ -148,6 +148,14 @@ export class DynamicFormComponent {
     return optionCount > 0 ? `repeat(${optionCount}, minmax(0, 1fr))` : null;
   }
 
+  shouldStackRadioOnSmall(field: FormFieldConfig): boolean {
+    if (this.radioLayout(field) !== 'row') {
+      return false;
+    }
+
+    return (field.options?.length ?? 0) > 2;
+  }
+
   isChecked(field: FormFieldConfig): boolean {
     return this.controlFor(field.name)?.value === true;
   }

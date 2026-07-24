@@ -2,6 +2,16 @@
   display: block;
 }
 
+.radio-options {
+  grid-template-columns: var(--radio-grid-template, minmax(0, 1fr));
+}
+
+@media (max-width: 639px) {
+  .radio-options--stack-sm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .help-rich :where(p, ul, ol) {
   margin-top: 0.3rem;
 }
