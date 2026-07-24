@@ -9,13 +9,13 @@ export const BRAND_CONFIGS: Record<string, BrandConfig> = {
     logoPath: 'img/logos/qld/logo_header.png',
     mainPhone: '0161 874 7710',
     modules: [
-      { code: 'PC', description: 'Car Insurance', icon: 'fa-car' },
-      { code: 'GV', description: 'Van Insurance', icon: 'fa-truck' },
-      { code: 'BD', description: 'Breakdown Insurance', icon: 'fa-wrench' },
-      { code: 'TX', description: 'Taxi Insurance', icon: 'fa-taxi' },
-      { code: 'HC', description: 'House Insurance', icon: 'fa-home' },
-      { code: 'HH', description: 'Holiday Home Insurance', icon: 'fa-umbrella-beach' },
-      { code: 'LL', description: 'Landlord Insurance', icon: 'fa-building' },
+      { code: 'PC', description: 'Car Insurance', icon: 'fa-car', journeyType: 'motor' },
+      { code: 'GV', description: 'Van Insurance', icon: 'fa-truck', journeyType: 'motor' },
+      { code: 'BD', description: 'Breakdown Insurance', icon: 'fa-wrench', journeyType: 'motor' },
+      { code: 'TX', description: 'Taxi Insurance', icon: 'fa-taxi', journeyType: 'motor' },
+      { code: 'HC', description: 'House Insurance', icon: 'fa-home', journeyType: 'property' },
+      { code: 'HH', description: 'Holiday Home Insurance', icon: 'fa-umbrella-beach', journeyType: 'property' },
+      { code: 'LL', description: 'Landlord Insurance', icon: 'fa-building', journeyType: 'property' },
     ],
     footer: {
       text: 'Quoteline Direct is a trading name of Arthur J. Gallagher Insurance Brokers Limited, which is authorised and regulated by the Financial Conduct Authority. Registered Office: Spectrum Building, 7th Floor, 55 Blythswood Street, Glasgow, G2 7AT. Registered in Scotland. Company Number: SC108909',
@@ -35,7 +35,7 @@ export const BRAND_CONFIGS: Record<string, BrandConfig> = {
     logoPath: 'img/logos/chq/logo_header.png',
     mainPhone: '0161 929 2837',
     modules: [
-      { code: 'TX', description: 'Taxi Insurance', icon: 'fa-taxi' },
+      { code: 'TX', description: 'Taxi Insurance', icon: 'fa-taxi', journeyType: 'motor' },
     ],
     footer: {
       text: 'ChoiceQuote is a trading name of Arthur J. Gallagher Insurance Brokers Limited, which is authorised and regulated by the Financial Conduct Authority. Registered Office: Spectrum Building, 7th Floor, 55 Blythswood Street, Glasgow, G2. Online sales and quotation service is currently only available to UK mainland customers. Calls may be recorded for training and monitoring purposes.',
@@ -55,9 +55,9 @@ export const BRAND_CONFIGS: Record<string, BrandConfig> = {
     logoPath: 'img/logos/ajg/logo_header.png',
     mainPhone: '0161 874 7710',
     modules: [
-      { code: 'GV', description: 'Van Insurance', icon: 'fa-truck' },
-      { code: 'TX', description: 'Taxi Insurance', icon: 'fa-taxi' },
-      { code: 'HC', description: 'House Insurance', icon: 'fa-home' },
+      { code: 'GV', description: 'Van Insurance', icon: 'fa-truck', journeyType: 'motor' },
+      { code: 'TX', description: 'Taxi Insurance', icon: 'fa-taxi', journeyType: 'motor' },
+      { code: 'HC', description: 'House Insurance', icon: 'fa-home', journeyType: 'property' },
     ],
     footer: {
       text: 'Arthur J. Gallagher Insurance Brokers Limited is authorised and regulated by the Financial Conduct Authority. Registered Office: Spectrum Building, 55, Blythswood Street, Glasgow, G2 7AT. Registered in Scotland. Company Number: SC108909',

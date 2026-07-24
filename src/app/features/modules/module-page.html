@@ -24,6 +24,47 @@
         Continue through the {{ brand.fullName }} {{ module.description.toLowerCase() }} flow.
       </p>
 
+      @if (currentStep(); as activeStep) {
+        <section
+          aria-labelledby="journey-title"
+          class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5"
+        >
+          <div class="flex items-center justify-between gap-4">
+            <h2 id="journey-title" class="text-lg font-semibold text-slate-900">
+              Customer journey
+            </h2>
+            <span class="text-sm font-medium text-slate-600">
+              Step {{ activeStep.id }} of {{ currentJourney().length }}
+            </span>
+          </div>
+
+          <ol
+            class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+            aria-label="Journey steps"
+          >
+            @for (step of currentJourney(); track step.name) {
+              @if (stepLink(step.name); as link) {
+                <li>
+                  <a
+                    [routerLink]="link"
+                    class="flex items-center gap-3 rounded-lg border bg-white px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-offset-2"
+                    [class.border-slate-200]="!isActiveStep(step)"
+                    [class.text-slate-700]="!isActiveStep(step)"
+                    [class.border-[var(--brand-primary)]]="isActiveStep(step)"
+                    [class.text-[var(--brand-primary)]]="isActiveStep(step)"
+                    [attr.aria-current]="isActiveStep(step) ? 'step' : null"
+                    [attr.aria-label]="'Go to step ' + step.id + ': ' + step.displayName"
+                  >
+                    <i [class]="'fa-solid fa-' + step.icon" aria-hidden="true"></i>
+                    <span>{{ step.displayName }}</span>
+                  </a>
+                </li>
+              }
+            }
+          </ol>
+        </section>
+      }
+
       <div class="module-content mt-6">
         @switch (module.code) {
           @case ('PC') {
@@ -48,6 +89,47 @@
             <app-ll-module />
           }
         }
+      </div>
+
+      <div
+        class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4"
+      >
+        <div>
+          @if (previousStep(); as prev) {
+            @if (stepLink(prev.name); as prevLink) {
+              <a
+                [routerLink]="prevLink"
+                class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white focus-visible:outline-offset-2"
+                [attr.aria-label]="'Go to previous step: ' + prev.displayName"
+              >
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                {{ prev.displayName }}
+              </a>
+            }
+          }
+        </div>
+
+        <div>
+          @if (nextStep(); as next) {
+            @if (stepLink(next.name); as nextLink) {
+              <a
+                [routerLink]="nextLink"
+                class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-white"
+                [style.backgroundColor]="brand.primaryColor"
+                [attr.aria-label]="'Go to next step: ' + next.displayName"
+              >
+                {{ next.displayName }}
+                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+              </a>
+            }
+          } @else {
+            <span
+              class="inline-flex items-center rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700"
+            >
+              Final step reached
+            </span>
+          }
+        </div>
       </div>
     }
   </div>

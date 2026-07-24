@@ -1,9 +1,11 @@
 export type BrandId = 'qld' | 'chq' | 'ajg';
+export type ModuleJourneyType = 'motor' | 'property';
 
 export interface BrandModule {
   code: string;
   description: string;
   icon: string; // Font Awesome icon class, e.g. 'fa-home'
+  journeyType: ModuleJourneyType;
 }
 
 export interface FooterLink {
