@@ -84,6 +84,10 @@ export class ModulePageComponent {
     return this.currentJourney().find(journeyStep => journeyStep.name === step.next) ?? null;
   });
 
+  readonly requiresStepSubmitForNext = computed(() => {
+    return this.currentModuleCode() === 'GV' && this.currentStep()?.name === 'your-policy';
+  });
+
   constructor() {
     effect(() => {
       const moduleCode = this.currentModuleCode();
