@@ -22,6 +22,7 @@ export class FormNormalizationService {
       case 'phone':
         return this.normalizePhone(value);
       case 'date':
+        console.log(value);
         return this.normalizeDate(value);
       case 'currency':
         return this.normalizeCurrency(value);
@@ -51,10 +52,22 @@ export class FormNormalizationService {
     }
 
     const trimmed = value.trim();
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${day}/${month}/${year}`;
+    }
+
     const slashMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (slashMatch) {
       const [, day, month, year] = slashMatch;
-      return `${year}-${month}-${day}`;
+      return `${day}/${month}/${year}`;
+    }
+
+    const noSpacesMatch = trimmed.match(/^(\d{2})(\d{2})(\d{4})$/);
+    if (noSpacesMatch) {
+      const [, day, month, year] = noSpacesMatch;
+      return `${day}/${month}/${year}`;
     }
 
     return trimmed;

@@ -1,81 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { BrandService } from '../../core/services/brand.service';
+import { adultOnlyValidator, licenseYearsByAgeValidator, validDateValidator } from '../../core/validators/form-validators';
 import { DynamicFormComponent } from '../../shared/components/dynamic-form/dynamic-form';
 import { FormFieldConfig } from '../../core/models/form-field.model';
-
-const MINIMUM_DRIVER_AGE = 18;
-
-function parseDateInput(value: unknown): Date | null {
-  if (typeof value !== 'string' || !value.trim()) {
-    return null;
-  }
-
-  const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoMatch) {
-    const [, yearRaw, monthRaw, dayRaw] = isoMatch;
-    const year = Number(yearRaw);
-    const month = Number(monthRaw);
-    const day = Number(dayRaw);
-    return new Date(year, month - 1, day);
-  }
-
-  const slashMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (slashMatch) {
-    const [, dayRaw, monthRaw, yearRaw] = slashMatch;
-    const year = Number(yearRaw);
-    const month = Number(monthRaw);
-    const day = Number(dayRaw);
-    return new Date(year, month - 1, day);
-  }
-
-  return null;
-}
-
-function calculateAge(birthDate: Date, today = new Date()): number {
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDelta = today.getMonth() - birthDate.getMonth();
-
-  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birthDate.getDate())) {
-    age -= 1;
-  }
-
-  return age;
-}
-
-const adultOnlyValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
-  const birthDate = parseDateInput(control.value);
-  if (!birthDate) {
-    return null;
-  }
-
-  const age = calculateAge(birthDate);
-  return age >= MINIMUM_DRIVER_AGE ? null : { adultOnly: true };
-};
-
-const licenseYearsByAgeValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
-  const rawYearsHeld = control.value;
-  if (rawYearsHeld === null || rawYearsHeld === undefined || rawYearsHeld === '') {
-    return null;
-  }
-
-  const yearsHeld = Number(rawYearsHeld);
-  if (!Number.isFinite(yearsHeld)) {
-    return null;
-  }
-
-  const birthDateRaw = control.parent?.get('dateOfBirth')?.value;
-  const birthDate = parseDateInput(birthDateRaw);
-  if (!birthDate) {
-    return null;
-  }
-
-  const age = calculateAge(birthDate);
-  const maxPossibleYearsHeld = Math.max(0, age - MINIMUM_DRIVER_AGE);
-  return yearsHeld <= maxPossibleYearsHeld
-    ? null
-    : { licenseYearsByAge: { maxPossibleYearsHeld, age } };
-};
 
 const PC_FORM_FIELDS: readonly FormFieldConfig[] = [
   {
@@ -174,6 +101,12 @@ const PC_FORM_FIELDS: readonly FormFieldConfig[] = [
     name: 'dateOfBirth',
     validators: [
       { type: 'required' },
+      {
+        type: 'custom',
+        name: 'validDate',
+        message: 'Enter a valid date in DD/MM/YYYY format.',
+        validatorFn: validDateValidator,
+      },
       {
         type: 'custom',
         name: 'adultOnly',
