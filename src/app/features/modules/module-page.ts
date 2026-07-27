@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, Type, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
@@ -19,13 +20,7 @@ import {
   selector: 'app-module-page',
   imports: [
     RouterLink,
-    PcModuleComponent,
-    GvModuleComponent,
-    BdModuleComponent,
-    TxModuleComponent,
-    HcModuleComponent,
-    HhModuleComponent,
-    LlModuleComponent,
+    CommonModule,
   ],
   templateUrl: './module-page.html',
   styleUrl: './module-page.css',
@@ -45,6 +40,28 @@ export class ModulePageComponent {
   readonly currentModule = computed(() => {
     const code = this.currentModuleCode();
     return code ? this.brandService.getModuleByCode(code) : null;
+  });
+
+  readonly moduleComponent = computed<Type<unknown> | null>(() => {
+    const code = this.currentModule()?.code;
+    switch (code) {
+      case 'PC':
+        return PcModuleComponent;
+      case 'GV':
+        return GvModuleComponent;
+      case 'BD':
+        return BdModuleComponent;
+      case 'TX':
+        return TxModuleComponent;
+      case 'HC':
+        return HcModuleComponent;
+      case 'HH':
+        return HhModuleComponent;
+      case 'LL':
+        return LlModuleComponent;
+      default:
+        return null;
+    }
   });
 
   readonly currentJourney = computed(() => {
@@ -85,7 +102,8 @@ export class ModulePageComponent {
   });
 
   readonly requiresStepSubmitForNext = computed(() => {
-    return this.currentModuleCode() === 'GV' && this.currentStep()?.name === 'your-policy';
+    const stepName = this.currentStep()?.name;
+    return stepName === 'your-policy' || stepName === 'assumptions';
   });
 
   constructor() {

@@ -66,29 +66,7 @@
       }
 
       <div class="module-content mt-6">
-        @switch (module.code) {
-          @case ('PC') {
-            <app-pc-module />
-          }
-          @case ('GV') {
-            <app-gv-module />
-          }
-          @case ('BD') {
-            <app-bd-module />
-          }
-          @case ('TX') {
-            <app-tx-module />
-          }
-          @case ('HC') {
-            <app-hc-module />
-          }
-          @case ('HH') {
-            <app-hh-module />
-          }
-          @case ('LL') {
-            <app-ll-module />
-          }
-        }
+        <ng-template [ngComponentOutlet]="moduleComponent()"></ng-template>
       </div>
 
       <div
