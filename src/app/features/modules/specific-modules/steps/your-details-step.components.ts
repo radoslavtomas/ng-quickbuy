@@ -1,5 +1,5 @@
 import { Component, computed, effect, input, output, signal } from '@angular/core';
-import { AddressLookupMatch } from '../../../../core/services/address-lookup-mock.service';
+import { AddressLookupMatch } from '../../../../core/services/address-lookup.service';
 import { DynamicFormComponent } from '../../../../shared/components/dynamic-form/dynamic-form';
 import {
   AddressSearchCriteria,

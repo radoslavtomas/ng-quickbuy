@@ -2,8 +2,8 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { firstValueFrom } from 'rxjs';
 import {
   AddressLookupMatch,
-  AddressLookupMockService,
-} from '../../../../core/services/address-lookup-mock.service';
+  AddressLookupService,
+} from '../../../../core/services/address-lookup.service';
 import { DynamicFormComponent } from '../../../../shared/components/dynamic-form/dynamic-form';
 import {
   ADDRESS_LOOKUP_FIELDS,
@@ -120,7 +120,7 @@ export class AddressSearchComponent {
   readonly loading = signal(false);
   readonly lookupError = signal<string | null>(null);
 
-  private readonly lookupService = inject(AddressLookupMockService);
+  private readonly lookupService = inject(AddressLookupService);
 
   onCriteriaChanged(value: Record<string, unknown>): void {
     this.criteriaChanged.emit({

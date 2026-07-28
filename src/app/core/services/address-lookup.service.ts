@@ -56,7 +56,7 @@ export interface AddressLookupMatch {
 }
 
 @Injectable({ providedIn: 'root' })
-export class AddressLookupMockService {
+export class AddressLookupService {
   private readonly http = inject(HttpClient);
   private readonly endpoint = 'https://quickbuyv3-dev.quotelinedirect.co.uk/api/miscellaneous/address/get/bypostcode';
 
