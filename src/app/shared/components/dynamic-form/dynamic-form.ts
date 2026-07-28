@@ -26,6 +26,7 @@ export class DynamicFormComponent {
   readonly submitLabel = input('Continue');
 
   readonly submitted = output<Record<string, unknown>>();
+  readonly valueChanged = output<Record<string, unknown>>();
   readonly invalidSubmit = output<void>();
 
   readonly form = new FormGroup({});
@@ -49,6 +50,7 @@ export class DynamicFormComponent {
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.syncConditionalState();
       this.revalidateCrossFieldRules();
+      this.valueChanged.emit(this.form.getRawValue());
     });
   }
 

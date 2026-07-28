@@ -14,7 +14,7 @@ import {
   LlModuleComponent,
   PcModuleComponent,
   TxModuleComponent,
-} from './specific-modules';
+} from './specific-modules/index';
 
 @Component({
   selector: 'app-module-page',
