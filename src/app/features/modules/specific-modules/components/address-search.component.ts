@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, ViewChild, computed, effect, inject, input, output, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
   AddressLookupMatch,
@@ -39,6 +39,7 @@ import {
           [fields]="lookupFields"
           [initialValue]="lookupInitialValue()"
           [submitLabel]="loading() ? 'Searching...' : 'Find address'"
+          submitIcon="fa-solid fa-house"
           (valueChanged)="onCriteriaChanged($event)"
           (submitted)="onLookupSearch($event)"
         />
@@ -69,13 +70,14 @@ import {
     }
 
     @if (lookupError(); as error) {
-      <p class="mt-1 text-[0.82rem] text-red-700" role="alert">{{ error }}</p>
+      <p class="mt-1 text-[0.82rem] text-red-700" role="alert">We couldn't find the address. Please, try again.</p>
     }
   `,
 })
 export class AddressSearchComponent {
   readonly initialPostcode = input('');
   readonly initialNumberOrName = input('');
+  readonly initialAddress = input<AddressLookupMatch | null>(null);
 
   readonly criteriaChanged = output<AddressSearchCriteria>();
   readonly resolved = output<AddressLookupMatch>();
@@ -122,6 +124,26 @@ export class AddressSearchComponent {
   readonly lookupError = signal<string | null>(null);
 
   private readonly lookupService = inject(AddressLookupService);
+  @ViewChild(DynamicFormComponent) private addressForm?: DynamicFormComponent;
+
+  constructor() {
+    effect(() => {
+      const initialAddress = this.initialAddress();
+      if (!initialAddress || this.mode() !== 'lookup') {
+        return;
+      }
+
+      this.selectedAddress.set(initialAddress);
+    });
+  }
+
+  validateCurrentInput(): void {
+    if (this.selectedAddress()) {
+      return;
+    }
+
+    this.addressForm?.validateFromParent();
+  }
 
   onCriteriaChanged(value: Record<string, unknown>): void {
     this.criteriaChanged.emit({
@@ -199,6 +221,7 @@ export class AddressSearchComponent {
       manualAddress.postcode.trim().length > 0;
 
     if (!isComplete) {
+      this.selectedAddress.set(null);
       this.addressCleared.emit();
       return;
     }

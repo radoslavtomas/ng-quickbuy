@@ -19,6 +19,7 @@ import { AddressSearchComponent } from '../components/address-search.component';
     <app-address-search
       [initialPostcode]="addressCriteria().postcode"
       [initialNumberOrName]="addressCriteria().numberOrName"
+      [initialAddress]="resolvedAddress()"
       (criteriaChanged)="onCriteriaChanged($event)"
       (addressCleared)="onAddressCleared()"
       (resolved)="onAddressResolved($event)"
@@ -61,6 +62,7 @@ export class MotorYourDetailsStepComponent {
   }));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+  @ViewChild(AddressSearchComponent) private addressSearch?: AddressSearchComponent;
 
   constructor() {
     effect(() => {
@@ -114,8 +116,15 @@ export class MotorYourDetailsStepComponent {
   }
 
   submitFromNavigation(): void {
-    if (!this.hasResolvedAddress()) {
+    const detailsAreValid = this.dynamicForm?.validateFromParent() ?? true;
+    const addressIsResolved = this.hasResolvedAddress();
+
+    if (!addressIsResolved) {
       this.addressRequiredError.set(true);
+      this.addressSearch?.validateCurrentInput();
+    }
+
+    if (!detailsAreValid || !addressIsResolved) {
       return;
     }
 
@@ -132,6 +141,7 @@ export class MotorYourDetailsStepComponent {
     <app-address-search
       [initialPostcode]="addressCriteria().postcode"
       [initialNumberOrName]="addressCriteria().numberOrName"
+      [initialAddress]="resolvedAddress()"
       (criteriaChanged)="onCriteriaChanged($event)"
       (addressCleared)="onAddressCleared()"
       (resolved)="onAddressResolved($event)"
@@ -172,6 +182,7 @@ export class PropertyYourDetailsStepComponent {
   }));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+  @ViewChild(AddressSearchComponent) private addressSearch?: AddressSearchComponent;
 
   constructor() {
     effect(() => {
@@ -225,6 +236,18 @@ export class PropertyYourDetailsStepComponent {
   }
 
   submitFromNavigation(): void {
+    const detailsAreValid = this.dynamicForm?.validateFromParent() ?? true;
+    const addressIsResolved = this.hasResolvedAddress();
+
+    if (!addressIsResolved) {
+      this.addressRequiredError.set(true);
+      this.addressSearch?.validateCurrentInput();
+    }
+
+    if (!detailsAreValid || !addressIsResolved) {
+      return;
+    }
+
     this.dynamicForm?.submitFromParent();
   }
 }
