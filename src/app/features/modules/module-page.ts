@@ -6,6 +6,7 @@ import { map } from 'rxjs';
 import { BrandService } from '../../core/services/brand.service';
 import { getJourneyByType } from '../../core/config/module-journeys.config';
 import type { JourneyStep } from '../../core/models/module-journey.model';
+import { StepNavigationService } from '../../core/services/step-navigation.service';
 import {
   BdModuleComponent,
   GvModuleComponent,
@@ -29,6 +30,7 @@ export class ModulePageComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly brandService = inject(BrandService);
+  private readonly stepNavigationService = inject(StepNavigationService);
 
   readonly brand = this.brandService.config;
   readonly currentModuleCode = this.brandService.currentModuleCode;
@@ -101,11 +103,6 @@ export class ModulePageComponent {
     return this.currentJourney().find(journeyStep => journeyStep.name === step.next) ?? null;
   });
 
-  readonly requiresStepSubmitForNext = computed(() => {
-    const stepName = this.currentStep()?.name;
-    return stepName === 'your-policy' || stepName === 'assumptions';
-  });
-
   constructor() {
     effect(() => {
       const moduleCode = this.currentModuleCode();
@@ -127,5 +124,15 @@ export class ModulePageComponent {
 
   isActiveStep(step: JourneyStep): boolean {
     return this.currentStep()?.name === step.name;
+  }
+
+  onNextClicked(): void {
+    const moduleCode = this.currentModuleCode();
+    const stepName = this.currentStep()?.name;
+    if (!moduleCode || !stepName) {
+      return;
+    }
+
+    this.stepNavigationService.requestSubmitNext({ moduleCode, stepName });
   }
 }

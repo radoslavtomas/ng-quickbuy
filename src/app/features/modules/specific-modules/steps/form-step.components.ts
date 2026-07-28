@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, ViewChild, input, output } from '@angular/core';
 import { DynamicFormComponent } from '../../../../shared/components/dynamic-form/dynamic-form';
 import {
   MOTOR_ADDITIONAL_DRIVERS_FIELDS,
@@ -18,7 +18,7 @@ import {
     <app-dynamic-form
       [fields]="fields"
       [initialValue]="initialValue()"
-      submitLabel="Save and continue"
+      [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
     />
   `,
@@ -27,6 +27,12 @@ export class MotorYourVehicleStepComponent {
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
   readonly fields = MOTOR_YOUR_VEHICLE_FIELDS;
+
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+
+  submitFromNavigation(): void {
+    this.dynamicForm?.submitFromParent();
+  }
 }
 
 @Component({
@@ -37,7 +43,7 @@ export class MotorYourVehicleStepComponent {
     <app-dynamic-form
       [fields]="fields"
       [initialValue]="initialValue()"
-      submitLabel="Save and continue"
+      [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
     />
   `,
@@ -46,6 +52,12 @@ export class MotorAdditionalDriversStepComponent {
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
   readonly fields = MOTOR_ADDITIONAL_DRIVERS_FIELDS;
+
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+
+  submitFromNavigation(): void {
+    this.dynamicForm?.submitFromParent();
+  }
 }
 
 @Component({
@@ -56,7 +68,7 @@ export class MotorAdditionalDriversStepComponent {
     <app-dynamic-form
       [fields]="fields"
       [initialValue]="initialValue()"
-      submitLabel="Request quotes"
+      [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
     />
   `,
@@ -65,6 +77,12 @@ export class MotorYourPolicyStepComponent {
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
   readonly fields = MOTOR_YOUR_POLICY_FIELDS;
+
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+
+  submitFromNavigation(): void {
+    this.dynamicForm?.submitFromParent();
+  }
 }
 
 @Component({
@@ -75,7 +93,7 @@ export class MotorYourPolicyStepComponent {
     <app-dynamic-form
       [fields]="fields"
       [initialValue]="initialValue()"
-      submitLabel="Save and continue"
+      [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
     />
   `,
@@ -84,6 +102,12 @@ export class PropertyYourPropertyStepComponent {
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
   readonly fields = PROPERTY_YOUR_PROPERTY_FIELDS;
+
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+
+  submitFromNavigation(): void {
+    this.dynamicForm?.submitFromParent();
+  }
 }
 
 @Component({
@@ -94,7 +118,7 @@ export class PropertyYourPropertyStepComponent {
     <app-dynamic-form
       [fields]="fields"
       [initialValue]="initialValue()"
-      submitLabel="Save and continue"
+      [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
     />
   `,
@@ -103,6 +127,12 @@ export class PropertyJointProposerStepComponent {
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
   readonly fields = PROPERTY_JOINT_PROPOSER_FIELDS;
+
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+
+  submitFromNavigation(): void {
+    this.dynamicForm?.submitFromParent();
+  }
 }
 
 @Component({
@@ -113,7 +143,7 @@ export class PropertyJointProposerStepComponent {
     <app-dynamic-form
       [fields]="fields"
       [initialValue]="initialValue()"
-      submitLabel="Save and continue"
+      [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
     />
   `,
@@ -122,6 +152,12 @@ export class PropertyYourPolicyStepComponent {
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
   readonly fields = PROPERTY_YOUR_POLICY_FIELDS;
+
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+
+  submitFromNavigation(): void {
+    this.dynamicForm?.submitFromParent();
+  }
 }
 
 @Component({
@@ -132,7 +168,7 @@ export class PropertyYourPolicyStepComponent {
     <app-dynamic-form
       [fields]="fields"
       [initialValue]="initialValue()"
-      submitLabel="Request quotes"
+      [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
     />
   `,
@@ -141,4 +177,10 @@ export class PropertyAssumptionsStepComponent {
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
   readonly fields = PROPERTY_ASSUMPTIONS_FIELDS;
+
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+
+  submitFromNavigation(): void {
+    this.dynamicForm?.submitFromParent();
+  }
 }

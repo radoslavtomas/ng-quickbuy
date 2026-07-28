@@ -88,24 +88,17 @@
         </div>
 
         <div>
-          @if (requiresStepSubmitForNext()) {
-            <span
-              class="inline-flex items-center rounded-md bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800"
+          @if (nextStep(); as next) {
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-white"
+              [style.backgroundColor]="brand.primaryColor"
+              [attr.aria-label]="'Submit and continue to step: ' + next.displayName"
+              (click)="onNextClicked()"
             >
-              Submit this step to request quotes
-            </span>
-          } @else if (nextStep(); as next) {
-            @if (stepLink(next.name); as nextLink) {
-              <a
-                [routerLink]="nextLink"
-                class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-white"
-                [style.backgroundColor]="brand.primaryColor"
-                [attr.aria-label]="'Go to next step: ' + next.displayName"
-              >
-                {{ next.displayName }}
-                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-              </a>
-            }
+              {{ next.displayName }}
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </button>
           } @else {
             <span
               class="inline-flex items-center rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700"

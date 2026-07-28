@@ -311,38 +311,6 @@ export const PROPERTY_ASSUMPTIONS_FIELDS: readonly FormFieldConfig[] = [
   },
 ];
 
-export const FIRST_STEP_ADDRESS_FIELDS: readonly FormFieldConfig[] = [
-  {
-    type: 'text',
-    label: 'House Name/Number',
-    name: 'houseNameNumber',
-    validators: [{ type: 'required' }],
-    normalization: ['trim'],
-    metadata: { placeholder: '1' },
-  },
-  {
-    type: 'text',
-    label: 'Address Line 2',
-    name: 'addressLine2',
-    normalization: ['trim'],
-    metadata: { placeholder: 'District or locality (optional)' },
-  },
-  {
-    type: 'text',
-    label: 'Address Line 3',
-    name: 'addressLine3',
-    normalization: ['trim'],
-    metadata: { placeholder: 'Town (optional)' },
-  },
-  {
-    type: 'text',
-    label: 'Address Line 4',
-    name: 'addressLine4',
-    normalization: ['trim'],
-    metadata: { placeholder: 'County (optional)' },
-  },
-];
-
 export const MOTOR_FIRST_STEP_PERSONAL_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'text',

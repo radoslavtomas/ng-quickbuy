@@ -1,8 +1,9 @@
-import { Component, computed, inject, input } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, ViewChild, computed, inject, input } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { FormWorkflowService } from '../../../../core/services/form-workflow.service';
+import { StepNavigationService } from '../../../../core/services/step-navigation.service';
 import {
   DEMO_QUOTES,
   MOTOR_STEP_DEFAULT_VALUES,
@@ -60,6 +61,12 @@ export class MotorQuoteJourneyComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly workflowService = inject(FormWorkflowService);
+  private readonly stepNavigationService = inject(StepNavigationService);
+
+  @ViewChild(MotorYourDetailsStepComponent) private motorYourDetailsStep?: MotorYourDetailsStepComponent;
+  @ViewChild(MotorYourVehicleStepComponent) private motorYourVehicleStep?: MotorYourVehicleStepComponent;
+  @ViewChild(MotorAdditionalDriversStepComponent) private motorAdditionalDriversStep?: MotorAdditionalDriversStepComponent;
+  @ViewChild(MotorYourPolicyStepComponent) private motorYourPolicyStep?: MotorYourPolicyStepComponent;
 
   readonly currentStepName = toSignal(
     this.route.paramMap.pipe(map(params => params.get('stepName')?.toLowerCase() ?? MOTOR_STEP_ORDER[0])),
@@ -80,6 +87,18 @@ export class MotorQuoteJourneyComponent {
 
   readonly payloadPretty = computed(() => JSON.stringify(this.payload(), null, 2));
   readonly quotes = computed(() => DEMO_QUOTES);
+
+  constructor() {
+    this.stepNavigationService.submitNext$
+      .pipe(takeUntilDestroyed())
+      .subscribe((request) => {
+        if (request.moduleCode !== this.moduleCode() || request.stepName !== this.currentStepName()) {
+          return;
+        }
+
+        this.submitCurrentStep();
+      });
+  }
 
   currentStepInitialValue(): Record<string, unknown> {
     const stepName = this.currentStepName();
@@ -119,6 +138,25 @@ export class MotorQuoteJourneyComponent {
     }
 
     void this.router.navigate(['/', this.moduleCode(), nextStep]);
+  }
+
+  private submitCurrentStep(): void {
+    switch (this.currentStepName()) {
+      case 'your-details':
+        this.motorYourDetailsStep?.submitFromNavigation();
+        break;
+      case 'your-vehicle':
+        this.motorYourVehicleStep?.submitFromNavigation();
+        break;
+      case 'additional-drivers':
+        this.motorAdditionalDriversStep?.submitFromNavigation();
+        break;
+      case 'your-policy':
+        this.motorYourPolicyStep?.submitFromNavigation();
+        break;
+      default:
+        break;
+    }
   }
 }
 
@@ -164,6 +202,13 @@ export class PropertyQuoteJourneyComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly workflowService = inject(FormWorkflowService);
+  private readonly stepNavigationService = inject(StepNavigationService);
+
+  @ViewChild(PropertyYourDetailsStepComponent) private propertyYourDetailsStep?: PropertyYourDetailsStepComponent;
+  @ViewChild(PropertyYourPropertyStepComponent) private propertyYourPropertyStep?: PropertyYourPropertyStepComponent;
+  @ViewChild(PropertyJointProposerStepComponent) private propertyJointProposerStep?: PropertyJointProposerStepComponent;
+  @ViewChild(PropertyYourPolicyStepComponent) private propertyYourPolicyStep?: PropertyYourPolicyStepComponent;
+  @ViewChild(PropertyAssumptionsStepComponent) private propertyAssumptionsStep?: PropertyAssumptionsStepComponent;
 
   readonly currentStepName = toSignal(
     this.route.paramMap.pipe(map(params => params.get('stepName')?.toLowerCase() ?? PROPERTY_STEP_ORDER[0])),
@@ -184,6 +229,18 @@ export class PropertyQuoteJourneyComponent {
 
   readonly payloadPretty = computed(() => JSON.stringify(this.payload(), null, 2));
   readonly quotes = computed(() => DEMO_QUOTES);
+
+  constructor() {
+    this.stepNavigationService.submitNext$
+      .pipe(takeUntilDestroyed())
+      .subscribe((request) => {
+        if (request.moduleCode !== this.moduleCode() || request.stepName !== this.currentStepName()) {
+          return;
+        }
+
+        this.submitCurrentStep();
+      });
+  }
 
   currentStepInitialValue(): Record<string, unknown> {
     const stepName = this.currentStepName();
@@ -223,5 +280,27 @@ export class PropertyQuoteJourneyComponent {
     }
 
     void this.router.navigate(['/', this.moduleCode(), nextStep]);
+  }
+
+  private submitCurrentStep(): void {
+    switch (this.currentStepName()) {
+      case 'your-details':
+        this.propertyYourDetailsStep?.submitFromNavigation();
+        break;
+      case 'your-property':
+        this.propertyYourPropertyStep?.submitFromNavigation();
+        break;
+      case 'joint-proposer':
+        this.propertyJointProposerStep?.submitFromNavigation();
+        break;
+      case 'your-policy':
+        this.propertyYourPolicyStep?.submitFromNavigation();
+        break;
+      case 'assumptions':
+        this.propertyAssumptionsStep?.submitFromNavigation();
+        break;
+      default:
+        break;
+    }
   }
 }

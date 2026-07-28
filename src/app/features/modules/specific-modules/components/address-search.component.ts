@@ -54,8 +54,8 @@ import {
         <app-dynamic-form
           [fields]="manualFields"
           [initialValue]="manualInitialValue()"
-          submitLabel="Use this address"
-          (submitted)="onManualAddressSubmit($event)"
+          [showSubmitButton]="false"
+          (valueChanged)="onManualAddressChanged($event)"
         />
 
         <button
@@ -79,6 +79,7 @@ export class AddressSearchComponent {
 
   readonly criteriaChanged = output<AddressSearchCriteria>();
   readonly resolved = output<AddressLookupMatch>();
+  readonly addressCleared = output<void>();
 
   readonly lookupFields = ADDRESS_LOOKUP_FIELDS;
   readonly manualFields = ADDRESS_MANUAL_FIELDS;
@@ -133,18 +134,21 @@ export class AddressSearchComponent {
     this.lookupError.set(null);
     this.mode.set('manual');
     this.selectedAddress.set(null);
+    this.addressCleared.emit();
   }
 
   useAddressLookup(): void {
     this.lookupError.set(null);
     this.mode.set('lookup');
     this.selectedAddress.set(null);
+    this.addressCleared.emit();
   }
 
   changeAddress(): void {
     this.lookupError.set(null);
     this.mode.set('lookup');
     this.selectedAddress.set(null);
+    this.addressCleared.emit();
   }
 
   async onLookupSearch(value: Record<string, unknown>): Promise<void> {
@@ -179,7 +183,7 @@ export class AddressSearchComponent {
     }
   }
 
-  onManualAddressSubmit(value: Record<string, unknown>): void {
+  onManualAddressChanged(value: Record<string, unknown>): void {
     const manualAddress: AddressLookupMatch = {
       houseNameNumber: '',
       addressLine1: asString(value['addressLine1']),
@@ -189,8 +193,17 @@ export class AddressSearchComponent {
       postcode: asString(value['postcode']),
     };
 
+    const isComplete =
+      manualAddress.addressLine1.trim().length > 0 &&
+      manualAddress.addressLine4.trim().length > 0 &&
+      manualAddress.postcode.trim().length > 0;
+
+    if (!isComplete) {
+      this.addressCleared.emit();
+      return;
+    }
+
     this.criteriaChanged.emit({ postcode: manualAddress.postcode, numberOrName: '' });
-    this.selectedAddress.set(manualAddress);
     this.resolved.emit(manualAddress);
   }
 }

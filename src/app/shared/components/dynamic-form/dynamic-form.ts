@@ -24,6 +24,7 @@ export class DynamicFormComponent {
   readonly fields = input.required<readonly FormFieldConfig[]>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly submitLabel = input('Continue');
+  readonly showSubmitButton = input(true);
 
   readonly submitted = output<Record<string, unknown>>();
   readonly valueChanged = output<Record<string, unknown>>();
@@ -173,6 +174,10 @@ export class DynamicFormComponent {
     }
 
     this.submitted.emit(this.form.getRawValue());
+  }
+
+  submitFromParent(): void {
+    this.onSubmit();
   }
 
   private buildForm(fields: readonly FormFieldConfig[], initialValues: Record<string, unknown>): void {

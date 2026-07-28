@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, output, signal } from '@angular/core';
+import { Component, ViewChild, computed, effect, input, output, signal } from '@angular/core';
 import { AddressLookupMatch } from '../../../../core/services/address-lookup.service';
 import { DynamicFormComponent } from '../../../../shared/components/dynamic-form/dynamic-form';
 import {
@@ -20,6 +20,7 @@ import { AddressSearchComponent } from '../components/address-search.component';
       [initialPostcode]="addressCriteria().postcode"
       [initialNumberOrName]="addressCriteria().numberOrName"
       (criteriaChanged)="onCriteriaChanged($event)"
+      (addressCleared)="onAddressCleared()"
       (resolved)="onAddressResolved($event)"
     />
 
@@ -28,10 +29,16 @@ import { AddressSearchComponent } from '../components/address-search.component';
         <app-dynamic-form
           [fields]="fields"
           [initialValue]="formInitialValue()"
-          submitLabel="Save and continue"
+          [showSubmitButton]="false"
           (submitted)="onSubmitted($event)"
         />
       </div>
+    }
+
+    @if (addressRequiredError()) {
+      <p class="mt-2 text-[0.82rem] text-red-700" role="alert">
+        Please resolve your address using lookup or complete manual address entry before continuing.
+      </p>
     }
   `,
 })
@@ -43,6 +50,7 @@ export class MotorYourDetailsStepComponent {
 
   readonly addressCriteria = signal<AddressSearchCriteria>({ postcode: '', numberOrName: '' });
   readonly resolvedAddress = signal<AddressLookupMatch | null>(null);
+  readonly addressRequiredError = signal(false);
 
   readonly hasResolvedAddress = computed(() => this.resolvedAddress() !== null || hasAddressState(this.initialValue()));
 
@@ -51,6 +59,8 @@ export class MotorYourDetailsStepComponent {
     ...this.resolvedAddress(),
     ...this.addressCriteria(),
   }));
+
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
 
   constructor() {
     effect(() => {
@@ -78,15 +88,38 @@ export class MotorYourDetailsStepComponent {
   }
 
   onAddressResolved(match: AddressLookupMatch): void {
+    this.addressRequiredError.set(false);
     this.resolvedAddress.set(match);
   }
 
+  onAddressCleared(): void {
+    this.addressRequiredError.set(false);
+    this.resolvedAddress.set(null);
+  }
+
   onSubmitted(value: Record<string, unknown>): void {
+    const resolved = this.resolvedAddress();
+    if (!resolved || !hasAddressState(resolved)) {
+      this.addressRequiredError.set(true);
+      return;
+    }
+
+    this.addressRequiredError.set(false);
+
     this.saved.emit({
       ...value,
       ...this.addressCriteria(),
-      ...this.resolvedAddress(),
+      ...resolved,
     });
+  }
+
+  submitFromNavigation(): void {
+    if (!this.hasResolvedAddress()) {
+      this.addressRequiredError.set(true);
+      return;
+    }
+
+    this.dynamicForm?.submitFromParent();
   }
 }
 
@@ -100,6 +133,7 @@ export class MotorYourDetailsStepComponent {
       [initialPostcode]="addressCriteria().postcode"
       [initialNumberOrName]="addressCriteria().numberOrName"
       (criteriaChanged)="onCriteriaChanged($event)"
+      (addressCleared)="onAddressCleared()"
       (resolved)="onAddressResolved($event)"
     />
 
@@ -107,7 +141,7 @@ export class MotorYourDetailsStepComponent {
       <app-dynamic-form
         [fields]="fields"
         [initialValue]="formInitialValue()"
-        submitLabel="Save and continue"
+        [showSubmitButton]="false"
         (submitted)="onSubmitted($event)"
       />
     </div>
@@ -137,6 +171,8 @@ export class PropertyYourDetailsStepComponent {
     ...this.addressCriteria(),
   }));
 
+  @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
+
   constructor() {
     effect(() => {
       const value = this.initialValue();
@@ -167,6 +203,11 @@ export class PropertyYourDetailsStepComponent {
     this.resolvedAddress.set(match);
   }
 
+  onAddressCleared(): void {
+    this.addressRequiredError.set(false);
+    this.resolvedAddress.set(null);
+  }
+
   onSubmitted(value: Record<string, unknown>): void {
     const resolved = this.resolvedAddress();
     if (!resolved || !hasAddressState(resolved)) {
@@ -181,5 +222,9 @@ export class PropertyYourDetailsStepComponent {
       ...this.addressCriteria(),
       ...resolved,
     });
+  }
+
+  submitFromNavigation(): void {
+    this.dynamicForm?.submitFromParent();
   }
 }

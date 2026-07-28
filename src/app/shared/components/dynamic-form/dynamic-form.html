@@ -230,10 +230,12 @@
     }
   }
 
-  <button
-    type="submit"
-    class="mt-1 rounded-md bg-slate-900 px-4 py-2.5 font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
-  >
-    {{ submitLabel() }}
-  </button>
+  @if (showSubmitButton()) {
+    <button
+      type="submit"
+      class="mt-1 rounded-md bg-slate-900 px-4 py-2.5 font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+    >
+      {{ submitLabel() }}
+    </button>
+  }
 </form>
