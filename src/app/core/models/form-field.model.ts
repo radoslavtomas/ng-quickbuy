@@ -58,6 +58,8 @@ export interface FieldMetadata {
   maxLengthCounter?: boolean;
   maskPattern?: string;
   radioLayout?: 'row' | 'column';
+  aliases?: readonly string[];
+  valueTransform?: 'booleanYN' | 'numberString';
 }
 
 export interface FieldValidatorConfig {

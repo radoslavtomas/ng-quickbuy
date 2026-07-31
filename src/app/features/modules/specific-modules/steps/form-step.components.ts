@@ -1,14 +1,16 @@
-import { Component, ViewChild, input, output } from '@angular/core';
+import { Component, ViewChild, computed, input, output } from '@angular/core';
 import { DynamicFormComponent } from '../../../../shared/components/dynamic-form/dynamic-form';
 import {
-  MOTOR_ADDITIONAL_DRIVERS_FIELDS,
-  MOTOR_YOUR_POLICY_FIELDS,
-  MOTOR_YOUR_VEHICLE_FIELDS,
-  PROPERTY_ASSUMPTIONS_FIELDS,
-  PROPERTY_JOINT_PROPOSER_FIELDS,
-  PROPERTY_YOUR_POLICY_FIELDS,
-  PROPERTY_YOUR_PROPERTY_FIELDS,
-} from '../config';
+  getMotorAdditionalDriversFields,
+  getMotorYourPolicyFields,
+  getMotorYourVehicleFields,
+} from '../config/motor';
+import {
+  getPropertyAssumptionsFields,
+  getPropertyJointProposerFields,
+  getPropertyYourPolicyFields,
+  getPropertyYourPropertyFields,
+} from '../config/property';
 
 @Component({
   selector: 'app-motor-your-vehicle-step',
@@ -16,7 +18,7 @@ import {
   template: `
     <p class="module-code">Step: your-vehicle</p>
     <app-dynamic-form
-      [fields]="fields"
+      [fields]="fields()"
       [initialValue]="initialValue()"
       [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
@@ -24,9 +26,10 @@ import {
   `,
 })
 export class MotorYourVehicleStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
-  readonly fields = MOTOR_YOUR_VEHICLE_FIELDS;
+  readonly fields = computed(() => getMotorYourVehicleFields(this.moduleCode()));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
 
@@ -41,7 +44,7 @@ export class MotorYourVehicleStepComponent {
   template: `
     <p class="module-code">Step: additional-drivers</p>
     <app-dynamic-form
-      [fields]="fields"
+      [fields]="fields()"
       [initialValue]="initialValue()"
       [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
@@ -49,9 +52,10 @@ export class MotorYourVehicleStepComponent {
   `,
 })
 export class MotorAdditionalDriversStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
-  readonly fields = MOTOR_ADDITIONAL_DRIVERS_FIELDS;
+  readonly fields = computed(() => getMotorAdditionalDriversFields(this.moduleCode()));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
 
@@ -66,7 +70,7 @@ export class MotorAdditionalDriversStepComponent {
   template: `
     <p class="module-code">Step: your-policy</p>
     <app-dynamic-form
-      [fields]="fields"
+      [fields]="fields()"
       [initialValue]="initialValue()"
       [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
@@ -74,9 +78,10 @@ export class MotorAdditionalDriversStepComponent {
   `,
 })
 export class MotorYourPolicyStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
-  readonly fields = MOTOR_YOUR_POLICY_FIELDS;
+  readonly fields = computed(() => getMotorYourPolicyFields(this.moduleCode()));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
 
@@ -91,7 +96,7 @@ export class MotorYourPolicyStepComponent {
   template: `
     <p class="module-code">Step: your-property</p>
     <app-dynamic-form
-      [fields]="fields"
+      [fields]="fields()"
       [initialValue]="initialValue()"
       [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
@@ -99,9 +104,10 @@ export class MotorYourPolicyStepComponent {
   `,
 })
 export class PropertyYourPropertyStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
-  readonly fields = PROPERTY_YOUR_PROPERTY_FIELDS;
+  readonly fields = computed(() => getPropertyYourPropertyFields(this.moduleCode()));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
 
@@ -116,7 +122,7 @@ export class PropertyYourPropertyStepComponent {
   template: `
     <p class="module-code">Step: joint-proposer</p>
     <app-dynamic-form
-      [fields]="fields"
+      [fields]="fields()"
       [initialValue]="initialValue()"
       [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
@@ -124,9 +130,10 @@ export class PropertyYourPropertyStepComponent {
   `,
 })
 export class PropertyJointProposerStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
-  readonly fields = PROPERTY_JOINT_PROPOSER_FIELDS;
+  readonly fields = computed(() => getPropertyJointProposerFields(this.moduleCode()));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
 
@@ -141,7 +148,7 @@ export class PropertyJointProposerStepComponent {
   template: `
     <p class="module-code">Step: your-policy</p>
     <app-dynamic-form
-      [fields]="fields"
+      [fields]="fields()"
       [initialValue]="initialValue()"
       [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
@@ -149,9 +156,10 @@ export class PropertyJointProposerStepComponent {
   `,
 })
 export class PropertyYourPolicyStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
-  readonly fields = PROPERTY_YOUR_POLICY_FIELDS;
+  readonly fields = computed(() => getPropertyYourPolicyFields(this.moduleCode()));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
 
@@ -166,7 +174,7 @@ export class PropertyYourPolicyStepComponent {
   template: `
     <p class="module-code">Step: assumptions</p>
     <app-dynamic-form
-      [fields]="fields"
+      [fields]="fields()"
       [initialValue]="initialValue()"
       [showSubmitButton]="false"
       (submitted)="saved.emit($event)"
@@ -174,9 +182,10 @@ export class PropertyYourPolicyStepComponent {
   `,
 })
 export class PropertyAssumptionsStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
-  readonly fields = PROPERTY_ASSUMPTIONS_FIELDS;
+  readonly fields = computed(() => getPropertyAssumptionsFields(this.moduleCode()));
 
   @ViewChild(DynamicFormComponent) private dynamicForm?: DynamicFormComponent;
 

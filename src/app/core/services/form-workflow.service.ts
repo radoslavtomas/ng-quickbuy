@@ -31,6 +31,25 @@ export class FormWorkflowService {
     }));
   }
 
+  setJourneyStepValues(
+    moduleCode: string,
+    stepValuesByStepName: Readonly<Record<string, Record<string, unknown>>>,
+    mergeWithExisting = true,
+  ): void {
+    const normalizedModuleCode = moduleCode.toUpperCase();
+    this.stepValuesState.update((current) => {
+      const next = { ...current };
+
+      for (const [stepName, value] of Object.entries(stepValuesByStepName)) {
+        const stepKey = `${normalizedModuleCode}:${stepName}`;
+        const existing = current[stepKey] ?? {};
+        next[stepKey] = mergeWithExisting ? { ...existing, ...value } : value;
+      }
+
+      return next;
+    });
+  }
+
   getStepValue(stepKey: string): Record<string, unknown> {
     return this.stepValuesState()[stepKey] ?? {};
   }

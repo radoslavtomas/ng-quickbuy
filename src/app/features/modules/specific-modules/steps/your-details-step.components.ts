@@ -3,11 +3,12 @@ import { AddressLookupMatch } from '../../../../core/services/address-lookup.ser
 import { DynamicFormComponent } from '../../../../shared/components/dynamic-form/dynamic-form';
 import {
   AddressSearchCriteria,
-  MOTOR_FIRST_STEP_PERSONAL_FIELDS,
-  PROPERTY_FIRST_STEP_PERSONAL_FIELDS,
+  applyFieldAliases,
   asString,
   hasAddressState,
-} from '../config';
+} from '../config/shared/common';
+import { getMotorYourDetailsFields } from '../config/motor';
+import { getPropertyYourDetailsFields } from '../config/property';
 import { AddressSearchComponent } from '../components/address-search.component';
 
 @Component({
@@ -28,7 +29,7 @@ import { AddressSearchComponent } from '../components/address-search.component';
     @if (hasResolvedAddress()) {
       <div class="mt-5 border-t border-slate-200 pt-5">
         <app-dynamic-form
-          [fields]="fields"
+          [fields]="fields()"
           [initialValue]="formInitialValue()"
           [showSubmitButton]="false"
           (submitted)="onSubmitted($event)"
@@ -44,10 +45,11 @@ import { AddressSearchComponent } from '../components/address-search.component';
   `,
 })
 export class MotorYourDetailsStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
 
-  readonly fields = MOTOR_FIRST_STEP_PERSONAL_FIELDS;
+  readonly fields = computed(() => getMotorYourDetailsFields(this.moduleCode()));
 
   readonly addressCriteria = signal<AddressSearchCriteria>({ postcode: '', numberOrName: '' });
   readonly resolvedAddress = signal<AddressLookupMatch | null>(null);
@@ -56,7 +58,7 @@ export class MotorYourDetailsStepComponent {
   readonly hasResolvedAddress = computed(() => this.resolvedAddress() !== null || hasAddressState(this.initialValue()));
 
   readonly formInitialValue = computed(() => ({
-    ...this.initialValue(),
+    ...applyFieldAliases(this.initialValue(), this.fields()),
     ...this.resolvedAddress(),
     ...this.addressCriteria(),
   }));
@@ -66,7 +68,7 @@ export class MotorYourDetailsStepComponent {
 
   constructor() {
     effect(() => {
-      const value = this.initialValue();
+      const value = applyFieldAliases(this.initialValue(), this.fields());
       this.addressCriteria.set({
         postcode: asString(value['postcode']),
         numberOrName: asString(value['houseNameNumber']) || asString(value['addressLine1']),
@@ -149,7 +151,7 @@ export class MotorYourDetailsStepComponent {
 
     <div class="mt-5 border-t border-slate-200 pt-5">
       <app-dynamic-form
-        [fields]="fields"
+        [fields]="fields()"
         [initialValue]="formInitialValue()"
         [showSubmitButton]="false"
         (submitted)="onSubmitted($event)"
@@ -164,10 +166,11 @@ export class MotorYourDetailsStepComponent {
   `,
 })
 export class PropertyYourDetailsStepComponent {
+  readonly moduleCode = input.required<string>();
   readonly initialValue = input<Record<string, unknown>>({});
   readonly saved = output<Record<string, unknown>>();
 
-  readonly fields = PROPERTY_FIRST_STEP_PERSONAL_FIELDS;
+  readonly fields = computed(() => getPropertyYourDetailsFields(this.moduleCode()));
 
   readonly addressCriteria = signal<AddressSearchCriteria>({ postcode: '', numberOrName: '' });
   readonly resolvedAddress = signal<AddressLookupMatch | null>(null);
@@ -176,7 +179,7 @@ export class PropertyYourDetailsStepComponent {
   readonly hasResolvedAddress = computed(() => this.resolvedAddress() !== null || hasAddressState(this.initialValue()));
 
   readonly formInitialValue = computed(() => ({
-    ...this.initialValue(),
+    ...applyFieldAliases(this.initialValue(), this.fields()),
     ...this.resolvedAddress(),
     ...this.addressCriteria(),
   }));
@@ -186,7 +189,7 @@ export class PropertyYourDetailsStepComponent {
 
   constructor() {
     effect(() => {
-      const value = this.initialValue();
+      const value = applyFieldAliases(this.initialValue(), this.fields());
       this.addressCriteria.set({
         postcode: asString(value['postcode']),
         numberOrName: asString(value['houseNameNumber']) || asString(value['addressLine1']),

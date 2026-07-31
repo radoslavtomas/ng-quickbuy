@@ -1,6 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { BrandService } from '../../../../core/services/brand.service';
-import { MODULE_CONTENT_STYLES } from '../config';
+import { MODULE_CONTENT_STYLES } from '../config/shared/common';
 import { MotorQuoteJourneyComponent, PropertyQuoteJourneyComponent } from './quote-journeys.component';
 
 class BaseModuleComponent {

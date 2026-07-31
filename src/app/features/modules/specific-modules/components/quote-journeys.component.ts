@@ -6,11 +6,9 @@ import { FormWorkflowService } from '../../../../core/services/form-workflow.ser
 import { StepNavigationService } from '../../../../core/services/step-navigation.service';
 import {
   DEMO_QUOTES,
-  MOTOR_STEP_DEFAULT_VALUES,
-  MOTOR_STEP_ORDER,
-  PROPERTY_STEP_DEFAULT_VALUES,
-  PROPERTY_STEP_ORDER,
-} from '../config';
+} from '../config/shared/common';
+import { MOTOR_STEP_ORDER, getMotorStepDefaultValues } from '../config/motor';
+import { PROPERTY_STEP_ORDER, getPropertyStepDefaultValues } from '../config/property';
 import {
   MotorAdditionalDriversStepComponent,
   MotorYourPolicyStepComponent,
@@ -35,16 +33,16 @@ import { MotorYourDetailsStepComponent, PropertyYourDetailsStepComponent } from 
   template: `
     @switch (currentStepName()) {
       @case ('your-details') {
-        <app-motor-your-details-step [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
+        <app-motor-your-details-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
       }
       @case ('your-vehicle') {
-        <app-motor-your-vehicle-step [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
+        <app-motor-your-vehicle-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
       }
       @case ('additional-drivers') {
-        <app-motor-additional-drivers-step [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
+        <app-motor-additional-drivers-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
       }
       @case ('your-policy') {
-        <app-motor-your-policy-step [initialValue]="currentStepInitialValue()" (saved)="onPolicySubmitted($event)" />
+        <app-motor-your-policy-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="onPolicySubmitted($event)" />
       }
       @case ('your-quotes') {
         <app-motor-your-quotes-step [payloadPretty]="payloadPretty()" [quotes]="quotes()" />
@@ -107,7 +105,7 @@ export class MotorQuoteJourneyComponent {
       return saved;
     }
 
-    return MOTOR_STEP_DEFAULT_VALUES[stepName] ?? {};
+    return getMotorStepDefaultValues(this.moduleCode())[stepName] ?? {};
   }
 
   saveAndNext(value: Record<string, unknown>): void {
@@ -173,19 +171,19 @@ export class MotorQuoteJourneyComponent {
   template: `
     @switch (currentStepName()) {
       @case ('your-details') {
-        <app-property-your-details-step [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
+        <app-property-your-details-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
       }
       @case ('your-property') {
-        <app-property-your-property-step [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
+        <app-property-your-property-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
       }
       @case ('joint-proposer') {
-        <app-property-joint-proposer-step [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
+        <app-property-joint-proposer-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
       }
       @case ('your-policy') {
-        <app-property-your-policy-step [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
+        <app-property-your-policy-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="saveAndNext($event)" />
       }
       @case ('assumptions') {
-        <app-property-assumptions-step [initialValue]="currentStepInitialValue()" (saved)="onAssumptionsSubmitted($event)" />
+        <app-property-assumptions-step [moduleCode]="moduleCode()" [initialValue]="currentStepInitialValue()" (saved)="onAssumptionsSubmitted($event)" />
       }
       @case ('your-quotes') {
         <app-property-your-quotes-step [payloadPretty]="payloadPretty()" [quotes]="quotes()" />
@@ -249,7 +247,7 @@ export class PropertyQuoteJourneyComponent {
       return saved;
     }
 
-    return PROPERTY_STEP_DEFAULT_VALUES[stepName] ?? {};
+    return getPropertyStepDefaultValues(this.moduleCode())[stepName] ?? {};
   }
 
   saveAndNext(value: Record<string, unknown>): void {

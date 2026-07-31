@@ -1,5 +1,5 @@
 import { Component, input } from '@angular/core';
-import { DemoQuote } from '../config';
+import { DemoQuote } from '../config/shared/common';
 
 @Component({
   selector: 'app-motor-your-quotes-step',

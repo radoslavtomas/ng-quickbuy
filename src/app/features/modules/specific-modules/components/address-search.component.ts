@@ -10,7 +10,7 @@ import {
   ADDRESS_MANUAL_FIELDS,
   AddressSearchCriteria,
   asString,
-} from '../config';
+} from '../config/shared/common';
 
 @Component({
   selector: 'app-address-search',
