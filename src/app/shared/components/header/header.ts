@@ -1,5 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
-import { NgOptimizedImage } from '@angular/common';
+import { DOCUMENT, NgOptimizedImage } from '@angular/common';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of, switchMap } from 'rxjs';
 import { BrandService } from '../../../core/services/brand.service';
@@ -16,6 +16,9 @@ export class HeaderComponent {
   private readonly brandService = inject(BrandService);
   private readonly moduleParamsService = inject(ModuleParametersService);
 
+  private readonly document = inject(DOCUMENT);
+  private readonly domain = this.document.defaultView?.location.hostname ?? '';
+
   readonly brand = this.brandService.config;
   readonly currentModuleCode = this.brandService.currentModuleCode;
 
@@ -23,7 +26,7 @@ export class HeaderComponent {
     toObservable(this.currentModuleCode).pipe(
       switchMap((code: string | null) =>
         code
-          ? this.moduleParamsService.fetchParameters(this.brand.id, code)
+          ? this.moduleParamsService.fetchParameters(this.brand.id, code, this.domain)
           : of(null),
       ),
       catchError(() => of(null)),

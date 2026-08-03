@@ -6,7 +6,7 @@ import type { QuoteRecallRequest, QuoteRecallResponse } from '../models/quote-re
 @Injectable({ providedIn: 'root' })
 export class QuoteRecallService {
   private readonly http = inject(HttpClient);
-  private readonly endpoint = 'https://qld-api.emea.ajgco.com/quote/get/recall/';
+  private readonly endpoint = 'https://quickbuyv3-dev.quotelinedirect.co.uk/api/quote/get/recall/';
 
   fetchRecall(request: QuoteRecallRequest): Observable<QuoteRecallResponse> {
     const formData = new FormData();

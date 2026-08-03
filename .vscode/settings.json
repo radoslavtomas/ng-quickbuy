@@ -1,0 +1,5 @@
+{
+    "angular.enable-strict-mode-prompt": false,
+    "snyk.advanced.organization": "d4d9a708-04e6-4bad-b993-5e32c843acad",
+    "snyk.advanced.autoSelectOrganization": true
+}
