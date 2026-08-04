@@ -5,33 +5,21 @@ import type {
   QuoteRecallResponse,
   RecallHydrationResult,
 } from '../../../../core/models/quote-recall.model';
+import type { JourneyPayloadMapper } from '../../../../core/models/journey-payload.model';
 import {
   getFieldsSections,
   getJourneyForModule,
   getQuestionSteps,
 } from '../../journeys/journey-registry';
-import { applyFieldAliases } from '../config/shared/common';
 
-/** Recall keys for the proposer address, which the address section owns. */
-const ADDRESS_FIELD_MAPPING: Readonly<Record<string, string>> = {
-  'proposer-address-addressline1': 'addressLine1',
-  'proposer-address-addressline2': 'addressLine2',
-  'proposer-address-addressline3': 'addressLine3',
-  'proposer-address-postcode': 'postcode',
-};
-
-const FIELD_VALUE_MAPPING: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
-  'policy-cover': {
-    C: 'comprehensive',
-    TPFT: 'tpft',
-    TPO: 'tpo',
-  },
-  'vehicle-wherekept': {
-    G: 'garage',
-    D: 'driveway',
-    R: 'roadside',
-  },
-};
+/** Internal names of the address fields the address section owns. */
+const ADDRESS_FIELDS: readonly string[] = [
+  'addressLine1',
+  'addressLine2',
+  'addressLine3',
+  'addressLine4',
+  'postcode',
+];
 
 /** Section id that holds the proposer address, by convention in both journeys. */
 const ADDRESS_SECTION_ID = 'address';
@@ -67,6 +55,7 @@ export class QuoteRecallHydrationService {
       return { hydratedSteps: {}, unresolvedFields: { ...source } };
     }
 
+    const mapper = journey.payloadMapper;
     const hydratedSteps: Record<string, Record<string, Record<string, unknown>>> = {};
     const consumedKeys = new Set<string>();
 
@@ -74,15 +63,14 @@ export class QuoteRecallHydrationService {
       const stepValues: Record<string, Record<string, unknown>> = {};
 
       for (const section of getFieldsSections(step)) {
-        const aliasedSource = applyFieldAliases(source, section.fields);
-        const values = this.pickSectionValues(aliasedSource, section.fields, consumedKeys);
+        const values = this.pickSectionValues(source, section.fields, mapper, consumedKeys);
         if (Object.keys(values).length > 0) {
           stepValues[section.id] = values;
         }
       }
 
       if (step.sections.some(section => section.id === ADDRESS_SECTION_ID)) {
-        const address = this.pickAddress(source, consumedKeys);
+        const address = this.pickAddress(source, mapper, consumedKeys);
         if (Object.keys(address).length > 0) {
           stepValues[ADDRESS_SECTION_ID] = address;
         }
@@ -108,22 +96,31 @@ export class QuoteRecallHydrationService {
     };
   }
 
+  /**
+   * Reads each field of a section from the recall response.
+   *
+   * Fields are looked up by the backend key the mapper reports, so a rename of an
+   * internal name cannot break hydration. The internal name is also accepted, which
+   * covers fields with no known backend key.
+   */
   private pickSectionValues(
     source: Record<string, unknown>,
     fields: readonly FormFieldConfig[],
+    mapper: JourneyPayloadMapper,
     consumedKeys: Set<string>,
   ): Record<string, unknown> {
     const values: Record<string, unknown> = {};
 
     for (const field of fields) {
-      const value = source[field.name];
-      if (value === undefined) {
+      const backendKey = mapper.backendKeyFor(field.name);
+      const rawValue = source[backendKey] ?? source[field.name];
+      if (rawValue === undefined) {
         continue;
       }
 
+      consumedKeys.add(backendKey);
       consumedKeys.add(field.name);
-      (field.metadata?.aliases ?? []).forEach(alias => consumedKeys.add(alias));
-      values[field.name] = this.normalizeValue(field, value);
+      values[field.name] = this.normalizeValue(field, mapper.fromWireValueFor(field.name, rawValue));
     }
 
     return values;
@@ -131,29 +128,27 @@ export class QuoteRecallHydrationService {
 
   private pickAddress(
     source: Record<string, unknown>,
+    mapper: JourneyPayloadMapper,
     consumedKeys: Set<string>,
   ): Record<string, unknown> {
     const address: Record<string, unknown> = {};
 
-    Object.entries(ADDRESS_FIELD_MAPPING).forEach(([recallKey, formKey]) => {
-      const value = source[recallKey];
+    for (const internalName of ADDRESS_FIELDS) {
+      const backendKey = mapper.backendKeyFor(internalName);
+      const value = source[backendKey] ?? source[internalName];
       if (value === undefined || value === null || value === '') {
-        return;
+        continue;
       }
 
-      consumedKeys.add(recallKey);
-      address[formKey] = value;
-    });
+      consumedKeys.add(backendKey);
+      consumedKeys.add(internalName);
+      address[internalName] = value;
+    }
 
     return address;
   }
 
   private normalizeValue(field: FormFieldConfig, value: unknown): unknown {
-    const mapped = FIELD_VALUE_MAPPING[field.name];
-    if (mapped && typeof value === 'string' && mapped[value] !== undefined) {
-      return mapped[value];
-    }
-
     if (field.metadata?.valueTransform === 'booleanYN') {
       return this.toBooleanYN(value);
     }

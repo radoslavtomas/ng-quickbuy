@@ -5,7 +5,7 @@ export const MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'date',
     label: 'Policy start date',
-    name: 'policy-inceptiondate',
+    name: 'startDate',
     validators: [
       { type: 'required' },
       {
@@ -16,12 +16,11 @@ export const MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
       },
     ],
     normalization: ['trim', 'date'],
-    metadata: { aliases: ['policyStartDate'] },
   },
   {
     type: 'radio',
     label: 'Level of cover',
-    name: 'policy-cover',
+    name: 'coverType',
     validators: [{ type: 'required' }],
     options: [
       { label: 'Third party only', value: 'tpo' },
@@ -30,19 +29,17 @@ export const MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
     ],
     metadata: {
       radioLayout: 'column',
-      aliases: ['coverType'],
     },
   },
   {
     type: 'number',
     label: 'Voluntary excess',
-    name: 'policy-volxs',
+    name: 'voluntaryExcess',
     validators: [{ type: 'required' }, { type: 'min', value: 0 }, { type: 'max', value: 1000 }],
     normalization: ['currency'],
     metadata: {
       prefix: 'GBP',
       placeholder: '250',
-      aliases: ['voluntaryExcess'],
     },
   },
   {

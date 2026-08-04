@@ -137,33 +137,3 @@ export function hasAddressState(value: { addressLine1?: unknown; postcode?: unkn
   return Boolean(asString(value['addressLine1']) && asString(value['postcode']));
 }
 
-export function getFirstDefinedValue(source: Record<string, unknown>, keys: readonly string[]): unknown {
-  for (const key of keys) {
-    if (source[key] !== undefined) {
-      return source[key];
-    }
-  }
-
-  return undefined;
-}
-
-export function applyFieldAliases(
-  source: Record<string, unknown>,
-  fields: readonly FormFieldConfig[],
-): Record<string, unknown> {
-  const next = { ...source };
-
-  for (const field of fields) {
-    if (next[field.name] !== undefined) {
-      continue;
-    }
-
-    const aliases = field.metadata?.aliases ?? [];
-    const aliasValue = getFirstDefinedValue(source, aliases);
-    if (aliasValue !== undefined) {
-      next[field.name] = aliasValue;
-    }
-  }
-
-  return next;
-}

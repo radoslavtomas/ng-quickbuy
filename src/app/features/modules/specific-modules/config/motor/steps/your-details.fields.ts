@@ -5,31 +5,29 @@ export const MOTOR_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'text',
     label: 'First name',
-    name: 'proposer-name-forenames',
+    name: 'forenames',
     validators: [{ type: 'required' }],
     normalization: ['trim'],
     metadata: {
       autocomplete: 'given-name',
       placeholder: 'Alex',
-      aliases: ['firstName'],
     },
   },
   {
     type: 'text',
     label: 'Surname',
-    name: 'proposer-name-surname',
+    name: 'surname',
     validators: [{ type: 'required' }],
     normalization: ['trim'],
     metadata: {
       autocomplete: 'family-name',
       placeholder: 'Taylor',
-      aliases: ['lastName'],
     },
   },
   {
     type: 'date',
     label: 'Date of birth',
-    name: 'proposer-dateofbirth',
+    name: 'dateOfBirth',
     validators: [
       { type: 'required' },
       {
@@ -48,32 +46,29 @@ export const MOTOR_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
     normalization: ['trim', 'date'],
     metadata: {
       autocomplete: 'bday',
-      aliases: ['dateOfBirth'],
     },
   },
   {
     type: 'email',
     label: 'Email',
-    name: 'proposer-email',
+    name: 'email',
     validators: [{ type: 'required' }, { type: 'email' }],
     normalization: ['trim', 'lowercase'],
     metadata: {
       autocomplete: 'email',
       placeholder: 'alex.taylor@example.com',
-      aliases: ['email'],
     },
   },
   {
     type: 'tel',
     label: 'Mobile number',
-    name: 'proposer-daytimetelephone',
+    name: 'phone',
     validators: [{ type: 'required' }, { type: 'minLength', value: 10 }, { type: 'maxLength', value: 15 }],
     normalization: ['trim', 'phone'],
     metadata: {
       autocomplete: 'tel',
       placeholder: '07123456789',
       maskPattern: '[0-9+ ]*',
-      aliases: ['mobilePhone', 'mainPhone'],
     },
   },
 ];

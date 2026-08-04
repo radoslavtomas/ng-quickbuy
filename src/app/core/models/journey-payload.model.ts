@@ -24,4 +24,19 @@ export interface JourneyPayloadMapper {
    * take form data.
    */
   toStoreFields(answers: JourneyAnswers): Record<string, string>;
+
+  /** The backend key for an internal field name, or the name itself if unmapped. */
+  backendKeyFor(internalName: string): string;
+
+  /** The internal field name for a backend key, or the key itself if unmapped. */
+  internalNameFor(backendKey: string): string;
+
+  /**
+   * Translates an internal value to its coded wire form, or null when the value is
+   * absent and should not be sent.
+   */
+  toWireValueFor(internalName: string, value: unknown): string | null;
+
+  /** Translates a coded wire value back to the value the form uses. */
+  fromWireValueFor(internalName: string, value: unknown): unknown;
 }

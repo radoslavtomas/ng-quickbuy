@@ -121,8 +121,8 @@ describe('JourneyPersistenceService', () => {
   it('includes the reference and the answers on a step update', async () => {
     await service.ensureCreated('PC');
     journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', {
-      'vehicle-regnumber': 'AB12CDE',
-      'policy-totalmileage': 12000,
+      registration: 'AB12CDE',
+      annualMileage: 12000,
     });
 
     const journey = getJourneyForModule('PC')!;
@@ -138,7 +138,7 @@ describe('JourneyPersistenceService', () => {
 
   it('prefers a captured inception date over today', async () => {
     journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
-      'policy-inceptiondate': '01/09/2026',
+      startDate: '01/09/2026',
     });
 
     await service.ensureCreated('PC');

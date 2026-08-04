@@ -4,12 +4,11 @@ export const MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'text',
     label: 'Vehicle registration',
-    name: 'vehicle-regnumber',
+    name: 'registration',
     validators: [{ type: 'required' }, { type: 'maxLength', value: 10 }],
     normalization: ['trim', 'uppercase'],
     metadata: {
       placeholder: 'AB12CDE',
-      aliases: ['registration'],
     },
   },
   {
@@ -26,19 +25,18 @@ export const MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'number',
     label: 'Estimated annual mileage',
-    name: 'policy-totalmileage',
+    name: 'annualMileage',
     validators: [{ type: 'required' }, { type: 'min', value: 1000 }, { type: 'max', value: 100000 }],
     normalization: ['currency'],
     metadata: {
       suffix: 'miles',
       placeholder: '12000',
-      aliases: ['annualMileage'],
     },
   },
   {
     type: 'radio',
     label: 'Where is the vehicle kept overnight?',
-    name: 'vehicle-wherekept',
+    name: 'overnightLocation',
     validators: [{ type: 'required' }],
     options: [
       { label: 'Driveway', value: 'driveway' },
@@ -47,7 +45,6 @@ export const MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
     ],
     metadata: {
       radioLayout: 'row',
-      aliases: ['overnightLocation'],
     },
   },
 ];

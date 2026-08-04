@@ -4,13 +4,13 @@ import { MOTOR_PAYLOAD_MAPPER, PROPERTY_PAYLOAD_MAPPER } from './journey-payload
 const MOTOR_ANSWERS: JourneyAnswers = {
   'your-details': {
     address: { postcode: 'M16 0PQ', addressLine1: '17 Talbot Road', addressLine2: '' },
-    proposer: { 'proposer-name-forenames': 'Alex', 'proposer-email': 'alex@example.com' },
+    proposer: { forenames: 'Alex', email: 'alex@example.com' },
   },
   'your-vehicle': {
-    vehicle: { 'vehicle-regnumber': 'AB12CDE', 'policy-totalmileage': 12000 },
+    vehicle: { registration: 'AB12CDE', annualMileage: 12000, overnightLocation: 'garage' },
   },
   'your-policy': {
-    policy: { 'policy-cover': 'comprehensive', declarationAccepted: true },
+    policy: { coverType: 'comprehensive', declarationAccepted: true },
   },
 };
 
@@ -20,13 +20,53 @@ describe('journey payload mappers', () => {
     expect(PROPERTY_PAYLOAD_MAPPER.version).toBe('property-1');
   });
 
-  it('flattens every section of every step into wire fields', () => {
+  it('sends each answer under the insurer key rather than the internal name', () => {
     const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields(MOTOR_ANSWERS);
 
-    expect(fields['postcode']).toBe('M16 0PQ');
+    expect(fields['proposer-address-postcode']).toBe('M16 0PQ');
     expect(fields['proposer-name-forenames']).toBe('Alex');
+    expect(fields['proposer-email']).toBe('alex@example.com');
     expect(fields['vehicle-regnumber']).toBe('AB12CDE');
-    expect(fields['policy-cover']).toBe('comprehensive');
+
+    // Internal names must not leak onto the wire.
+    expect(fields['forenames']).toBeUndefined();
+    expect(fields['registration']).toBeUndefined();
+  });
+
+  it('translates coded values, not just names', () => {
+    const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields(MOTOR_ANSWERS);
+
+    expect(fields['policy-cover']).toBe('C');
+    expect(fields['vehicle-wherekept']).toBe('G');
+  });
+
+  it('round-trips a coded value back to the form representation', () => {
+    expect(MOTOR_PAYLOAD_MAPPER.fromWireValueFor('coverType', 'TPFT')).toBe('tpft');
+    expect(MOTOR_PAYLOAD_MAPPER.fromWireValueFor('overnightLocation', 'R')).toBe('roadside');
+    // Unknown codes pass through rather than becoming undefined.
+    expect(MOTOR_PAYLOAD_MAPPER.fromWireValueFor('coverType', 'ZZ')).toBe('ZZ');
+  });
+
+  it('maps names in both directions consistently', () => {
+    for (const internal of ['forenames', 'registration', 'startDate', 'voluntaryExcess']) {
+      const key = MOTOR_PAYLOAD_MAPPER.backendKeyFor(internal);
+      expect(key).not.toBe(internal);
+      expect(MOTOR_PAYLOAD_MAPPER.internalNameFor(key)).toBe(internal);
+    }
+  });
+
+  it('passes through a name with no known insurer key', () => {
+    expect(MOTOR_PAYLOAD_MAPPER.backendKeyFor('declarationAccepted')).toBe('declarationAccepted');
+    expect(MOTOR_PAYLOAD_MAPPER.internalNameFor('somethingNew')).toBe('somethingNew');
+  });
+
+  it('differs per product where the products differ', () => {
+    // Cover type is a motor concept; property has no mapping or codes for it.
+    expect(MOTOR_PAYLOAD_MAPPER.backendKeyFor('coverType')).toBe('policy-cover');
+    expect(PROPERTY_PAYLOAD_MAPPER.backendKeyFor('coverType')).toBe('coverType');
+    expect(PROPERTY_PAYLOAD_MAPPER.toWireValueFor('coverType', 'comprehensive')).toBe(
+      'comprehensive',
+    );
   });
 
   it('sends numbers as strings, because the endpoints take form data', () => {
@@ -45,16 +85,21 @@ describe('journey payload mappers', () => {
   it('omits empty answers rather than sending blanks', () => {
     const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
       'your-details': {
-        address: { addressLine2: '', addressLine3: null, addressLine4: undefined, postcode: 'M1 1AA' },
+        address: {
+          addressLine2: '',
+          addressLine3: null,
+          addressLine4: undefined,
+          postcode: 'M1 1AA',
+        },
       },
     });
 
-    expect(Object.keys(fields)).toEqual(['postcode']);
+    expect(Object.keys(fields)).toEqual(['proposer-address-postcode']);
   });
 
   it('keeps zero, which is a real answer rather than an absent one', () => {
     const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
-      'your-policy': { policy: { 'policy-volxs': 0 } },
+      'your-policy': { policy: { voluntaryExcess: 0 } },
     });
 
     expect(fields['policy-volxs']).toBe('0');

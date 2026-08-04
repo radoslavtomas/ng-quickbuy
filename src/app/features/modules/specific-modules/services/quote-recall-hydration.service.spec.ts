@@ -12,7 +12,7 @@ describe('QuoteRecallHydrationService', () => {
     journeyState = TestBed.inject(JourneyStateService);
   });
 
-  it('maps recall values onto the sections that own them and stores them', () => {
+  it('maps insurer keys onto the internal names of the sections that own them', () => {
     const result = service.hydrateAndStore('PC', {
       data: {
         'proposer-name-forenames': 'Alex',
@@ -24,29 +24,28 @@ describe('QuoteRecallHydrationService', () => {
       },
     });
 
-    expect(result.hydratedSteps['your-details']['proposer']['proposer-name-forenames']).toBe('Alex');
+    expect(result.hydratedSteps['your-details']['proposer']['forenames']).toBe('Alex');
     expect(result.hydratedSteps['your-details']['address']['addressLine1']).toBe('17 Talbot Road');
-    expect(result.hydratedSteps['your-vehicle']['vehicle']['vehicle-regnumber']).toBe('AB12CDE');
+    expect(result.hydratedSteps['your-vehicle']['vehicle']['registration']).toBe('AB12CDE');
 
     // Coded backend values become the option values the form actually uses.
-    expect(result.hydratedSteps['your-policy']['policy']['policy-cover']).toBe('comprehensive');
+    expect(result.hydratedSteps['your-policy']['policy']['coverType']).toBe('comprehensive');
     // Numbers arrive as strings over the wire.
-    expect(result.hydratedSteps['your-vehicle']['vehicle']['policy-totalmileage']).toBe(12000);
+    expect(result.hydratedSteps['your-vehicle']['vehicle']['annualMileage']).toBe(12000);
 
-    expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['vehicle-regnumber']).toBe(
+    expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['registration']).toBe(
       'AB12CDE',
     );
   });
 
-  it('resolves legacy alias keys to their current field names', () => {
+  it('also accepts a value already under its internal name', () => {
+    // Useful for fixtures and for fields whose insurer key is not known yet.
     const result = service.mapRecallToJourney('PC', {
-      data: { firstName: 'Jordan', registration: 'XY99ZZZ' },
+      data: { forenames: 'Jordan', registration: 'XY99ZZZ' },
     });
 
-    expect(result.hydratedSteps['your-details']['proposer']['proposer-name-forenames']).toBe(
-      'Jordan',
-    );
-    expect(result.hydratedSteps['your-vehicle']['vehicle']['vehicle-regnumber']).toBe('XY99ZZZ');
+    expect(result.hydratedSteps['your-details']['proposer']['forenames']).toBe('Jordan');
+    expect(result.hydratedSteps['your-vehicle']['vehicle']['registration']).toBe('XY99ZZZ');
     expect(result.unresolvedFields).toEqual({});
   });
 

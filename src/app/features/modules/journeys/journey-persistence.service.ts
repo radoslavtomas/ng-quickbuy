@@ -8,9 +8,10 @@ import {
   type PartialStoreRequest,
   QuotePartialStoreService,
 } from '../../../core/services/quote-partial-store.service';
+import { POLICY_START_DATE_FIELD } from './journey-payload.mapper';
 import { getFirstStep, getJourneyForModule, getQuestionSteps } from './journey-registry';
 
-/** Backend key for the policy start date, required on every store call. */
+/** Backend key for the policy start date, which the store endpoint requires by name. */
 const INCEPTION_DATE_KEY = 'policy-inceptiondate';
 
 /**
@@ -143,7 +144,7 @@ export class JourneyPersistenceService {
         for (const [, values] of Object.entries(
           this.journeyState.stepAnswers(moduleCode, step.name),
         )) {
-          const captured = values[INCEPTION_DATE_KEY];
+          const captured = values[POLICY_START_DATE_FIELD];
           if (typeof captured === 'string' && captured.trim().length > 0) {
             return captured;
           }

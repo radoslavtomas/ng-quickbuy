@@ -5,10 +5,10 @@ import { routes } from '../../../app.routes';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
 
 const VALID_VEHICLE_ANSWERS = {
-  'vehicle-regnumber': 'AB12CDE',
+  registration: 'AB12CDE',
   vehicleUse: 'sdp',
-  'policy-totalmileage': 12000,
-  'vehicle-wherekept': 'driveway',
+  annualMileage: 12000,
+  overnightLocation: 'driveway',
 };
 
 const RESOLVED_ADDRESS = {
@@ -88,7 +88,7 @@ describe('journey flow', () => {
 
     const fixture = await renderAt('/PC/your-vehicle');
     const registration = (fixture.nativeElement as HTMLElement).querySelector(
-      '#vehicle-regnumber',
+      '#registration',
     ) as HTMLInputElement | null;
 
     expect(registration?.value).toBe('AB12CDE');
@@ -96,14 +96,14 @@ describe('journey flow', () => {
 
   it('hides the proposer questions until an address is resolved', async () => {
     const withoutAddress = await renderAt('/PC/your-details');
-    expect((withoutAddress.nativeElement as HTMLElement).querySelector('#proposer-email')).toBeNull();
+    expect((withoutAddress.nativeElement as HTMLElement).querySelector('#email')).toBeNull();
 
     journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
     withoutAddress.detectChanges();
     await withoutAddress.whenStable();
 
     expect(
-      (withoutAddress.nativeElement as HTMLElement).querySelector('#proposer-email'),
+      (withoutAddress.nativeElement as HTMLElement).querySelector('#email'),
     ).not.toBeNull();
   });
 
@@ -153,9 +153,9 @@ describe('journey flow', () => {
     const host = fixture.nativeElement as HTMLElement;
 
     // date rendered as text, radio group, numbers with prefix/suffix, and a checkbox.
-    expect(host.querySelector('#policy-inceptiondate')).not.toBeNull();
+    expect(host.querySelector('#startDate')).not.toBeNull();
     expect(host.querySelectorAll('input[type=radio]').length).toBe(3);
-    expect(host.querySelector('#policy-volxs')).not.toBeNull();
+    expect(host.querySelector('#voluntaryExcess')).not.toBeNull();
     expect(host.querySelector('#licenseYearsHeld')).not.toBeNull();
     expect(host.querySelector('#declarationAccepted')).not.toBeNull();
     // The radio group is named by a real legend, as the reactive renderer is.
@@ -175,9 +175,9 @@ describe('journey flow', () => {
 
   it('advances past the Signal Forms section once it is valid', async () => {
     journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
-      'policy-inceptiondate': '01/09/2026',
-      'policy-cover': 'comprehensive',
-      'policy-volxs': 250,
+      startDate: '01/09/2026',
+      coverType: 'comprehensive',
+      voluntaryExcess: 250,
       licenseYearsHeld: 8,
       declarationAccepted: true,
     });
@@ -192,9 +192,9 @@ describe('journey flow', () => {
 
   it('rejects an invalid date through the bridged validator', async () => {
     journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
-      'policy-inceptiondate': '31/02/2026',
-      'policy-cover': 'comprehensive',
-      'policy-volxs': 250,
+      startDate: '31/02/2026',
+      coverType: 'comprehensive',
+      voluntaryExcess: 250,
       licenseYearsHeld: 8,
       declarationAccepted: true,
     });

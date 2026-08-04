@@ -55,10 +55,10 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
           title: 'Vehicle details',
           fields: MOTOR_YOUR_VEHICLE_FIELDS,
           defaults: {
-            'vehicle-regnumber': '',
+            registration: '',
             vehicleUse: '',
-            'policy-totalmileage': 0,
-            'vehicle-wherekept': '',
+            annualMileage: 0,
+            overnightLocation: '',
           },
         },
       ],
@@ -76,7 +76,7 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
           fields: MOTOR_ADDITIONAL_DRIVERS_FIELDS,
           defaults: {
             hasAdditionalDrivers: 'no',
-            'policy-previousinsurance-noclaimsbonusyears': '3',
+            noClaimsBonusYears: '3',
           },
         },
       ],
@@ -93,8 +93,8 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
           title: 'Your policy',
           fields: MOTOR_YOUR_POLICY_FIELDS,
           defaults: {
-            'policy-cover': 'comprehensive',
-            'policy-volxs': 250,
+            coverType: 'comprehensive',
+            voluntaryExcess: 250,
           },
         },
       ],

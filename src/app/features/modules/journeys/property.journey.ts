@@ -91,7 +91,7 @@ export const PROPERTY_JOURNEY: JourneyDefinition = {
           defaults: {
             buildingsSumInsured: 250000,
             contentsSumInsured: 60000,
-            'policy-volxs': 250,
+            voluntaryExcess: 250,
           },
         },
       ],

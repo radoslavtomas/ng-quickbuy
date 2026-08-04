@@ -24,7 +24,7 @@ export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'select',
     label: 'Main driver no-claims bonus',
-    name: 'policy-previousinsurance-noclaimsbonusyears',
+    name: 'noClaimsBonusYears',
     validators: [{ type: 'required' }],
     options: [
       { label: '0 years', value: '0' },
@@ -34,7 +34,6 @@ export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
       { label: '4 years', value: '4' },
       { label: '5+ years', value: '5_plus' },
     ],
-    metadata: { aliases: ['noClaimsBonus'] },
   },
 ];
 
