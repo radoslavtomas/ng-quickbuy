@@ -6,9 +6,9 @@ products ("modules") through multi-step question journeys.
 
 Angular 22 · standalone components · signals · zoneless · Tailwind CSS v4 · Vitest
 
-> **Status: work in progress.** The end-to-end UX and architecture are proven; quote results are
-> still demo data. Parts of the journey layer are actively being restructured — read
-> [Known limitations](#known-limitations-and-direction) before designing anything new on top of it.
+> **Status: work in progress.** The journey and configuration architecture is in place; quote results
+> are still demo data and the form runtime is mid-migration. See
+> [Known limitations](#known-limitations-and-direction).
 
 ## Contents
 
@@ -16,7 +16,7 @@ Angular 22 · standalone components · signals · zoneless · Tailwind CSS v4 ·
 - [Commands](#commands)
 - [Core concepts](#core-concepts)
 - [How a request becomes a screen](#how-a-request-becomes-a-screen)
-- [Configuration layers](#configuration-layers)
+- [Journey configuration](#journey-configuration)
 - [The form engine](#the-form-engine)
 - [Journey state](#journey-state)
 - [HTTP, environments and APIs](#http-environments-and-apis)
@@ -39,18 +39,18 @@ npm start
 
 Then open <http://localhost:4200>.
 
-**Pick a brand.** In a deployed environment the brand is chosen from the hostname. On `localhost`
-there is no brand in the hostname, so the app falls back to `DEFAULT_BRAND_ID` in
-`src/app/core/config/dev.config.ts` — currently `ajg`. Change that constant to develop against a
-different brand.
+**Pick a brand.** In a deployed environment the brand comes from the hostname. On `localhost` there
+is no brand in the hostname, so the app falls back to `DEFAULT_BRAND_ID` in
+`src/app/core/config/dev.config.ts`. Change that constant to develop against another brand — it also
+changes which products exist, because a brand only sells the modules it lists.
 
-**Walk a journey.** URLs are `/<MODULE_CODE>/<step-name>`. With the default `ajg` brand, try:
+**Walk a journey.** URLs are `/<MODULE_CODE>/<step-name>`, for example:
 
-- `/GV` — Van Insurance (motor journey)
+- `/PC` — Car Insurance (motor journey)
 - `/HC` — House Insurance (property journey)
 
-Visiting `/GV` with no step redirects to the first step. A module the current brand does not sell
-renders the not-found page — see [Troubleshooting](#troubleshooting) if that surprises you.
+Visiting `/PC` with no step redirects to the first step. A module the current brand does not sell, or
+a step the journey does not have, renders the not-found view.
 
 ## Commands
 
@@ -71,15 +71,18 @@ formatting commit first.
 
 ## Core concepts
 
-Four nouns explain most of the codebase:
+Five nouns explain most of the codebase:
 
-- **Brand** — a broker (`qld`, `chq`, `ajg`). Owns colours, logo, phone number, footer legal text
-  and, critically, *which modules it may sell*.
+- **Brand** — a broker (`qld`, `chq`, `ajg`). Owns colours, logo, phone number, footer legal text and
+  the list of module codes it is allowed to sell.
 - **Module** — a product, identified by a short code used as the first URL segment: `PC` car,
-  `GV` van, `BD` breakdown, `TX` taxi, `HC` house, `HH` holiday home, `LL` landlord.
-- **Journey type** — the shape of the questionnaire. Two exist, `motor` and `property`. Several
-  modules share one journey type.
-- **Step** — one screen of a journey, for example `your-details`, `your-vehicle`, `your-quotes`.
+  `GV` van, `BD` breakdown, `TX` taxi, `HC` house, `HH` holiday home, `LL` landlord. Defined once in
+  `MODULE_CATALOGUE`.
+- **Journey** — the questionnaire a module runs. Two exist, `motor` and `property`; several modules
+  share one.
+- **Step** — one screen of a journey, e.g. `your-details`, `your-vehicle`, `your-quotes`.
+- **Section** — one card within a step. Either `fields` (rendered from field configuration) or
+  `custom` (a bespoke component such as address lookup). Answers are stored per section.
 
 Journeys today:
 
@@ -89,67 +92,61 @@ Journeys today:
 
 ## How a request becomes a screen
 
-All four routes are lazy-loaded (`src/app/app.routes.ts`):
+Routes are lazy-loaded (`src/app/app.routes.ts`):
 
 - `''` → home, the brand's product grid
-- a custom `moduleStepMatcher` → `/:moduleCode/:stepName`, which only matches when the step is valid
-  for that module's journey type
-- `':moduleCode'` → the module page with no step, which redirects to the first step
+- `moduleStepMatcher` → `/:moduleCode/:stepName` for any module in the catalogue
+- `':moduleCode'` → journey page with no step, which redirects to the first step
 - `'**'` → not found
 
-`BrandService` resolves the brand once at construction from the hostname, and derives the active
-module code from router events. `App` renders the not-found page when the requested module is not one
-the current brand sells.
+The matcher validates the **module code only**, not the step. Validating the step there would mean
+importing every journey definition — and therefore every field schema — into the initial bundle,
+which grows with each product. The journey page validates the step and renders the not-found view in
+place for one it does not recognise.
 
-From there, the module page dispatches through three layers before a single field is rendered:
+There is one screen for every product and step:
 
 ```mermaid
 flowchart TD
-  Route["/GV/your-vehicle"] --> MP["ModulePageComponent<br/>switch on module code"]
-  MP -->|ngComponentOutlet| BM["GvModuleComponent<br/>one of 7 near-identical wrappers"]
-  BM --> JC["MotorQuoteJourneyComponent<br/>@switch on step name"]
-  JC --> SC["MotorYourVehicleStepComponent<br/>step layout and cards"]
-  SC --> DF["DynamicFormComponent<br/>renders fields from config"]
-  DF --> CFG["motor/steps/your-vehicle.fields.ts"]
+  Route["/GV/your-vehicle"] --> JP["JourneyPageComponent<br/>progress, heading, prev/next"]
+  JP --> REG["journey-registry<br/>module code -> journey -> step"]
+  REG --> SEC["step.sections"]
+  SEC --> SO["SectionOutletComponent<br/>per section"]
+  SO -->|kind: fields| DF["DynamicFormComponent<br/>renders field config"]
+  SO -->|kind: custom| CUS["AddressSection / QuoteResultsSection"]
+  JP --> ST["JourneyStateService<br/>answers per module/step/section"]
 ```
 
-The module page also owns the journey progress list, the previous/next controls and step-change focus
-management. "Next" does not submit the form directly: it publishes a request through
-`StepNavigationService`, the active journey component receives it and calls the current step
-component, which submits its `DynamicFormComponent`.
+`BrandService` resolves the brand once from the hostname and derives the active module code from
+router events. Continue validates every visible section, persists what it captured, marks the step
+complete and navigates on; one invalid section keeps the customer on the step with errors revealed.
 
-> Those three dispatch layers are the main known design problem, not a pattern to copy. Adding a step
-> or product currently means editing six to eight files. See
-> [Known limitations](#known-limitations-and-direction).
+## Journey configuration
 
-## Configuration layers
+**`src/app/core/config/module-catalogue.ts`** is the single source of truth for what a module code
+means and which journey it runs. Nothing else maps codes to journeys.
 
-Behaviour is config-driven, but configuration lives in two places.
+**`src/app/features/modules/journeys/`** holds the journey definitions:
 
-**`src/app/core/config/`** — application-wide:
+- `motor.journey.ts`, `property.journey.ts` — the steps of each journey, each with its route slug,
+  display name, icon, backend `storeStep` id and sections. Ordering comes from list position, so
+  there are no `next`/`prev` links to keep in sync.
+- `journey-registry.ts` — the only lookup API: resolve a journey for a module, find a step, get the
+  next/previous step, list question steps. Returns `null` for an unknown module rather than guessing.
 
-- `brands.config.ts` — every brand: colours, logo, phone, footer, and its module list
-- `module-journeys.config.ts` — the step list per journey type (with `next`/`prev` links), the
-  module-code → journey-type map, and the step validation used by the route matcher
-- `dev.config.ts` — `DEFAULT_BRAND_ID`, the localhost-only brand fallback
+**`src/app/features/modules/specific-modules/config/`** holds field schemas per journey and step
+(`motor/steps/*.fields.ts`, `property/steps/*.fields.ts`) plus `shared/common.ts` for the address
+schemas, demo quotes and helpers. Each file exports a plain array; journey definitions compose them
+into sections.
 
-**`src/app/features/modules/specific-modules/config/`** — per journey and step:
-
-- `motor/` and `property/`, each with `step-order.config.ts`, `default-values.config.ts`,
-  `modules.ts` (the module codes belonging to that journey) and `steps/*.fields.ts`
-- `shared/common.ts` — address lookup and manual-entry field schemas, demo quotes, small helpers
-- `journey-config.selectors.ts` — resolves a module code plus step name to field schemas and defaults
-
-Field `name` values deliberately mirror backend/recall keys where known
-(`proposer-name-forenames`, `vehicle-regnumber`, `policy-inceptiondate`). Legacy camelCase keys are
-bridged temporarily through `metadata.aliases`. See `specific-modules/config/README.md` for the
-naming strategy.
+Field `name` values mirror backend/recall keys where known (`proposer-name-forenames`,
+`vehicle-regnumber`, `policy-inceptiondate`). Legacy camelCase keys are bridged temporarily through
+`metadata.aliases`.
 
 ## The form engine
 
 `FormFieldConfig` (`src/app/core/models/form-field.model.ts`) is the contract. A field declares its
-type, label, help text, options, validators, normalization rules and conditional visibility or
-enablement:
+type, label, help text, options, validators, normalization rules and conditional visibility:
 
 ```ts
 {
@@ -163,10 +160,9 @@ enablement:
 }
 ```
 
-`DynamicFormComponent` turns an array of these into a flat `FormGroup` and renders the markup,
-supported by three services:
+`DynamicFormComponent` turns an array of these into a flat `FormGroup`, supported by three services:
 
-- `FormValidationRegistryService` — maps validator config to `ValidatorFn`, including named custom
+- `FormValidationRegistryService` — validator config to `ValidatorFn`, including named custom
   validators
 - `FormNormalizationService` — trim/uppercase/lowercase/phone/date/currency coercion on blur
 - `FormValidationMessageService` — resolves which message to show, preferring the field's own text
@@ -174,85 +170,88 @@ supported by three services:
 Cross-field and domain validators live in `src/app/core/validators/form-validators.ts`
 (`validDateValidator`, `adultOnlyValidator`, `licenseYearsByAgeValidator`).
 
-**Limitations to know before extending it:** the model is flat, so repeating groups (multiple
-drivers, claims, convictions) cannot be expressed — `additional-drivers` stores a *count* rather than
-a list. Changing the `initialValue` input tears down and rebuilds every control, which resets
-submitted state and collapses open help panels.
+A section gate is separate from field-level conditions: `JourneySection.visibleWhen` receives the
+whole step's answers, which is how the proposer questions stay hidden until an address is resolved.
+
+**Limitations to know before extending it:** the model is flat per section, so repeating groups
+(multiple drivers, claims, convictions) cannot be expressed — `additional-drivers` stores a *count*
+rather than a list. Changing the renderer's `initialValue` input rebuilds its controls, which is why
+`SectionOutletComponent` reads stored answers untracked when seeding a form.
 
 ## Journey state
 
-`FormWorkflowService` holds answers in a root-level signal keyed `MODULE:step`, for example
-`GV:your-vehicle`. Step components emit their values on submit; the journey component saves them and
-navigates on.
+`JourneyStateService` stores answers per **module → step → section**, plus which steps are complete.
+Nothing is merged into one flat object, so two steps may legitimately use the same field name without
+one overwriting the other — `declarationAccepted` genuinely exists in two steps and used to collide.
 
-Two consequences worth knowing: state is **in-memory only**, so a reload loses the journey; and the
-final payload is built by shallow-merging every step's values into one flat object, so a field name
-reused across two steps silently overwrites.
+State is still in-memory only: a browser refresh clears the journey. Server-side partial-quote save
+and resume is designed but not built.
 
 ## HTTP, environments and APIs
 
 Environment files carry per-target configuration:
 
 - `src/environments/environment.ts` — used by default
-- `src/environments/environment.production.ts` — swapped in by the `fileReplacements` entry in
-  `angular.json` for the production configuration
-- `src/environments/environment.model.ts` — the `AppEnvironment` shape both files must satisfy, so a
+- `src/environments/environment.production.ts` — swapped in by `fileReplacements` in `angular.json`
+- `src/environments/environment.model.ts` — the `AppEnvironment` shape both must satisfy, so a
   divergence is a compile error rather than a runtime surprise
 
 `API_BASE_URL` (`src/app/core/config/api.config.ts`) is injected wherever a service needs the host;
 no service hardcodes a URL. `apiInterceptor` (`src/app/core/http/api.interceptor.ts`) applies a
-20-second timeout and converts every failure into an `ApiError` carrying a status and a
-customer-safe message. There is no retry yet.
+20-second timeout and converts every failure into an `ApiError` with a customer-safe message. There
+is no retry yet.
 
 Services and endpoints:
 
-- `AddressLookupService` — `GET /api/miscellaneous/address/get/bypostcode`, used by the address step
-  with a manual-entry fallback
+- `AddressLookupService` — `GET /api/miscellaneous/address/get/bypostcode`, used by the address
+  section with a manual-entry fallback
 - `ModuleParametersService` — `GET /api/module/get/parameters`, currently consumed only by the header
-  for the module title and phone number. The response also carries opening hours, PDF links and
-  operational kill switches (`system.switchedoff`, `quotes.quotes_allow_buyonline`,
-  `switches.cpd_buyonline_suppressed`) that nothing acts on yet.
-- `QuoteRecallService` and `QuoteRecallHydrationService` — implemented and unit-tested, but **not yet
-  wired into any component**
+  for the module title and phone number. The response also carries operational kill switches
+  (`system.switchedoff`, `quotes.quotes_allow_buyonline`, `switches.cpd_buyonline_suppressed`) that
+  nothing acts on yet.
+- `QuoteRecallService` — `POST /api/quote/get/recall/`, with `QuoteRecallHydrationService` mapping a
+  response onto journey sections. Implemented and tested, but **not yet wired into a screen**.
 
 > The production `apiBaseUrl` still points at the development host, marked with a TODO. It must be
 > replaced before any production release.
 
 ## Accessibility
 
-The bar for this project is WCAG AA and clean AXE checks. `angular-eslint`'s template accessibility
-rules run in `npm run lint`, so regressions fail CI.
+The bar is WCAG AA and clean AXE checks. `angular-eslint`'s template accessibility rules run in
+`npm run lint`, so regressions fail CI.
 
 In place: radio groups named by a real `<legend>`; exactly one label per checkbox/toggle; per-field
 polite live regions for validation messages; single `banner` and `contentinfo` landmarks; a skip link
 to `<main id="main-content">`; and focus moved to the step heading with a polite "Step *n* of *m*"
-announcement on step change (`viewChild` + `afterRenderEffect`, never on first paint).
+announcement on step change.
 
-Still open: there is no error summary, and the page-level "Next" button sits outside the form, so an
-invalid step shows per-field errors without moving focus. Journey step links are also not gated on
-completion, so a later step can be reached before earlier ones are answered.
+Still open: there is no error summary, so an invalid step reveals per-field errors without moving
+focus. Journey step links are not gated on completion, so a later step can be opened before earlier
+ones are answered — the progress list does now mark completed steps.
 
 ## Project layout
 
 ```
 src/app/
-  core/                        cross-cutting, no UI
-    config/                    brands, journeys, dev fallback, API token
-    http/                      interceptor and ApiError
-    models/                    shared types
-    services/                  brand, form workflow, normalization, validation, HTTP clients
-    validators/                reusable ValidatorFn implementations
+  core/                          cross-cutting, no UI
+    config/                      brands, module catalogue, dev fallback, API token
+    http/                        interceptor and ApiError
+    models/                      shared types incl. journey.model.ts
+    services/                    brand, journey state, normalization, validation, HTTP clients
+    validators/                  reusable ValidatorFn implementations
   features/
-    home/                      brand product grid
+    home/                        brand product grid
     modules/
-      module-page.*            journey chrome: progress, prev/next, step focus
+      journeys/                  journey definitions + registry
+      journey-page/              the journey screen
+        section-outlet.component.ts   maps a section to its renderer
+        sections/                     bespoke section components
       specific-modules/
-        components/            per-module wrappers, journey dispatchers, address search
-        config/                journey, step and field configuration
-        services/              quote recall hydration
-        steps/                 per-step layouts
-  shared/components/           dynamic-form, step-card, header, footer, not-found
-src/environments/              per-target configuration
+        components/              address search
+        config/                  field schemas per journey and step
+        services/                quote recall hydration
+  shared/components/             dynamic-form, step-card, header, footer, not-found
+src/environments/                per-target configuration
 ```
 
 `core` must not import from `features`. `shared` holds reusable presentation only.
@@ -263,46 +262,42 @@ src/environments/              per-target configuration
 
 1. Add a `FormFieldConfig` entry to the relevant
    `specific-modules/config/<journey>/steps/*.fields.ts`.
-2. Use the backend key as `name` where it is known; add `metadata.aliases` only when migrating off a
-   legacy key.
-3. Add a matching entry to that journey's `default-values.config.ts` if the step needs a default.
-4. For a bespoke rule, add a `ValidatorFn` to `core/validators/form-validators.ts` and reference it
-   as `{ type: 'custom', name: '...', validatorFn: ..., message: '...' }`.
+2. Use the backend key as `name` where known; add `metadata.aliases` only when migrating off a legacy
+   key.
+3. If it needs a starting value, add it to that section's `defaults` in the journey definition.
+4. For a bespoke rule, add a `ValidatorFn` to `core/validators/form-validators.ts` and reference it as
+   `{ type: 'custom', name: '...', validatorFn: ..., message: '...' }`.
 
-No component changes are needed — `DynamicFormComponent` renders whatever the schema declares.
+No component changes are needed.
 
 ### Add a step to a journey
 
-Currently a multi-file change:
+1. Add the field schema in `specific-modules/config/<journey>/steps/<step>.fields.ts`.
+2. Add a step entry to `journeys/<journey>.journey.ts` in the position it should appear, with its
+   `name`, `displayName`, `icon`, `storeStep` and sections.
 
-1. `core/config/module-journeys.config.ts` — insert the step and fix the `next`/`prev` links on the
-   steps either side of it.
-2. `specific-modules/config/<journey>/step-order.config.ts` — add it in the same position.
-3. `specific-modules/config/<journey>/steps/<step>.fields.ts` — the field schema, plus an export from
-   that journey's `index.ts`.
-4. `specific-modules/config/journey-config.selectors.ts` — map the step name to its schema.
-5. `specific-modules/steps/form-step.components.ts` — a step component exposing
-   `submitFromNavigation()`.
-6. `specific-modules/components/quote-journeys.component.ts` — a `@case` in the template, a view
-   query for the new step component, and a branch in `submitCurrentStep()`.
+That is the whole change: ordering, routing, progress display, prev/next and validation all follow
+from the definition.
 
-### Add a module (product) to an existing journey type
+### Add a section with bespoke UI
 
-1. `core/config/brands.config.ts` — add it to each brand that sells it, with its `journeyType`.
-2. `core/config/module-journeys.config.ts` — add the code to `MODULE_JOURNEY_TYPE_BY_CODE`.
-3. `specific-modules/config/<journey>/modules.ts` — add the code, then extend the per-module maps in
-   that journey's `steps/*.fields.ts` and `default-values.config.ts`.
-4. `specific-modules/components/brand-modules.component.ts` — a wrapper component, exported from
-   `specific-modules/index.ts`.
-5. `features/modules/module-page.ts` — a `case` in `moduleComponent()`.
+1. Write the component under `journey-page/sections/`, exposing
+   `collect(): { valid: boolean; values: Record<string, unknown> }` and writing its values to
+   `JourneyStateService`.
+2. Add a `@case` for its key in `section-outlet.component.ts`.
+3. Reference it from a step as `{ kind: 'custom', id: '...', component: '<key>' }`.
+
+### Add a module (product)
+
+1. Add an entry to `MODULE_CATALOGUE` with its description, icon and `journeyId`.
+2. Add the code to `moduleCodes` for each brand that sells it in `brands.config.ts`.
 
 ### Add a brand
 
-1. `core/models/brand.model.ts` — extend the `BrandId` union.
-2. `core/config/brands.config.ts` — the brand entry, including its module list.
-3. `core/services/brand.service.ts` — a hostname match in `detectBrand()`.
+1. Extend the `BrandId` union in `core/models/brand.model.ts`.
+2. Add the brand entry, including its `moduleCodes`, in `core/config/brands.config.ts`.
+3. Add a hostname match in `detectBrand()` in `core/services/brand.service.ts`.
 4. Add the logo under `public/img/logos/<brand>/`.
-5. Set `DEFAULT_BRAND_ID` in `dev.config.ts` to test it on localhost.
 
 ## Conventions
 
@@ -311,7 +306,8 @@ Currently a multi-file change:
   only.
 - TypeScript runs with `strict`; templates with `strictTemplates` and `typeCheckHostBindings`.
 - Signals first: `input()`/`output()` functions rather than decorators, `computed()` for derived
-  state, `inject()` rather than constructor injection.
+  state, `viewChild()`/`viewChildren()` rather than decorators, `inject()` rather than constructor
+  injection.
 - Native control flow (`@if`, `@for`, `@switch`); `class`/`style` bindings rather than `ngClass`/`ngStyle`.
 - Do not set `standalone: true` or `changeDetection: OnPush` explicitly; both are defaults now.
 - The app is **zoneless** — there is no `zone.js`. Anything relying on automatic change detection
@@ -323,20 +319,19 @@ Currently a multi-file change:
 **`npm test` never finishes.** That is watch mode. Use `npm run test:ci`.
 
 **A module URL 404s.** The brand must sell that module. On localhost the brand comes from
-`DEFAULT_BRAND_ID` in `dev.config.ts`, which is `ajg` and only sells `GV`, `TX` and `HC` — so `/PC`
-legitimately 404s until you switch brand. A URL such as `/GV/not-a-step` also 404s, because the route
-matcher validates the step against the journey type.
+`DEFAULT_BRAND_ID` in `dev.config.ts`; `ajg`, for instance, only sells `GV`, `TX` and `HC`, so `/PC`
+legitimately 404s under that brand. A URL such as `/GV/not-a-step` also shows not-found, because the
+journey has no such step.
 
 **Wrong brand colours or logo locally.** Same cause: change `DEFAULT_BRAND_ID`.
 
-**Icons render as empty boxes.** Icon classes are built by string interpolation, and one of them comes
-from the module-parameters API. Font Awesome is pinned to `^6.7.2` on purpose: v7 removes the v5-era
-aliases this app uses (`fa-file-alt`, `fa-user-edit`, `fa-check-square`, `fa-home`). Do not upgrade to
-v7 without renaming those first. Only the solid face ships, so a `fa-brands` or `fa-regular` name will
-not resolve until its stylesheet is added to `angular.json`.
+**Icons render as empty boxes.** Icon classes are built by string interpolation, and one comes from
+the module-parameters API. Font Awesome is pinned to `^6.7.2` on purpose: v7 removes the v5-era
+aliases this app uses (`fa-file-alt`, `fa-user-edit`, `fa-check-square`, `fa-home`). Only the solid
+face ships, so a `fa-brands` or `fa-regular` name will not resolve until its stylesheet is added to
+`angular.json`.
 
-**Answers disappear after a reload.** Journey state is in-memory only. Header, footer and 404 links
-use `routerLink` so they no longer force a page reload, but a browser refresh still clears everything.
+**Answers disappear after a reload.** Journey state is in-memory only.
 
 **A template error appears that the editor did not show.** `strictTemplates` is on; run
 `npm run build` for the authoritative diagnostics.
@@ -345,21 +340,18 @@ use `routerLink` so they no longer force a page reload, but a browser refresh st
 
 Deliberate, known gaps — check here before assuming something is a bug:
 
-1. **Journey structure lives in components, not data.** Three dispatch layers, seven near-identical
-   module wrappers, two near-identical journey components, and module → journey mapping duplicated
-   across three config files. Being replaced by a single journey registry plus one generic step host.
-2. **No repeatable groups.** The flat form model cannot express multiple drivers, claims or
-   convictions. Addressed by moving to a nested typed model and Angular Signal Forms
-   (`@angular/forms/signals`), whose `applyEach`/`applyWhen` cover repeatable and conditional sections
-   natively.
-3. **Flat payload merge.** Step values are shallow-merged, so a name reused across steps collides
-   (`declarationAccepted` already exists in two steps). Being replaced by a typed nested model with an
-   explicit, versioned payload mapper per product.
-4. **No persistence.** Server-side partial-quote save and resume is designed but not built; the recall
-   services are already in place for the read side.
-5. **Operational switches ignored.** The module-parameters response can switch a product off or
+1. **No repeatable groups.** The flat per-section model cannot express multiple drivers, claims or
+   convictions. Being addressed by moving to a nested typed model and Angular Signal Forms
+   (`@angular/forms/signals`), whose `applyEach`/`applyWhen` cover repeatable and conditional
+   sections natively.
+2. **No typed payload mapper yet.** Answers are stored per section, but the outbound insurer payload
+   is not yet produced by an explicit versioned mapper, so field names still double as backend keys
+   and `metadata.aliases` still exists.
+3. **No persistence.** Server-side partial-quote save and resume via
+   `POST /api/miscellaneous/quote/post/store` is designed but not built; the recall side is
+   implemented and unwired.
+4. **Operational switches ignored.** The module-parameters response can switch a product off or
    suppress buy-online; nothing gates the journey on it yet.
-6. **Unknown module codes fall back silently.** `asMotorModuleCode()` returns `PC` and
-   `asPropertyModuleCode()` returns `HC` for anything unrecognised, so a misconfiguration renders the
-   wrong product's questions instead of failing loudly.
-7. **Demo quotes.** The final step renders fixture data and a payload dump, not live pricing.
+5. **No step-order gating.** Any step can be opened directly from the progress list, regardless of
+   whether earlier steps are complete.
+6. **Demo quotes.** The final step renders fixture data and a payload dump, not live pricing.
