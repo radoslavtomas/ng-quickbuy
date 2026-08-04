@@ -14,6 +14,8 @@ import { map } from 'rxjs';
 import type { JourneySection, JourneyStepDefinition } from '../../../core/models/journey.model';
 import { BrandService } from '../../../core/services/brand.service';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
+import { ModuleContextService } from '../../../core/services/module-context.service';
+import { JourneyPersistenceService } from '../journeys/journey-persistence.service';
 import {
   findStep,
   getFirstStep,
@@ -43,6 +45,8 @@ export class JourneyPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly brandService = inject(BrandService);
   private readonly journeyState = inject(JourneyStateService);
+  private readonly moduleContext = inject(ModuleContextService);
+  private readonly persistence = inject(JourneyPersistenceService);
 
   readonly brand = this.brandService.config;
 
@@ -77,6 +81,17 @@ export class JourneyPageComponent {
    * step in the URL", which redirects to the first step instead.
    */
   readonly stepNotFound = computed(() => this.requestedStepName() !== null && this.step() === null);
+
+  /** The product has been switched off upstream, so the journey must not be offered. */
+  readonly isSwitchedOff = computed(() => {
+    const moduleCode = this.moduleCode();
+    return moduleCode ? this.moduleContext.isSwitchedOff(moduleCode) : false;
+  });
+
+  readonly switchedOffMessage = computed(() => {
+    const moduleCode = this.moduleCode();
+    return moduleCode ? this.moduleContext.switchedOffMessage(moduleCode) : '';
+  });
 
   readonly stepCount = computed(() => this.journey()?.steps.length ?? 0);
 
@@ -115,6 +130,20 @@ export class JourneyPageComponent {
   });
 
   constructor() {
+    // Entering a journey mints its session, loads the module's operational
+    // parameters and creates the partial quote. Deliberately not awaited: the
+    // customer should see step 1 immediately, and the ordering that matters
+    // (parameters before create) is enforced inside the persistence service.
+    effect(() => {
+      const moduleCode = this.moduleCode();
+      if (!moduleCode || !this.journey()) {
+        return;
+      }
+
+      void this.moduleContext.ensureLoaded(moduleCode);
+      void this.persistence.ensureCreated(moduleCode);
+    });
+
     // A module route with no step lands on the first step of its journey.
     effect(() => {
       const moduleCode = this.moduleCode();
@@ -194,6 +223,7 @@ export class JourneyPageComponent {
     }
 
     this.journeyState.markStepComplete(moduleCode, step.name);
+    void this.persistence.recordStep(moduleCode, step);
 
     if (next) {
       void this.router.navigate(['/', moduleCode, next.name]);

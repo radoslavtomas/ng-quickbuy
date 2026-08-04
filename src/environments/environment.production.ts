@@ -14,4 +14,6 @@ import type { AppEnvironment } from './environment.model';
 export const environment: AppEnvironment = {
   production: true,
   apiBaseUrl: 'https://quickbuyv3-dev.quotelinedirect.co.uk',
+  // Empty on purpose: production uses the real hostname the customer arrived on.
+  domainOverride: '',
 };

@@ -10,4 +10,6 @@ import type { AppEnvironment } from './environment.model';
 export const environment: AppEnvironment = {
   production: false,
   apiBaseUrl: 'https://quickbuyv3-dev.quotelinedirect.co.uk',
+  // localhost is not a brand domain, so tell the API which one to assume.
+  domainOverride: 'quotelinedirect.co.uk',
 };

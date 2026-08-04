@@ -1,11 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
-import { DOCUMENT, NgOptimizedImage } from '@angular/common';
+import { Component, computed, effect, inject } from '@angular/core';
+import { NgOptimizedImage } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of, switchMap } from 'rxjs';
 import { BrandService } from '../../../core/services/brand.service';
-import { ModuleParametersService } from '../../../core/services/module-parameters.service';
-import type { ModuleParametersResponse } from '../../../core/models/module-parameters.model';
+import { ModuleContextService } from '../../../core/services/module-context.service';
 
 @Component({
   selector: 'app-header',
@@ -15,39 +12,41 @@ import type { ModuleParametersResponse } from '../../../core/models/module-param
 })
 export class HeaderComponent {
   private readonly brandService = inject(BrandService);
-  private readonly moduleParamsService = inject(ModuleParametersService);
-
-  private readonly document = inject(DOCUMENT);
-  private readonly domain = this.document.defaultView?.location.hostname ?? '';
+  private readonly moduleContext = inject(ModuleContextService);
 
   readonly brand = this.brandService.config;
   readonly currentModuleCode = this.brandService.currentModuleCode;
 
-  readonly moduleParams = toSignal<ModuleParametersResponse | null>(
-    toObservable(this.currentModuleCode).pipe(
-      switchMap((code: string | null) =>
-        code
-          ? this.moduleParamsService.fetchParameters(this.brand.id, code, this.domain)
-          : of(null),
-      ),
-      catchError(() => of(null)),
-    ),
-    { initialValue: null },
+  /**
+   * Module parameters come from the shared context service rather than a second
+   * request of the header's own, so the header and the journey agree on one
+   * response and the call is made once per module.
+   */
+  private readonly moduleParams = computed(() => {
+    const code = this.currentModuleCode();
+    return code ? this.moduleContext.parameters(code) : null;
+  });
+
+  readonly headerTitle = computed(
+    () => this.moduleParams()?.parameters.description ?? this.brand.fullName,
   );
 
-  readonly headerTitle = computed(() =>
-    this.moduleParams()?.parameters.description ?? this.brand.fullName,
+  readonly headerPhone = computed(
+    () => this.moduleParams()?.parameters.phone ?? this.brand.mainPhone,
   );
 
-  readonly headerPhone = computed(() =>
-    this.moduleParams()?.parameters.phone ?? this.brand.mainPhone,
-  );
+  readonly headerIcon = computed(() => this.moduleParams()?.parameters.icon ?? null);
 
-  readonly headerIcon = computed(() =>
-    this.moduleParams()?.parameters.icon ?? null,
-  );
+  readonly headerPhoneLink = computed(() => 'tel:' + this.headerPhone().replace(/\s+/g, ''));
 
-  readonly headerPhoneLink = computed(() =>
-    'tel:' + this.headerPhone().replace(/\s+/g, ''),
-  );
+  constructor() {
+    // On a deep link the header can be the first thing to know a module is active,
+    // so it asks too. The context service de-duplicates concurrent callers.
+    effect(() => {
+      const code = this.currentModuleCode();
+      if (code) {
+        void this.moduleContext.ensureLoaded(code);
+      }
+    });
+  }
 }

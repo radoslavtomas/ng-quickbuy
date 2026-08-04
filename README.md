@@ -184,8 +184,21 @@ rather than a list. Changing the renderer's `initialValue` input rebuilds its co
 Nothing is merged into one flat object, so two steps may legitimately use the same field name without
 one overwriting the other — `declarationAccepted` genuinely exists in two steps and used to collide.
 
-State is still in-memory only: a browser refresh clears the journey. Server-side partial-quote save
-and resume is designed but not built.
+Answers are also saved server-side as a **partial quote**, so an abandoned journey is recoverable:
+
+- `JourneySessionService` mints a `crypto.randomUUID()` session id on journey entry and persists it,
+  with the quote reference, in `sessionStorage`. A reload or deep link therefore continues the same
+  partial rather than starting a second one. Neither value is personal data.
+- `JourneyPersistenceService` calls `POST /api/miscellaneous/quote/post/store` twice over: a **create**
+  on journey entry (no `reference`, returns one) and an **update** after each completed step (with the
+  reference, so the backend updates that partial). It honours `quotes_partial_store`, is idempotent per
+  session, and never interrupts the customer — failures are logged and a failed create is retried on
+  the next completed step.
+- `policy-inceptiondate` is required on every call but only asked at step 4, so earlier calls send
+  today's date via `ClockService`. Nothing reads `new Date()` directly.
+
+What is still missing is *resume*: reading a partial back needs the recall entry point, and the
+identity fields required for it are an open question with the backend.
 
 ## HTTP, environments and APIs
 
@@ -196,6 +209,11 @@ Environment files carry per-target configuration:
 - `src/environments/environment.model.ts` — the `AppEnvironment` shape both must satisfy, so a
   divergence is a compile error rather than a runtime surprise
 
+`APP_DOMAIN` is resolved at **runtime** from the hostname, not baked into the build, because one build
+serves every brand and the brand is itself derived from the hostname. `environment.domainOverride`
+exists only for local development, where the hostname is `localhost` and the API needs a real brand
+domain; it is empty in production.
+
 `API_BASE_URL` (`src/app/core/config/api.config.ts`) is injected wherever a service needs the host;
 no service hardcodes a URL. `apiInterceptor` (`src/app/core/http/api.interceptor.ts`) applies a
 20-second timeout and converts every failure into an `ApiError` with a customer-safe message. There
@@ -205,10 +223,13 @@ Services and endpoints:
 
 - `AddressLookupService` — `GET /api/miscellaneous/address/get/bypostcode`, used by the address
   section with a manual-entry fallback
-- `ModuleParametersService` — `GET /api/module/get/parameters`, currently consumed only by the header
-  for the module title and phone number. The response also carries operational kill switches
-  (`system.switchedoff`, `quotes.quotes_allow_buyonline`, `switches.cpd_buyonline_suppressed`) that
-  nothing acts on yet.
+- `ModuleParametersService` — `GET /api/module/get/parameters`, wrapped by `ModuleContextService`,
+  which loads it once per module and de-duplicates concurrent callers. It exposes the operational
+  switches the journey must respect: `system.switchedoff` replaces the journey with an unavailable
+  message, `quotes.quotes_partial_store` gates partial storing, and
+  `quotes.quotes_allow_buyonline`/`switches.cpd_buyonline_suppressed` are available for buy-online.
+- `QuotePartialStoreService` — `POST /api/miscellaneous/quote/post/store`, see
+  [Journey state](#journey-state).
 - `QuoteRecallService` — `POST /api/quote/get/recall/`, with `QuoteRecallHydrationService` mapping a
   response onto journey sections. Implemented and tested, but **not yet wired into a screen**.
 
@@ -237,7 +258,8 @@ src/app/
     config/                      brands, module catalogue, dev fallback, API token
     http/                        interceptor and ApiError
     models/                      shared types incl. journey.model.ts
-    services/                    brand, journey state, normalization, validation, HTTP clients
+    services/                    brand, journey state, journey session, module context,
+                                 clock, normalization, validation, HTTP clients
     validators/                  reusable ValidatorFn implementations
   features/
     home/                        brand product grid
@@ -331,7 +353,9 @@ aliases this app uses (`fa-file-alt`, `fa-user-edit`, `fa-check-square`, `fa-hom
 face ships, so a `fa-brands` or `fa-regular` name will not resolve until its stylesheet is added to
 `angular.json`.
 
-**Answers disappear after a reload.** Journey state is in-memory only.
+**Answers disappear after a reload.** Client-side journey state is in-memory, so the screen restarts.
+The answers are not lost server-side — a partial quote was stored and the session id and reference
+survive in `sessionStorage` — but nothing reads the partial back yet, so there is no visible resume.
 
 **A template error appears that the editor did not show.** `strictTemplates` is on; run
 `npm run build` for the authoritative diagnostics.
@@ -347,11 +371,15 @@ Deliberate, known gaps — check here before assuming something is a bug:
 2. **No typed payload mapper yet.** Answers are stored per section, but the outbound insurer payload
    is not yet produced by an explicit versioned mapper, so field names still double as backend keys
    and `metadata.aliases` still exists.
-3. **No persistence.** Server-side partial-quote save and resume via
-   `POST /api/miscellaneous/quote/post/store` is designed but not built; the recall side is
-   implemented and unwired.
-4. **Operational switches ignored.** The module-parameters response can switch a product off or
-   suppress buy-online; nothing gates the journey on it yet.
-5. **No step-order gating.** Any step can be opened directly from the progress list, regardless of
+3. **No resume entry point.** Partial quotes are saved, but nothing reads one back yet: the recall
+   service and its hydration are implemented and unwired, pending confirmation of which identity
+   fields are required and how the customer receives the reference. A browser refresh therefore still
+   restarts the journey visually even though the partial exists server-side.
+4. **`storeStep` values are provisional.** Each step carries a backend step identifier, currently
+   mirroring its route slug, pending the real values — including what the create call should send,
+   since it fires before any step is complete.
+5. **Buy-online switches are read but unused.** `allowsBuyOnline()` exists; no screen consumes it yet,
+   because there is no buy-online step.
+6. **No step-order gating.** Any step can be opened directly from the progress list, regardless of
    whether earlier steps are complete.
-6. **Demo quotes.** The final step renders fixture data and a payload dump, not live pricing.
+7. **Demo quotes.** The final step renders fixture data and a payload dump, not live pricing.
