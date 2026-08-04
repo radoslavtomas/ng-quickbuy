@@ -116,9 +116,11 @@ flowchart TD
   JP --> REG["journey-registry<br/>module code -> journey -> step"]
   REG --> SEC["step.sections"]
   SEC --> SO["SectionOutletComponent<br/>per section"]
-  SO -->|kind: fields| DF["DynamicFormComponent<br/>renders field config"]
+  SO -->|kind: fields| SF["SignalFormComponent<br/>renders field config"]
+  SO -->|kind: repeat| RS["RepeatSectionComponent<br/>one SignalForm per item"]
   SO -->|kind: custom| CUS["AddressSection / QuoteResultsSection"]
   JP --> ST["JourneyStateService<br/>answers per module/step/section"]
+  JP --> PS["JourneyPersistenceService<br/>partial quote via the mapper"]
 ```
 
 `BrandService` resolves the brand once from the hostname and derives the active module code from
@@ -155,13 +157,14 @@ type, label, help text, options, validators, normalization rules and conditional
 
 ```ts
 {
-  type: 'number',
-  label: 'How many additional drivers?',
-  name: 'additionalDriverCount',
-  validators: [{ type: 'min', value: 0 }, { type: 'max', value: 4 }],
-  visibleWhen: [{ field: 'hasAdditionalDrivers', operator: 'equals', value: 'yes' }],
-  enabledWhen: [{ field: 'hasAdditionalDrivers', operator: 'equals', value: 'yes' }],
-  metadata: { placeholder: '1' },
+  type: 'text',
+  label: 'Joint proposer full name',
+  name: 'jointProposerName',
+  validators: [{ type: 'maxLength', value: 80 }],
+  visibleWhen: [{ field: 'hasJointProposer', operator: 'equals', value: 'yes' }],
+  enabledWhen: [{ field: 'hasJointProposer', operator: 'equals', value: 'yes' }],
+  normalization: ['trim'],
+  metadata: { placeholder: 'Jordan Taylor' },
 }
 ```
 
@@ -215,8 +218,10 @@ Answers are also saved server-side as a **partial quote**, so an abandoned journ
   reference, so the backend updates that partial). It honours `quotes_partial_store`, is idempotent per
   session, and never interrupts the customer — failures are logged and a failed create is retried on
   the next completed step.
-- `policy-inceptiondate` is required on every call but only asked at step 4, so earlier calls send
+- The policy start date is required on every call but only asked at step 4, so earlier calls send
   today's date via `ClockService`. Nothing reads `new Date()` directly.
+- Every field goes through the product's `JourneyPayloadMapper`, so what is stored server-side uses
+  insurer keys and coded values, not the internal names the forms use.
 
 What is still missing is *resume*: reading a partial back needs the recall entry point, and the
 identity fields required for it are an open question with the backend.
@@ -278,24 +283,25 @@ ones are answered — the progress list does now mark completed steps.
 ```
 src/app/
   core/                          cross-cutting, no UI
-    config/                      brands, module catalogue, dev fallback, API token
+    config/                      brands, module catalogue, dev fallback, API and domain tokens
+    forms/                       field config -> Signal Forms schema adapter
     http/                        interceptor and ApiError
-    models/                      shared types incl. journey.model.ts
-    services/                    brand, journey state, journey session, module context,
-                                 clock, normalization, validation, HTTP clients
+    models/                      shared types incl. journey and payload contracts
+    services/                    brand, journey state, journey session, module context, clock,
+                                 normalization, validation messages, HTTP clients
     validators/                  reusable ValidatorFn implementations
   features/
     home/                        brand product grid
     modules/
-      journeys/                  journey definitions + registry
+      journeys/                  journey definitions, registry, payload mappers, persistence
       journey-page/              the journey screen
         section-outlet.component.ts   maps a section to its renderer
-        sections/                     bespoke section components
+        sections/                     address, repeat and quote-results sections
       specific-modules/
         components/              address search
         config/                  field schemas per journey and step
         services/                quote recall hydration
-  shared/components/             dynamic-form, step-card, header, footer, not-found
+  shared/components/             signal-form, step-card, header, footer, not-found
 src/environments/                per-target configuration
 ```
 
@@ -307,11 +313,13 @@ src/environments/                per-target configuration
 
 1. Add a `FormFieldConfig` entry to the relevant
    `specific-modules/config/<journey>/steps/*.fields.ts`.
-2. Use the backend key as `name` where known; add `metadata.aliases` only when migrating off a legacy
-   key.
-3. If it needs a starting value, add it to that section's `defaults` in the journey definition.
-4. For a bespoke rule, add a `ValidatorFn` to `core/validators/form-validators.ts` and reference it as
-   `{ type: 'custom', name: '...', validatorFn: ..., message: '...' }`.
+2. Give `name` a readable internal value (`annualMileage`, not `policy-totalmileage`).
+3. If the insurer expects a different key, add the mapping to `journey-payload.mapper.ts`. Without one
+   the field is sent under its internal name, which is fine only while that name matches the contract.
+4. If it needs a starting value, add it to that section's `defaults` in the journey definition.
+5. For a bespoke rule, add a `ValidatorFn` to `core/validators/form-validators.ts` and reference it as
+   `{ type: 'custom', name: '...', validatorFn: ..., message: '...' }`. Note it can only read siblings
+   in the same section.
 
 No component changes are needed.
 
@@ -323,6 +331,17 @@ No component changes are needed.
 
 That is the whole change: ordering, routing, progress display, prev/next and validation all follow
 from the definition.
+
+### Add a list of items, such as extra drivers
+
+1. Add the per-item questions as their own `FormFieldConfig` array.
+2. Add a `repeat` section to the step with `itemFields`, an `itemLabel`, and the wire `slots` items may
+   occupy. The number of slots is the maximum number of items, so take it from the insurer's allowed
+   list rather than writing a number.
+3. Register those slots against the section id in the product's mapper (`repeatSlots`), so items are
+   filed under the right keys.
+
+Slots are assigned by position, so removing an item re-packs the rest.
 
 ### Add a section with bespoke UI
 
