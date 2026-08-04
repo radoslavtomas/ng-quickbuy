@@ -17,30 +17,31 @@
       </p>
     </header>
 
-    <div
-      class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+    <ul
+      class="grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3"
       role="list"
       aria-label="Available modules"
     >
       @for (module of brand.modules; track module.code) {
-        <a
-          [routerLink]="['/', module.code]"
-          class="module-card group rounded-xl border border-slate-200 bg-white p-5 text-left no-underline shadow-sm transition duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md focus-visible:-translate-y-0.5 focus-visible:shadow-md focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
-          role="listitem"
-          [attr.aria-label]="'Open ' + module.description"
-        >
-          <div
-            class="inline-flex h-10 w-10 items-center justify-center rounded-full text-white"
-            [style.background-color]="brand.primaryColor"
+        <li class="min-w-0">
+          <a
+            [routerLink]="['/', module.code]"
+            class="module-card group block h-full rounded-xl border border-slate-200 bg-white p-5 text-left no-underline shadow-sm transition duration-150 ease-out hover:-translate-y-0.5 hover:shadow-md focus-visible:-translate-y-0.5 focus-visible:shadow-md focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+            [attr.aria-label]="'Open ' + module.description"
           >
-            <i class="fa-solid {{ module.icon }}" aria-hidden="true"></i>
-          </div>
-          <h2 class="mt-4 text-xl font-semibold text-slate-900">{{ module.description }}</h2>
-          <p class="mt-2 text-sm leading-6 text-slate-600">
-            Continue to {{ module.description.toLowerCase() }} details.
-          </p>
-        </a>
+            <div
+              class="inline-flex h-10 w-10 items-center justify-center rounded-full text-white"
+              [style.background-color]="brand.primaryColor"
+            >
+              <i class="fa-solid {{ module.icon }}" aria-hidden="true"></i>
+            </div>
+            <h2 class="mt-4 text-xl font-semibold text-slate-900">{{ module.description }}</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+              Continue to {{ module.description.toLowerCase() }} details.
+            </p>
+          </a>
+        </li>
       }
-    </div>
+    </ul>
   </div>
 </section>

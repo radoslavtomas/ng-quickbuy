@@ -1,5 +1,6 @@
-﻿<app-header />
-<main class="main-content">
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<app-header />
+<main id="main-content" class="main-content" tabindex="-1">
   @if (hasInvalidModuleRequest()) {
     <app-not-found />
   } @else {

@@ -4,7 +4,7 @@
     class="mx-auto flex w-full max-w-4xl items-center justify-between bg-white px-4 py-3 sm:px-6 sm:py-4"
     [style.--brand-primary]="brand.primaryColor"
   >
-    <a href="/" class="inline-flex shrink-0" [attr.aria-label]="brand.fullName + ' home'">
+    <a routerLink="/" class="inline-flex shrink-0" [attr.aria-label]="brand.fullName + ' home'">
       <img
         [ngSrc]="brand.logoPath"
         [alt]="brand.fullName + ' logo'"
@@ -37,8 +37,6 @@
   <div
     class="flex w-full items-center justify-center px-4 py-2.5"
     [style.background-color]="brand.primaryColor"
-    role="banner"
-    aria-label="Section header"
   >
     <span class="text-sm font-bold tracking-wide text-white sm:text-lg">{{ headerTitle() }}</span>
   </div>

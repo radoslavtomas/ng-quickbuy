@@ -1,5 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, Type, computed, effect, inject } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  Type,
+  afterRenderEffect,
+  computed,
+  effect,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
@@ -103,6 +112,14 @@ export class ModulePageComponent {
     return this.currentJourney().find(journeyStep => journeyStep.name === step.next) ?? null;
   });
 
+  readonly stepAnnouncement = computed(() => {
+    const step = this.currentStep();
+    return step ? `Step ${step.id} of ${this.currentJourney().length}` : '';
+  });
+
+  private readonly stepHeading = viewChild<ElementRef<HTMLHeadingElement>>('stepHeading');
+  private renderedStepName: string | null = null;
+
   constructor() {
     effect(() => {
       const moduleCode = this.currentModuleCode();
@@ -114,6 +131,22 @@ export class ModulePageComponent {
       }
 
       void this.router.navigate(['/', moduleCode, firstStepName], { replaceUrl: true });
+    });
+
+    // Move focus to the heading of the newly rendered step, but never on first paint.
+    afterRenderEffect(() => {
+      const stepName = this.currentStep()?.name ?? null;
+      const heading = this.stepHeading()?.nativeElement;
+      if (!stepName || !heading || this.renderedStepName === stepName) {
+        return;
+      }
+
+      const isFirstRenderedStep = this.renderedStepName === null;
+      this.renderedStepName = stepName;
+
+      if (!isFirstRenderedStep) {
+        heading.focus();
+      }
     });
   }
 

@@ -1,4 +1,4 @@
-<div class="w-full border-t border-gray-200 bg-white px-4 py-5 sm:px-6">
+<footer class="w-full border-t border-gray-200 bg-white px-4 py-5 sm:px-6">
   <div class="mx-auto flex w-full max-w-4xl flex-col gap-4">
     <div class="flex justify-end">
       <button
@@ -12,7 +12,7 @@
     </div>
 
     <a
-      href="/"
+      routerLink="/"
       class="inline-flex self-center sm:self-start"
       [attr.aria-label]="brand.fullName + ' home'"
     >
@@ -35,8 +35,6 @@
       }
     </nav>
 
-    <footer class="py-2">
-      <p class="text-center text-xs leading-relaxed text-gray-500">{{ brand.footer.text }}</p>
-    </footer>
+    <p class="py-2 text-center text-xs leading-relaxed text-gray-500">{{ brand.footer.text }}</p>
   </div>
-</div>
+</footer>

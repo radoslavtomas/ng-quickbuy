@@ -1,5 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { DOCUMENT, NgOptimizedImage } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { catchError, of, switchMap } from 'rxjs';
 import { BrandService } from '../../../core/services/brand.service';
@@ -8,7 +9,7 @@ import type { ModuleParametersResponse } from '../../../core/models/module-param
 
 @Component({
   selector: 'app-header',
-  imports: [NgOptimizedImage],
+  imports: [NgOptimizedImage, RouterLink],
   templateUrl: './header.html',
   styleUrl: './header.css',
 })

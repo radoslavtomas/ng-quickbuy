@@ -2,34 +2,72 @@
   @for (field of fields(); track field.name) {
     @if (isVisible(field)) {
       <div class="min-w-0 w-full py-1">
-        <div class="flex items-start gap-1">
-          @if (field.type === 'radio') {
-            <p class="text-[0.95rem] font-bold text-slate-900">{{ field.label }}</p>
-          } @else {
-            <label [for]="field.name" class="block text-[0.95rem] font-bold text-slate-900">
-              {{ field.label }}
-            </label>
-          }
+        @if (field.type !== 'radio') {
+          <div class="flex items-start gap-1">
+            @if (field.type === 'checkbox' || field.type === 'toggle') {
+              <label
+                [for]="field.name"
+                class="inline-flex items-center gap-2 text-[0.95rem] font-bold text-slate-900"
+              >
+                <input
+                  [id]="field.name"
+                  [name]="field.name"
+                  type="checkbox"
+                  [formControlName]="field.name"
+                  [attr.role]="field.type === 'toggle' ? 'switch' : null"
+                  [attr.aria-describedby]="messageId(field)"
+                  [attr.aria-invalid]="isInvalid(field)"
+                  class="peer sr-only"
+                />
 
-          @if (field.helpText) {
-            <button
-              type="button"
-              class="shrink-0 px-1 py-1 text-xs font-semibold text-slate-500 cursor-pointer hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
-              [attr.aria-expanded]="isHelpExpanded(field)"
-              [attr.aria-controls]="helpId(field)"
-              (click)="toggleHelp(field)"
-            >
-              {{ isHelpExpanded(field) ? 'Hide help' : 'Need help?' }}
-            </button>
-          }
-        </div>
+                <span
+                  aria-hidden="true"
+                  class="flex h-4 w-4 shrink-0 items-center justify-center rounded border bg-white text-[0.65rem] text-slate-900 transition peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500"
+                  [class.border-slate-400]="!isInvalid(field) && !isValid(field)"
+                  [class.border-red-500]="isInvalid(field)"
+                  [class.border-green-500]="isValid(field)"
+                  [class.peer-checked\:bg-slate-900]="!isInvalid(field) && !isValid(field)"
+                  [class.peer-checked\:bg-red-600]="isInvalid(field)"
+                  [class.peer-checked\:bg-green-600]="isValid(field)"
+                >
+                  <i
+                    class="fa-solid fa-check transition"
+                    [class.opacity-0]="!isChecked(field)"
+                    [class.opacity-100]="isChecked(field)"
+                    [class.text-red-700]="isInvalid(field)"
+                    [class.text-green-700]="isValid(field)"
+                    [class.text-white]="!isInvalid(field) && !isValid(field)"
+                  ></i>
+                </span>
 
-        @if (field.helpText && isHelpExpanded(field)) {
-          <div
-            [id]="helpId(field)"
-            class="help-rich mt-2 rounded border border-slate-200 bg-slate-50 p-2 text-xs leading-5 text-slate-700"
-            [innerHTML]="field.helpText"
-          ></div>
+                <span>{{ field.label }}</span>
+              </label>
+            } @else {
+              <label [for]="field.name" class="block text-[0.95rem] font-bold text-slate-900">
+                {{ field.label }}
+              </label>
+            }
+
+            @if (field.helpText) {
+              <button
+                type="button"
+                class="shrink-0 px-1 py-1 text-xs font-semibold text-slate-500 cursor-pointer hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+                [attr.aria-expanded]="isHelpExpanded(field)"
+                [attr.aria-controls]="helpId(field)"
+                (click)="toggleHelp(field)"
+              >
+                {{ isHelpExpanded(field) ? 'Hide help' : 'Need help?' }}
+              </button>
+            }
+          </div>
+
+          @if (field.helpText && isHelpExpanded(field)) {
+            <div
+              [id]="helpId(field)"
+              class="help-rich mt-2 rounded border border-slate-200 bg-slate-50 p-2 text-xs leading-5 text-slate-700"
+              [innerHTML]="field.helpText"
+            ></div>
+          }
         }
 
         @if (
@@ -56,11 +94,11 @@
               </span>
             }
 
-            @if (field.metadata?.prefix) {
+            @if (field.metadata?.prefix; as prefix) {
               <span
                 class="inline-flex h-11 shrink-0 items-center border-r border-slate-300 px-2.5 text-[0.85rem] text-slate-500"
                 aria-hidden="true"
-                >{{ field.metadata?.prefix }}</span
+                >{{ prefix }}</span
               >
             }
 
@@ -85,11 +123,11 @@
               class="h-11 min-w-0 flex-1 border-0 bg-transparent px-2.5 text-[0.95rem] focus:outline-none"
             />
 
-            @if (field.metadata?.suffix) {
+            @if (field.metadata?.suffix; as suffix) {
               <span
                 class="inline-flex h-11 shrink-0 items-center border-l border-slate-300 px-2.5 text-[0.85rem] text-slate-500"
                 aria-hidden="true"
-                >{{ field.metadata?.suffix }}</span
+                >{{ suffix }}</span
               >
             }
           </div>
@@ -149,7 +187,39 @@
         }
 
         @if (field.type === 'radio') {
-          <fieldset class="mt-1 border-0 p-0" [attr.aria-describedby]="messageId(field)">
+          <fieldset
+            class="min-w-0 border-0 p-0"
+            [attr.aria-labelledby]="labelId(field)"
+            [attr.aria-describedby]="messageId(field)"
+          >
+            <legend class="w-full p-0">
+              <span class="flex items-start gap-1">
+                <span [id]="labelId(field)" class="text-[0.95rem] font-bold text-slate-900">
+                  {{ field.label }}
+                </span>
+
+                @if (field.helpText) {
+                  <button
+                    type="button"
+                    class="shrink-0 px-1 py-1 text-xs font-semibold text-slate-500 cursor-pointer hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+                    [attr.aria-expanded]="isHelpExpanded(field)"
+                    [attr.aria-controls]="helpId(field)"
+                    (click)="toggleHelp(field)"
+                  >
+                    {{ isHelpExpanded(field) ? 'Hide help' : 'Need help?' }}
+                  </button>
+                }
+              </span>
+            </legend>
+
+            @if (field.helpText && isHelpExpanded(field)) {
+              <div
+                [id]="helpId(field)"
+                class="help-rich mt-2 rounded border border-slate-200 bg-slate-50 p-2 text-xs leading-5 text-slate-700"
+                [innerHTML]="field.helpText"
+              ></div>
+            }
+
             <div
               class="radio-options mt-2 grid gap-px overflow-hidden rounded border"
               [class.radio-options--stack-sm]="shouldStackRadioOnSmall(field)"
@@ -184,44 +254,7 @@
           </fieldset>
         }
 
-        @if (field.type === 'checkbox' || field.type === 'toggle') {
-          <label class="mt-2 inline-flex items-center gap-2 text-slate-900" [for]="field.name">
-            <input
-              [id]="field.name"
-              [name]="field.name"
-              type="checkbox"
-              [formControlName]="field.name"
-              [attr.role]="field.type === 'toggle' ? 'switch' : null"
-              [attr.aria-describedby]="messageId(field)"
-              [attr.aria-invalid]="isInvalid(field)"
-              class="peer sr-only"
-            />
-
-            <span
-              aria-hidden="true"
-              class="flex h-4 w-4 items-center justify-center rounded border bg-white text-[0.65rem] text-slate-900 transition peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500"
-              [class.border-slate-400]="!isInvalid(field) && !isValid(field)"
-              [class.border-red-500]="isInvalid(field)"
-              [class.border-green-500]="isValid(field)"
-              [class.peer-checked\:bg-slate-900]="!isInvalid(field) && !isValid(field)"
-              [class.peer-checked\:bg-red-600]="isInvalid(field)"
-              [class.peer-checked\:bg-green-600]="isValid(field)"
-            >
-              <i
-                class="fa-solid fa-check transition"
-                [class.opacity-0]="!isChecked(field)"
-                [class.opacity-100]="isChecked(field)"
-                [class.text-red-700]="isInvalid(field)"
-                [class.text-green-700]="isValid(field)"
-                [class.text-white]="!isInvalid(field) && !isValid(field)"
-              ></i>
-            </span>
-
-            <span>{{ field.type === 'toggle' ? 'Enabled' : 'Tick to confirm' }}</span>
-          </label>
-        }
-
-        <div [id]="messageId(field)" class="mt-2">
+        <div [id]="messageId(field)" class="mt-2" aria-live="polite" aria-atomic="true">
           @for (message of fieldMessages(field); track message) {
             <p class="text-[0.82rem] text-red-700">{{ message }}</p>
           }
