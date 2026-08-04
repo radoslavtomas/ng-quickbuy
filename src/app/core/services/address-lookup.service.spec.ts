@@ -1,6 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { API_BASE_URL } from '../config/api.config';
 import { AddressLookupResponse, AddressLookupService } from './address-lookup.service';
+
+const TEST_API_BASE_URL = 'https://api.test.local';
 
 describe('AddressLookupService', () => {
   let service: AddressLookupService;
@@ -9,6 +12,7 @@ describe('AddressLookupService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
+      providers: [{ provide: API_BASE_URL, useValue: TEST_API_BASE_URL }],
     });
 
     service = TestBed.inject(AddressLookupService);
@@ -17,6 +21,16 @@ describe('AddressLookupService', () => {
 
   afterEach(() => {
     httpMock.verify();
+  });
+
+  it('builds the endpoint from the configured API base URL', () => {
+    service.lookupByPostcode({ postcode: 'M16 0PQ', numberOrNameForSearch: '17' }).subscribe();
+
+    const request = httpMock.expectOne(
+      (req) => req.url === `${TEST_API_BASE_URL}/api/miscellaneous/address/get/bypostcode`,
+    );
+
+    request.flush(buildLookupResponse());
   });
 
   it('sends lookup request with normalized postcode and query params', () => {

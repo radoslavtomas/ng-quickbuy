@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
+import { API_BASE_URL } from '../config/api.config';
 
 export interface AddressLookupRequest {
   postcode: string;
@@ -58,7 +59,7 @@ export interface AddressLookupMatch {
 @Injectable({ providedIn: 'root' })
 export class AddressLookupService {
   private readonly http = inject(HttpClient);
-  private readonly endpoint = 'https://quickbuyv3-dev.quotelinedirect.co.uk/api/miscellaneous/address/get/bypostcode';
+  private readonly endpoint = `${inject(API_BASE_URL)}/api/miscellaneous/address/get/bypostcode`;
 
   lookupByPostcode(request: AddressLookupRequest): Observable<AddressLookupResponse> {
     const postcode = this.normalizePostcode(request.postcode);

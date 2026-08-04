@@ -110,10 +110,6 @@ export const MODULE_JOURNEY_TYPE_BY_CODE: Readonly<Record<string, ModuleJourneyT
   LL: 'property',
 };
 
-export const MODULE_JOURNEY_STEP_NAMES = new Set<string>(
-  [...MOTOR_JOURNEY, ...PROPERTY_JOURNEY].map(step => step.name),
-);
-
 export function getJourneyByType(type: ModuleJourneyType): readonly JourneyStep[] {
   return JOURNEY_BY_TYPE[type];
 }

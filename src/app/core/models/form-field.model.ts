@@ -82,5 +82,4 @@ export interface FormFieldConfig {
   visibleWhen?: readonly FieldCondition[];
   enabledWhen?: readonly FieldCondition[];
   metadata?: FieldMetadata;
-  reviewFormatter?: (value: unknown, formValue: Record<string, unknown>) => string;
 }
