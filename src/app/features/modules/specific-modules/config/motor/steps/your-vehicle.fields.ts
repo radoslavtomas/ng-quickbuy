@@ -1,7 +1,6 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { MotorModuleCode, asMotorModuleCode } from '../modules';
 
-const SHARED_MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
+export const MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'text',
     label: 'Vehicle registration',
@@ -53,13 +52,3 @@ const SHARED_MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
   },
 ];
 
-const MOTOR_YOUR_VEHICLE_FIELDS_BY_MODULE: Readonly<Record<MotorModuleCode, readonly FormFieldConfig[]>> = {
-  PC: SHARED_MOTOR_YOUR_VEHICLE_FIELDS,
-  GV: SHARED_MOTOR_YOUR_VEHICLE_FIELDS,
-  TX: SHARED_MOTOR_YOUR_VEHICLE_FIELDS,
-  BD: SHARED_MOTOR_YOUR_VEHICLE_FIELDS,
-};
-
-export function getMotorYourVehicleFields(moduleCode: string): readonly FormFieldConfig[] {
-  return MOTOR_YOUR_VEHICLE_FIELDS_BY_MODULE[asMotorModuleCode(moduleCode)];
-}

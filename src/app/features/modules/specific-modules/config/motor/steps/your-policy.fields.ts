@@ -1,8 +1,7 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
 import { licenseYearsByAgeValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
-import { MotorModuleCode, asMotorModuleCode } from '../modules';
 
-const SHARED_MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
+export const MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'date',
     label: 'Policy start date',
@@ -75,13 +74,3 @@ const SHARED_MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
   },
 ];
 
-const MOTOR_YOUR_POLICY_FIELDS_BY_MODULE: Readonly<Record<MotorModuleCode, readonly FormFieldConfig[]>> = {
-  PC: SHARED_MOTOR_YOUR_POLICY_FIELDS,
-  GV: SHARED_MOTOR_YOUR_POLICY_FIELDS,
-  TX: SHARED_MOTOR_YOUR_POLICY_FIELDS,
-  BD: SHARED_MOTOR_YOUR_POLICY_FIELDS,
-};
-
-export function getMotorYourPolicyFields(moduleCode: string): readonly FormFieldConfig[] {
-  return MOTOR_YOUR_POLICY_FIELDS_BY_MODULE[asMotorModuleCode(moduleCode)];
-}

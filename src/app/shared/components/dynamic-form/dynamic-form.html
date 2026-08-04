@@ -240,7 +240,7 @@
                     [name]="field.name"
                     [formControlName]="field.name"
                     [value]="option.value"
-                    [disabled]="option.disabled ?? false"
+                    [attr.disabled]="option.disabled ? '' : null"
                   />
 
                   <span

@@ -6,6 +6,7 @@ import { filter, map, startWith } from 'rxjs';
 import type { BrandConfig } from '../models/brand.model';
 import { BRAND_CONFIGS } from '../config/brands.config';
 import { DEFAULT_BRAND_ID } from '../config/dev.config';
+import { findModuleByCode, type ModuleDefinition } from '../config/module-catalogue';
 
 @Injectable({ providedIn: 'root' })
 export class BrandService {
@@ -13,6 +14,12 @@ export class BrandService {
   private readonly router = inject(Router);
 
   readonly config: BrandConfig = this.detectBrand();
+
+  /**
+   * The products this brand sells, resolved against the catalogue and in the order
+   * the brand lists them.
+   */
+  readonly modules: readonly ModuleDefinition[] = this.resolveModules();
 
   readonly requestedModuleCode: Signal<string | null> = toSignal(
     this.router.events.pipe(
@@ -36,6 +43,22 @@ export class BrandService {
     this.requestedModuleCode() !== null && this.currentModuleCode() === null,
   );
 
+  private resolveModules(): readonly ModuleDefinition[] {
+    return this.config.moduleCodes.flatMap(code => {
+      const module = findModuleByCode(code);
+      if (!module) {
+        // A brand listing a code that is not in the catalogue is a configuration
+        // error: surface it rather than quietly selling nothing.
+        console.error(
+          `Brand "${this.config.id}" lists module code "${code}", which is not in MODULE_CATALOGUE.`,
+        );
+        return [];
+      }
+
+      return [module];
+    });
+  }
+
   private detectBrand(): BrandConfig {
     const hostname = this.document.defaultView?.location.hostname ?? '';
 
@@ -54,8 +77,7 @@ export class BrandService {
       return null;
     }
 
-    const isValidModule = this.config.modules.some(m => m.code === firstSegment);
-    return isValidModule ? firstSegment : null;
+    return this.sellsModule(firstSegment) ? firstSegment : null;
   }
 
   private extractRequestedModuleCode(url: string): string | null {
@@ -63,7 +85,14 @@ export class BrandService {
     return firstSegment || null;
   }
 
-  getModuleByCode(code: string) {
-    return this.config.modules.find(m => m.code === code) ?? null;
+  /** True when this brand is allowed to sell the given module code. */
+  sellsModule(code: string | null | undefined): boolean {
+    return this.getModuleByCode(code) !== null;
+  }
+
+  /** The catalogue entry for a code, but only if this brand sells it. */
+  getModuleByCode(code: string | null | undefined): ModuleDefinition | null {
+    const module = findModuleByCode(code);
+    return module && this.modules.includes(module) ? module : null;
   }
 }

@@ -12,4 +12,5 @@ export class HomeComponent {
   private readonly brandService = inject(BrandService);
 
   readonly brand = this.brandService.config;
+  readonly modules = this.brandService.modules;
 }

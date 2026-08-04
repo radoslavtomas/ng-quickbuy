@@ -1,0 +1,140 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { App } from '../../../app';
+import { routes } from '../../../app.routes';
+import { JourneyStateService } from '../../../core/services/journey-state.service';
+
+const VALID_VEHICLE_ANSWERS = {
+  'vehicle-regnumber': 'AB12CDE',
+  vehicleUse: 'sdp',
+  'policy-totalmileage': 12000,
+  'vehicle-wherekept': 'driveway',
+};
+
+const RESOLVED_ADDRESS = {
+  postcode: 'M16 0PQ',
+  addressLine1: '17 Talbot Road',
+  houseNameNumber: '17',
+  addressLine2: '',
+  addressLine3: '',
+  addressLine4: 'Manchester',
+};
+
+describe('journey flow', () => {
+  let router: Router;
+  let journeyState: JourneyStateService;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter(routes)],
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    journeyState = TestBed.inject(JourneyStateService);
+    journeyState.resetAll();
+  });
+
+  async function renderAt(url: string): Promise<ComponentFixture<App>> {
+    await router.navigateByUrl(url);
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function continueButton(fixture: ComponentFixture<App>): HTMLButtonElement | null {
+    const buttons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    return buttons.find(button => button.getAttribute('aria-label')?.startsWith('Continue')) ?? null;
+  }
+
+  it('renders the step heading and progress from the journey definition', async () => {
+    const fixture = await renderAt('/PC/your-vehicle');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Your vehicle');
+    expect(text).toContain('Step 2 of 5');
+    // Section titles come from configuration, not from a per-step component.
+    expect(text).toContain('Vehicle details');
+  });
+
+  it('advances to the next step and records completion when the step is valid', async () => {
+    journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
+
+    const fixture = await renderAt('/PC/your-vehicle');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+
+    expect(router.url).toContain('/PC/additional-drivers');
+    expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(true);
+  });
+
+  it('keeps the customer on the step when a required answer is missing', async () => {
+    const fixture = await renderAt('/PC/your-vehicle');
+
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toContain('/PC/your-vehicle');
+    expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('is required');
+  });
+
+  it('persists answers the customer typed so returning to a step restores them', async () => {
+    journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
+
+    const fixture = await renderAt('/PC/your-vehicle');
+    const registration = (fixture.nativeElement as HTMLElement).querySelector(
+      '#vehicle-regnumber',
+    ) as HTMLInputElement | null;
+
+    expect(registration?.value).toBe('AB12CDE');
+  });
+
+  it('hides the proposer questions until an address is resolved', async () => {
+    const withoutAddress = await renderAt('/PC/your-details');
+    expect((withoutAddress.nativeElement as HTMLElement).querySelector('#proposer-email')).toBeNull();
+
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+    withoutAddress.detectChanges();
+    await withoutAddress.whenStable();
+
+    expect(
+      (withoutAddress.nativeElement as HTMLElement).querySelector('#proposer-email'),
+    ).not.toBeNull();
+  });
+
+  it('blocks the first step until the address section is satisfied', async () => {
+    const fixture = await renderAt('/PC/your-details');
+
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toContain('/PC/your-details');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Please resolve your address',
+    );
+  });
+
+  it('renders the outcome step with quotes instead of questions', async () => {
+    const fixture = await renderAt('/PC/your-quotes');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Demo quotes');
+    expect(text).toContain('Final step reached');
+    expect(continueButton(fixture)).toBeNull();
+  });
+
+  it('drives the property journey from the same shell', async () => {
+    const fixture = await renderAt('/HC/your-property');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Your property');
+    expect(text).toContain('Step 2 of 6');
+    expect(text).toContain('Property details');
+  });
+});

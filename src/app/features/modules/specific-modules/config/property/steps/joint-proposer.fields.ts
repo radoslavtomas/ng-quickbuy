@@ -1,8 +1,7 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
 import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
-import { PropertyModuleCode, asPropertyModuleCode } from '../modules';
 
-const SHARED_PROPERTY_JOINT_PROPOSER_FIELDS: readonly FormFieldConfig[] = [
+export const PROPERTY_JOINT_PROPOSER_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'radio',
     label: 'Do you have a joint proposer?',
@@ -48,12 +47,3 @@ const SHARED_PROPERTY_JOINT_PROPOSER_FIELDS: readonly FormFieldConfig[] = [
   },
 ];
 
-const PROPERTY_JOINT_PROPOSER_FIELDS_BY_MODULE: Readonly<Record<PropertyModuleCode, readonly FormFieldConfig[]>> = {
-  HC: SHARED_PROPERTY_JOINT_PROPOSER_FIELDS,
-  HH: SHARED_PROPERTY_JOINT_PROPOSER_FIELDS,
-  LL: SHARED_PROPERTY_JOINT_PROPOSER_FIELDS,
-};
-
-export function getPropertyJointProposerFields(moduleCode: string): readonly FormFieldConfig[] {
-  return PROPERTY_JOINT_PROPOSER_FIELDS_BY_MODULE[asPropertyModuleCode(moduleCode)];
-}

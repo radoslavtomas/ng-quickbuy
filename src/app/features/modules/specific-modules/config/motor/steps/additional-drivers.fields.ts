@@ -1,7 +1,6 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { MotorModuleCode, asMotorModuleCode } from '../modules';
 
-const SHARED_MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
+export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'radio',
     label: 'Any additional drivers?',
@@ -39,13 +38,3 @@ const SHARED_MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
   },
 ];
 
-const MOTOR_ADDITIONAL_DRIVERS_FIELDS_BY_MODULE: Readonly<Record<MotorModuleCode, readonly FormFieldConfig[]>> = {
-  PC: SHARED_MOTOR_ADDITIONAL_DRIVERS_FIELDS,
-  GV: SHARED_MOTOR_ADDITIONAL_DRIVERS_FIELDS,
-  TX: SHARED_MOTOR_ADDITIONAL_DRIVERS_FIELDS,
-  BD: SHARED_MOTOR_ADDITIONAL_DRIVERS_FIELDS,
-};
-
-export function getMotorAdditionalDriversFields(moduleCode: string): readonly FormFieldConfig[] {
-  return MOTOR_ADDITIONAL_DRIVERS_FIELDS_BY_MODULE[asMotorModuleCode(moduleCode)];
-}

@@ -1,12 +1,4 @@
 export type BrandId = 'qld' | 'chq' | 'ajg';
-export type ModuleJourneyType = 'motor' | 'property';
-
-export interface BrandModule {
-  code: string;
-  description: string;
-  icon: string; // Font Awesome icon class, e.g. 'fa-home'
-  journeyType: ModuleJourneyType;
-}
 
 export interface FooterLink {
   label: string;
@@ -25,6 +17,12 @@ export interface BrandConfig {
   secondaryColor: string;
   logoPath: string;
   mainPhone: string;
-  modules: BrandModule[];
+  /**
+   * Codes from `MODULE_CATALOGUE` this brand is allowed to sell, in display order.
+   *
+   * A brand contributes only the decision to sell a product; the description, icon
+   * and journey come from the catalogue, so they cannot drift between brands.
+   */
+  moduleCodes: readonly string[];
   footer: BrandFooter;
 }

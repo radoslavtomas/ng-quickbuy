@@ -18,6 +18,8 @@ export interface QuoteRecallResponse {
 }
 
 export interface RecallHydrationResult {
-  hydratedSteps: Record<string, Record<string, unknown>>;
+  /** step name -> section id -> field values */
+  hydratedSteps: Record<string, Record<string, Record<string, unknown>>>;
+  /** Recall keys no section claimed, i.e. journey config and contract have drifted. */
   unresolvedFields: Record<string, unknown>;
 }

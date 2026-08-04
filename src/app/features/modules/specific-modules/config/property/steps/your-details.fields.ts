@@ -1,8 +1,7 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
 import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
-import { PropertyModuleCode, asPropertyModuleCode } from '../modules';
 
-const SHARED_PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
+export const PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'text',
     label: 'First name',
@@ -79,12 +78,3 @@ const SHARED_PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
   },
 ];
 
-const PROPERTY_YOUR_DETAILS_FIELDS_BY_MODULE: Readonly<Record<PropertyModuleCode, readonly FormFieldConfig[]>> = {
-  HC: SHARED_PROPERTY_YOUR_DETAILS_FIELDS,
-  HH: SHARED_PROPERTY_YOUR_DETAILS_FIELDS,
-  LL: SHARED_PROPERTY_YOUR_DETAILS_FIELDS,
-};
-
-export function getPropertyYourDetailsFields(moduleCode: string): readonly FormFieldConfig[] {
-  return PROPERTY_YOUR_DETAILS_FIELDS_BY_MODULE[asPropertyModuleCode(moduleCode)];
-}

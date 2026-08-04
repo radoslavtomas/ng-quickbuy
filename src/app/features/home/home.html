@@ -22,7 +22,7 @@
       role="list"
       aria-label="Available modules"
     >
-      @for (module of brand.modules; track module.code) {
+      @for (module of modules; track module.code) {
         <li class="min-w-0">
           <a
             [routerLink]="['/', module.code]"

@@ -1,7 +1,6 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { PropertyModuleCode, asPropertyModuleCode } from '../modules';
 
-const SHARED_PROPERTY_YOUR_PROPERTY_FIELDS: readonly FormFieldConfig[] = [
+export const PROPERTY_YOUR_PROPERTY_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'select',
     label: 'Property type',
@@ -43,12 +42,3 @@ const SHARED_PROPERTY_YOUR_PROPERTY_FIELDS: readonly FormFieldConfig[] = [
   },
 ];
 
-const PROPERTY_YOUR_PROPERTY_FIELDS_BY_MODULE: Readonly<Record<PropertyModuleCode, readonly FormFieldConfig[]>> = {
-  HC: SHARED_PROPERTY_YOUR_PROPERTY_FIELDS,
-  HH: SHARED_PROPERTY_YOUR_PROPERTY_FIELDS,
-  LL: SHARED_PROPERTY_YOUR_PROPERTY_FIELDS,
-};
-
-export function getPropertyYourPropertyFields(moduleCode: string): readonly FormFieldConfig[] {
-  return PROPERTY_YOUR_PROPERTY_FIELDS_BY_MODULE[asPropertyModuleCode(moduleCode)];
-}

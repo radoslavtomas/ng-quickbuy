@@ -1,21 +1,23 @@
 import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
-import { isValidJourneyStepForModule } from './core/config/module-journeys.config';
+import { findModuleByCode } from './core/config/module-catalogue';
 
 const loadHomeComponent = () => import('./features/home/home').then(m => m.HomeComponent);
-const loadModulePageComponent = () =>
-  import('./features/modules/module-page').then(m => m.ModulePageComponent);
+const loadJourneyPageComponent = () =>
+  import('./features/modules/journey-page/journey-page').then(m => m.JourneyPageComponent);
 const loadNotFoundComponent = () =>
   import('./shared/components/not-found/not-found').then(m => m.NotFoundComponent);
 
+/**
+ * Matches `/:moduleCode/:stepName` for any module in the catalogue.
+ *
+ * Deliberately checks the module code only, not the step. The catalogue is a small
+ * lookup, whereas validating the step would mean importing every journey definition
+ * — and therefore every field schema — into the initial bundle, which grows with
+ * each product added. The journey page validates the step instead and shows the
+ * not-found view in place for one it does not recognise.
+ */
 function moduleStepMatcher(segments: UrlSegment[]): UrlMatchResult | null {
-  if (segments.length !== 2) {
-    return null;
-  }
-
-  const moduleCode = segments[0].path.toUpperCase();
-  const stepName = segments[1].path.toLowerCase();
-
-  if (!isValidJourneyStepForModule(moduleCode, stepName)) {
+  if (segments.length !== 2 || !findModuleByCode(segments[0].path)) {
     return null;
   }
 
@@ -30,11 +32,10 @@ function moduleStepMatcher(segments: UrlSegment[]): UrlMatchResult | null {
 
 /**
  * Module routes use the module code as the first path segment, e.g. /HC, /GV.
- * Add feature-level routes inside each module entry as the app grows.
  */
 export const routes: Routes = [
   { path: '', loadComponent: loadHomeComponent },
-  { matcher: moduleStepMatcher, loadComponent: loadModulePageComponent },
-  { path: ':moduleCode', loadComponent: loadModulePageComponent },
+  { matcher: moduleStepMatcher, loadComponent: loadJourneyPageComponent },
+  { path: ':moduleCode', loadComponent: loadJourneyPageComponent },
   { path: '**', loadComponent: loadNotFoundComponent },
 ];

@@ -1,8 +1,7 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
 import { validDateValidator } from '../../../../../../core/validators/form-validators';
-import { PropertyModuleCode, asPropertyModuleCode } from '../modules';
 
-const SHARED_PROPERTY_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
+export const PROPERTY_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'date',
     label: 'Policy start date',
@@ -49,12 +48,3 @@ const SHARED_PROPERTY_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
   },
 ];
 
-const PROPERTY_YOUR_POLICY_FIELDS_BY_MODULE: Readonly<Record<PropertyModuleCode, readonly FormFieldConfig[]>> = {
-  HC: SHARED_PROPERTY_YOUR_POLICY_FIELDS,
-  HH: SHARED_PROPERTY_YOUR_POLICY_FIELDS,
-  LL: SHARED_PROPERTY_YOUR_POLICY_FIELDS,
-};
-
-export function getPropertyYourPolicyFields(moduleCode: string): readonly FormFieldConfig[] {
-  return PROPERTY_YOUR_POLICY_FIELDS_BY_MODULE[asPropertyModuleCode(moduleCode)];
-}
