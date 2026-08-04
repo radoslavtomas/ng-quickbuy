@@ -12,5 +12,5 @@ export const environment: AppEnvironment = {
   apiBaseUrl: 'https://quickbuyv3-dev.quotelinedirect.co.uk',
   // localhost carries no brand, so stand in for a brand host. The suffix is
   // stripped before the value is sent, so this reaches the API as `quotelinedirect`.
-  domainOverride: 'quotelinedirect.co.uk',
+  domainOverride: 'quotelinedirect',
 };
