@@ -139,9 +139,10 @@ means and which journey it runs. Nothing else maps codes to journeys.
 schemas, demo quotes and helpers. Each file exports a plain array; journey definitions compose them
 into sections.
 
-Field `name` values mirror backend/recall keys where known (`proposer-name-forenames`,
-`vehicle-regnumber`, `policy-inceptiondate`). Legacy camelCase keys are bridged temporarily through
-`metadata.aliases`.
+Field `name` values are **internal** (`forenames`, `registration`, `startDate`). They are a UI concern
+and never appear on the wire: `journey-payload.mapper.ts` translates them to insurer keys, and coded
+values with them, so `coverType: 'comprehensive'` leaves as `policy-cover: 'C'`. Renaming a field is
+therefore safe, and a contract change is confined to the mapper.
 
 ## The form engine
 
@@ -386,9 +387,11 @@ Deliberate, known gaps — check here before assuming something is a bug:
    convictions. Being addressed by moving to a nested typed model and Angular Signal Forms
    (`@angular/forms/signals`), whose `applyEach`/`applyWhen` cover repeatable and conditional
    sections natively.
-2. **No typed payload mapper yet.** Answers are stored per section, but the outbound insurer payload
-   is not yet produced by an explicit versioned mapper, so field names still double as backend keys
-   and `metadata.aliases` still exists.
+2. **The mapper's key coverage is partial.** Every product has a versioned mapper owning the
+   translation, but a field with no confirmed insurer key is sent under its internal name. Those are
+   the names to check against the backend contract: `vehicleUse`, `hasAdditionalDrivers`,
+   `licenseYearsHeld`, `declarationAccepted`, `propertyType`, `bedrooms`, `occupancy`, `yearBuilt`,
+   the joint-proposer fields, `buildingsSumInsured` and `contentsSumInsured`.
 3. **No resume entry point.** Partial quotes are saved, but nothing reads one back yet: the recall
    service and its hydration are implemented and unwired, pending confirmation of which identity
    fields are required and how the customer receives the reference. A browser refresh therefore still
