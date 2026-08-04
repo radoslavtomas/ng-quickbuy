@@ -9,7 +9,9 @@
  * release — shipping this value means a production build silently calls the
  * dev API.
  */
-export const environment = {
+import type { AppEnvironment } from './environment.model';
+
+export const environment: AppEnvironment = {
   production: true,
   apiBaseUrl: 'https://quickbuyv3-dev.quotelinedirect.co.uk',
 };

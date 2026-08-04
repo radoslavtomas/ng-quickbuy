@@ -31,9 +31,7 @@ module.exports = defineConfig([
           style: 'kebab-case',
         },
       ],
-      // FOLLOW-UP: downgraded to 'warn' because pre-existing code has unused imports
-      // (module-parameters.service.ts, footer.ts). Restore to 'error' once those are cleaned up.
-      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unused-vars': 'error',
     },
   },
   {

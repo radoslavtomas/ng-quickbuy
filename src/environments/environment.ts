@@ -5,7 +5,9 @@
  * `fileReplacements` entry in `angular.json` for the production configuration.
  * Keep the shape of both files identical.
  */
-export const environment = {
+import type { AppEnvironment } from './environment.model';
+
+export const environment: AppEnvironment = {
   production: false,
   apiBaseUrl: 'https://quickbuyv3-dev.quotelinedirect.co.uk',
 };
