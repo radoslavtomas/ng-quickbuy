@@ -1,3 +1,6 @@
+<!-- Single source of truth for agent instructions.
+     .claude/CLAUDE.md, .github/copilot-instructions.md and .junie/guidelines.md are
+     symlinks to this file - edit this file only. -->
 
 You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
