@@ -1,43 +1,49 @@
-# Specific Module Config Structure
+# Field schemas
 
-This folder contains journey config split by journey, module, and step.
+Each file under `motor/steps/` and `property/steps/` exports one plain array of
+`FormFieldConfig`. Journey definitions in `features/modules/journeys/` compose these arrays into
+step sections, so these files describe **questions only** — never order, routing or defaults.
 
-## Layout
+- Step order and step metadata live in `<journey>.journey.ts`.
+- A section's starting values live on that section's `defaults` in the same file.
+- Which products exist and which journey they run lives in `core/config/module-catalogue.ts`.
 
-- `shared/common.ts`
-  - shared constants (`DEMO_QUOTES`, address fields, UI style helpers)
-  - migration helpers (`applyFieldAliases`)
-- `motor/`
-  - `step-order.config.ts`
-  - `default-values.config.ts`
-  - `modules.ts`
-  - `steps/*.fields.ts`
-- `property/`
-  - `step-order.config.ts`
-  - `default-values.config.ts`
-  - `modules.ts`
-  - `steps/*.fields.ts`
+For how to add a field, a step, a section or a product, see the recipes in the root `README.md`.
 
-## Naming Strategy
+## Field naming
 
-- Canonical field names should match backend/recall keys where known.
-- Example: `proposer-name-forenames`, `vehicle-regnumber`, `policy-inceptiondate`.
-- Legacy app keys are supported temporarily through `metadata.aliases`.
+Use the backend/recall key as `name` wherever it is known, because it is what the API expects and
+what a recall response returns:
 
-## How to Add a New Field
+```
+proposer-name-forenames    proposer-dateofbirth    proposer-email
+vehicle-regnumber          policy-inceptiondate    policy-volxs
+```
 
-1. Add it to the relevant `steps/*.fields.ts` file.
-2. If backend key is known, use that as `name`.
-3. If migrating from a legacy key, add `metadata.aliases`.
-4. Update corresponding defaults in `default-values.config.ts`.
+Where no backend key is known yet, use camelCase (`propertyType`, `buildingsSumInsured`) and treat it
+as provisional — it will change when the contract is confirmed.
 
-## How to Add a New Module Variant
+Field names only need to be unique **within a section**. Answers are stored per module, step and
+section, so two steps may reuse a name without colliding. `declarationAccepted` legitimately exists
+in both motor `your-policy` and property `assumptions`.
 
-1. Add module code in `modules.ts` for the journey.
-2. Add/override step field arrays for that module.
-3. Add module default value set if different from shared defaults.
+## Aliases are temporary
 
-## Temporary Compatibility
+`metadata.aliases` lets a recall response using a legacy camelCase key hydrate a field that has since
+been renamed to its backend key:
 
-- `metadata.aliases` exists for migration only.
-- Remove aliases when legacy keys are no longer present in workflow state or recall payload handling.
+```ts
+{ name: 'proposer-name-forenames', metadata: { aliases: ['firstName'] } }
+```
+
+Only `QuoteRecallHydrationService` reads them. They exist for migration and should be deleted once
+the payload mapper owns the translation between the internal model and the insurer contract — that
+mapper is the planned replacement for this whole convention, at which point field names become
+internal and stop doubling as backend keys.
+
+## Options and coded values
+
+Option `value`s are the internal representation, which is usually not what the backend sends. Where
+the backend uses codes, the translation lives in `FIELD_VALUE_MAPPING` in
+`services/quote-recall-hydration.service.ts` (for example `policy-cover: C -> comprehensive`). Keep
+the two in step: a new coded field needs both the options here and the mapping there.

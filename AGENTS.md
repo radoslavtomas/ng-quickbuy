@@ -4,6 +4,29 @@
 
 You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
+## This Project's Architecture
+
+NG QuickBuy renders multi-step insurance quote journeys for several brands. Journey structure is
+data, not components. Read `README.md` for the full picture; these are the rules that matter when
+changing code:
+
+- There is ONE journey screen (`features/modules/journey-page/`). Do NOT add per-module, per-step or
+  per-brand components. A new step is a new entry in a `*.journey.ts` definition; a new question is a
+  new entry in a `steps/*.fields.ts` array.
+- `core/config/module-catalogue.ts` is the ONLY place mapping a module code to a journey. Brands list
+  module codes and nothing else about the product.
+- Step order comes from position in the `steps` array. Never add `next`/`prev` links or a parallel
+  ordering list.
+- A step is composed of sections. Use a `fields` section for anything the generic renderer can draw;
+  add a `custom` section plus a `@case` in `section-outlet.component.ts` only for genuinely bespoke
+  UI. Custom sections expose `collect(): { valid, values }`.
+- Answers live in `JourneyStateService`, keyed by module, step and section. Never merge answers into
+  one flat object: field names are only unique within a section.
+- Never silently default an unrecognised module code or step to a real one. Selling the wrong
+  product's questions is worse than showing an error.
+- Do NOT render inputs that are not wired to a field config. An input that discards what the customer
+  typed is worse than no input.
+
 ## TypeScript Best Practices
 
 - Use strict type checking
