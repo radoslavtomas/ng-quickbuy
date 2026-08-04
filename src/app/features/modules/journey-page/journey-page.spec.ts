@@ -129,14 +129,23 @@ describe('journey flow', () => {
     expect(continueButton(fixture)).toBeNull();
   });
 
-  it('renders the migrated section with the Signal Forms engine, others with the reactive one', async () => {
-    const policyStep = await renderAt('/PC/your-policy');
-    expect((policyStep.nativeElement as HTMLElement).querySelector('app-signal-form')).not.toBeNull();
-    expect((policyStep.nativeElement as HTMLElement).querySelector('app-dynamic-form')).toBeNull();
+  it('renders every fields section with the Signal Forms renderer', async () => {
+    for (const step of ['your-vehicle', 'additional-drivers', 'your-policy']) {
+      const fixture = await renderAt(`/PC/${step}`);
+      const host = fixture.nativeElement as HTMLElement;
 
-    const vehicleStep = await renderAt('/PC/your-vehicle');
-    expect((vehicleStep.nativeElement as HTMLElement).querySelector('app-dynamic-form')).not.toBeNull();
-    expect((vehicleStep.nativeElement as HTMLElement).querySelector('app-signal-form')).toBeNull();
+      expect(host.querySelector('app-signal-form')).not.toBeNull();
+      // The reactive renderer is gone; nothing should reintroduce it.
+      expect(host.querySelector('app-dynamic-form')).toBeNull();
+    }
+  });
+
+  it('renders the address section forms with the Signal Forms renderer too', async () => {
+    const fixture = await renderAt('/PC/your-details');
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('app-address-section app-signal-form')).not.toBeNull();
+    expect(host.textContent).toContain('Find address');
   });
 
   it('renders every field type of the Signal Forms section', async () => {

@@ -16,6 +16,8 @@ import {
   type SectionModel,
 } from '../../../core/forms/signal-forms-schema';
 import type { FormFieldConfig } from '../../../core/models/form-field.model';
+import { FormNormalizationService } from '../../../core/services/form-normalization.service';
+import { FormValidationMessageService } from '../../../core/services/form-validation-message.service';
 
 /** Error shape the schema produces, narrowed for template use. */
 interface FieldError {
@@ -63,6 +65,8 @@ export class SignalFormComponent implements OnInit {
   readonly valueChanged = output<Record<string, unknown>>();
 
   private readonly injector = inject(Injector);
+  private readonly normalization = inject(FormNormalizationService);
+  private readonly messages = inject(FormValidationMessageService);
 
   /** Reveals errors for untouched fields once the customer has tried to continue. */
   private readonly submitAttempted = signal(false);
@@ -152,39 +156,28 @@ export class SignalFormComponent implements OnInit {
       return [];
     }
 
-    return state.errors().map(error => error.message ?? this.defaultMessage(field, error.kind));
+    return state
+      .errors()
+      .map(error => this.messages.resolve(field, error.kind, error.message));
   }
 
   /**
-   * Wording for errors the configuration did not supply a message for.
+   * Applies the field's normalization rules when it loses focus.
    *
-   * Mirrors `FormValidationMessageService`, which the reactive renderer uses, so a
-   * field reads the same either side of the migration. Constraint values come from
-   * the field's own configuration rather than the error payload.
+   * Still the normalization service rather than Signal Forms' `transformedValue`,
+   * so behaviour is identical to the reactive renderer it replaces. Moving to
+   * `transformedValue` is a separate change with its own risk.
    */
-  private defaultMessage(field: FormFieldConfig, kind: string): string {
-    const rule = (field.validators ?? []).find(
-      validator => validator.type === kind || (validator.type === 'custom' && validator.name === kind),
-    );
-    const limit = rule?.value;
+  normalize(field: FormFieldConfig): void {
+    const instance = this.instance();
+    if (!instance || !field.normalization?.length) {
+      return;
+    }
 
-    switch (kind) {
-      case 'required':
-        return `${field.label} is required.`;
-      case 'email':
-        return 'Enter a valid email address.';
-      case 'minLength':
-        return `${field.label} must be at least ${limit} characters.`;
-      case 'maxLength':
-        return `${field.label} must be ${limit} characters or fewer.`;
-      case 'min':
-        return `${field.label} must be greater than or equal to ${limit}.`;
-      case 'max':
-        return `${field.label} must be less than or equal to ${limit}.`;
-      case 'pattern':
-        return `${field.label} is not in the expected format.`;
-      default:
-        return `${field.label} is invalid.`;
+    const current = instance.model()[field.name];
+    const normalized = this.normalization.normalizeFieldValue(field, current);
+    if (normalized !== current) {
+      instance.model.update(model => ({ ...model, [field.name]: normalized }));
     }
   }
 

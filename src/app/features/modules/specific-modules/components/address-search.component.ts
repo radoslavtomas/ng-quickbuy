@@ -1,10 +1,10 @@
-import { Component, ViewChild, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
   AddressLookupMatch,
   AddressLookupService,
 } from '../../../../core/services/address-lookup.service';
-import { DynamicFormComponent } from '../../../../shared/components/dynamic-form/dynamic-form';
+import { SignalFormComponent } from '../../../../shared/components/signal-form/signal-form';
 import {
   ADDRESS_LOOKUP_FIELDS,
   ADDRESS_MANUAL_FIELDS,
@@ -14,7 +14,7 @@ import {
 
 @Component({
   selector: 'app-address-search',
-  imports: [DynamicFormComponent],
+  imports: [SignalFormComponent],
   template: `
     @if (selectedAddress(); as address) {
       <article class="rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -35,27 +35,33 @@ import {
       </article>
     } @else {
       @if (mode() === 'lookup') {
-        <app-dynamic-form
+        <app-signal-form
           [fields]="lookupFields"
           [initialValue]="lookupInitialValue()"
-          [submitLabel]="loading() ? 'Searching...' : 'Find address'"
-          submitIcon="fa-solid fa-house"
           (valueChanged)="onCriteriaChanged($event)"
-          (submitted)="onLookupSearch($event)"
         />
 
         <button
           type="button"
-          class="mt-2 text-sm font-semibold text-sky-700 underline decoration-sky-400 underline-offset-2 hover:text-sky-800"
+          class="mt-3 inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-200"
+          [disabled]="loading()"
+          (click)="searchForAddress()"
+        >
+          {{ loading() ? 'Searching...' : 'Find address' }}
+          <i class="fa-solid fa-house" aria-hidden="true"></i>
+        </button>
+
+        <button
+          type="button"
+          class="mt-2 block text-sm font-semibold text-sky-700 underline decoration-sky-400 underline-offset-2 hover:text-sky-800"
           (click)="useManualEntry()"
         >
           Enter the full address manually
         </button>
       } @else {
-        <app-dynamic-form
+        <app-signal-form
           [fields]="manualFields"
           [initialValue]="manualInitialValue()"
-          [showSubmitButton]="false"
           (valueChanged)="onManualAddressChanged($event)"
         />
 
@@ -124,7 +130,7 @@ export class AddressSearchComponent {
   readonly lookupError = signal<string | null>(null);
 
   private readonly lookupService = inject(AddressLookupService);
-  @ViewChild(DynamicFormComponent) private addressForm?: DynamicFormComponent;
+  private readonly addressForm = viewChild(SignalFormComponent);
 
   constructor() {
     effect(() => {
@@ -142,7 +148,17 @@ export class AddressSearchComponent {
       return;
     }
 
-    this.addressForm?.validateFromParent();
+    this.addressForm()?.collect();
+  }
+
+  /** Validates the lookup criteria, then searches. */
+  async searchForAddress(): Promise<void> {
+    const result = this.addressForm()?.collect();
+    if (!result?.valid) {
+      return;
+    }
+
+    await this.onLookupSearch(result.values);
   }
 
   onCriteriaChanged(value: Record<string, unknown>): void {
