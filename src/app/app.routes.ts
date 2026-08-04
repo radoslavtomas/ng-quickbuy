@@ -1,8 +1,11 @@
 import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
-import { HomeComponent } from './features/home/home';
-import { ModulePageComponent } from './features/modules/module-page';
-import { NotFoundComponent } from './shared/components/not-found/not-found';
 import { isValidJourneyStepForModule } from './core/config/module-journeys.config';
+
+const loadHomeComponent = () => import('./features/home/home').then(m => m.HomeComponent);
+const loadModulePageComponent = () =>
+  import('./features/modules/module-page').then(m => m.ModulePageComponent);
+const loadNotFoundComponent = () =>
+  import('./shared/components/not-found/not-found').then(m => m.NotFoundComponent);
 
 function moduleStepMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   if (segments.length !== 2) {
@@ -30,8 +33,8 @@ function moduleStepMatcher(segments: UrlSegment[]): UrlMatchResult | null {
  * Add feature-level routes inside each module entry as the app grows.
  */
 export const routes: Routes = [
-  { path: '', component: HomeComponent },
-  { matcher: moduleStepMatcher, component: ModulePageComponent },
-  { path: ':moduleCode', component: ModulePageComponent },
-  { path: '**', component: NotFoundComponent },
+  { path: '', loadComponent: loadHomeComponent },
+  { matcher: moduleStepMatcher, loadComponent: loadModulePageComponent },
+  { path: ':moduleCode', loadComponent: loadModulePageComponent },
+  { path: '**', loadComponent: loadNotFoundComponent },
 ];

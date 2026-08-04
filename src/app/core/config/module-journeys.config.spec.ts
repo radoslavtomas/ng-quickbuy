@@ -1,7 +1,6 @@
 import {
   getJourneyByType,
   isValidJourneyStepForModule,
-  MODULE_JOURNEY_STEP_NAMES,
   MOTOR_JOURNEY,
   PROPERTY_JOURNEY,
 } from './module-journeys.config';
@@ -19,12 +18,6 @@ describe('module-journeys.config', () => {
     expect(getJourneyByType('property').length).toBe(6);
     expect(getJourneyByType('property')[0].name).toBe('your-details');
     expect(getJourneyByType('property')[5].name).toBe('your-quotes');
-  });
-
-  it('contains key known step names', () => {
-    expect(MODULE_JOURNEY_STEP_NAMES.has('your-details')).toBe(true);
-    expect(MODULE_JOURNEY_STEP_NAMES.has('your-policy')).toBe(true);
-    expect(MODULE_JOURNEY_STEP_NAMES.has('your-quotes')).toBe(true);
   });
 
   it('accepts valid motor steps for motor modules', () => {

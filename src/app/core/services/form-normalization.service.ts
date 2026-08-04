@@ -22,7 +22,6 @@ export class FormNormalizationService {
       case 'phone':
         return this.normalizePhone(value);
       case 'date':
-        console.log(value);
         return this.normalizeDate(value);
       case 'currency':
         return this.normalizeCurrency(value);

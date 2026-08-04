@@ -1,12 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../config/api.config';
 import type { QuoteRecallRequest, QuoteRecallResponse } from '../models/quote-recall.model';
 
 @Injectable({ providedIn: 'root' })
 export class QuoteRecallService {
   private readonly http = inject(HttpClient);
-  private readonly endpoint = 'https://quickbuyv3-dev.quotelinedirect.co.uk/api/quote/get/recall/';
+  private readonly endpoint = `${inject(API_BASE_URL)}/api/quote/get/recall/`;
 
   fetchRecall(request: QuoteRecallRequest): Observable<QuoteRecallResponse> {
     const formData = new FormData();
