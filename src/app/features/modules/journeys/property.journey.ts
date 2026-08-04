@@ -5,6 +5,7 @@ import { PROPERTY_YOUR_PROPERTY_FIELDS } from '../specific-modules/config/proper
 import { PROPERTY_JOINT_PROPOSER_FIELDS } from '../specific-modules/config/property/steps/joint-proposer.fields';
 import { PROPERTY_YOUR_POLICY_FIELDS } from '../specific-modules/config/property/steps/your-policy.fields';
 import { PROPERTY_ASSUMPTIONS_FIELDS } from '../specific-modules/config/property/steps/assumptions.fields';
+import { PROPERTY_PAYLOAD_MAPPER } from './journey-payload.mapper';
 
 /** The proposer's details are only worth asking for once we know where they live. */
 function addressIsResolved(answers: StepAnswers): boolean {
@@ -18,6 +19,7 @@ function addressIsResolved(answers: StepAnswers): boolean {
  */
 export const PROPERTY_JOURNEY: JourneyDefinition = {
   id: 'property',
+  payloadMapper: PROPERTY_PAYLOAD_MAPPER,
   steps: [
     {
       name: 'your-details',

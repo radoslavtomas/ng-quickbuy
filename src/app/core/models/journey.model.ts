@@ -1,4 +1,5 @@
 import type { FormFieldConfig } from './form-field.model';
+import type { JourneyPayloadMapper } from './journey-payload.model';
 
 /** Identifies the shape of a questionnaire. Several modules share one journey. */
 export type JourneyId = 'motor' | 'property';
@@ -62,4 +63,6 @@ export interface JourneyStepDefinition {
 export interface JourneyDefinition {
   readonly id: JourneyId;
   readonly steps: readonly JourneyStepDefinition[];
+  /** Owns the translation between these answers and the insurer's wire format. */
+  readonly payloadMapper: JourneyPayloadMapper;
 }

@@ -4,6 +4,7 @@ import { MOTOR_YOUR_DETAILS_FIELDS } from '../specific-modules/config/motor/step
 import { MOTOR_YOUR_VEHICLE_FIELDS } from '../specific-modules/config/motor/steps/your-vehicle.fields';
 import { MOTOR_ADDITIONAL_DRIVERS_FIELDS } from '../specific-modules/config/motor/steps/additional-drivers.fields';
 import { MOTOR_YOUR_POLICY_FIELDS } from '../specific-modules/config/motor/steps/your-policy.fields';
+import { MOTOR_PAYLOAD_MAPPER } from './journey-payload.mapper';
 
 /** The proposer's details are only worth asking for once we know where they live. */
 function addressIsResolved(answers: StepAnswers): boolean {
@@ -19,6 +20,7 @@ function addressIsResolved(answers: StepAnswers): boolean {
  */
 export const MOTOR_JOURNEY: JourneyDefinition = {
   id: 'motor',
+  payloadMapper: MOTOR_PAYLOAD_MAPPER,
   steps: [
     {
       name: 'your-details',

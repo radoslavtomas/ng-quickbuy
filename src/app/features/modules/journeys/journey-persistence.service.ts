@@ -155,27 +155,17 @@ export class JourneyPersistenceService {
   }
 
   /**
-   * Flattens the answers captured so far into backend key/value pairs.
+   * The journey's answers in wire form, produced by the product's payload mapper.
    *
-   * Field names are already backend-shaped, which is why this can be a flat
-   * projection today. It becomes the payload mapper's job once the typed model
-   * lands, at which point this method goes away.
+   * The mapper owns the outbound contract, so nothing here knows backend field
+   * names.
    */
   private answerFields(moduleCode: string): Record<string, string> {
-    const fields: Record<string, string> = {};
-
-    for (const sections of Object.values(this.journeyState.moduleAnswers(moduleCode))) {
-      for (const values of Object.values(sections)) {
-        for (const [name, value] of Object.entries(values)) {
-          if (value === null || value === undefined || value === '') {
-            continue;
-          }
-
-          fields[name] = typeof value === 'boolean' ? (value ? 'Y' : 'N') : `${value}`;
-        }
-      }
+    const journey = getJourneyForModule(moduleCode);
+    if (!journey) {
+      return {};
     }
 
-    return fields;
+    return journey.payloadMapper.toStoreFields(this.journeyState.moduleAnswers(moduleCode));
   }
 }
