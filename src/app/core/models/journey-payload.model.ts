@@ -25,8 +25,19 @@ export interface JourneyPayloadMapper {
    */
   toStoreFields(answers: JourneyAnswers): Record<string, string>;
 
+  /**
+   * Wire slots this product files people under, the first being the proposer.
+   *
+   * The APIs identify people by slot rather than index, so the number of slots is
+   * also the ceiling on how many people a policy can name.
+   */
+  readonly personSlots: readonly string[];
+
   /** The backend key for an internal field name, or the name itself if unmapped. */
   backendKeyFor(internalName: string): string;
+
+  /** The backend key for a field belonging to the person in a given slot. */
+  backendKeyForSlot(slot: string, internalName: string): string;
 
   /** The internal field name for a backend key, or the key itself if unmapped. */
   internalNameFor(backendKey: string): string;

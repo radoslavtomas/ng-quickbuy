@@ -1,5 +1,11 @@
 import type { JourneyAnswers } from '../../../core/models/journey-payload.model';
-import { MOTOR_PAYLOAD_MAPPER, PROPERTY_PAYLOAD_MAPPER } from './journey-payload.mapper';
+import {
+  ADDITIONAL_DRIVER_SLOTS,
+  MOTOR_DRIVER_SLOTS,
+  MOTOR_PAYLOAD_MAPPER,
+  PROPERTY_PAYLOAD_MAPPER,
+  PROPERTY_PROPOSER_SLOTS,
+} from './journey-payload.mapper';
 
 const MOTOR_ANSWERS: JourneyAnswers = {
   'your-details': {
@@ -58,6 +64,48 @@ describe('journey payload mappers', () => {
   it('passes through a name with no known insurer key', () => {
     expect(MOTOR_PAYLOAD_MAPPER.backendKeyFor('declarationAccepted')).toBe('declarationAccepted');
     expect(MOTOR_PAYLOAD_MAPPER.internalNameFor('somethingNew')).toBe('somethingNew');
+  });
+
+  it('files the proposer under the proposer slot', () => {
+    // The existing keys were always slot-prefixed; this makes that explicit.
+    expect(MOTOR_PAYLOAD_MAPPER.backendKeyFor('forenames')).toBe('proposer-name-forenames');
+    expect(MOTOR_PAYLOAD_MAPPER.backendKeyFor('dateOfBirth')).toBe('proposer-dateofbirth');
+    expect(MOTOR_PAYLOAD_MAPPER.backendKeyFor('postcode')).toBe('proposer-address-postcode');
+  });
+
+  it('files another person under their own slot, reusing the same field names', () => {
+    expect(MOTOR_PAYLOAD_MAPPER.backendKeyForSlot('driver-2', 'forenames')).toBe(
+      'driver-2-name-forenames',
+    );
+    expect(MOTOR_PAYLOAD_MAPPER.backendKeyForSlot('driver-4', 'dateOfBirth')).toBe(
+      'driver-4-dateofbirth',
+    );
+    expect(PROPERTY_PAYLOAD_MAPPER.backendKeyForSlot('jointproposer', 'surname')).toBe(
+      'jointproposer-name-surname',
+    );
+  });
+
+  it('recognises any slot on the way back in', () => {
+    expect(MOTOR_PAYLOAD_MAPPER.internalNameFor('driver-3-name-surname')).toBe('surname');
+    expect(MOTOR_PAYLOAD_MAPPER.internalNameFor('proposer-dateofbirth')).toBe('dateOfBirth');
+    expect(PROPERTY_PAYLOAD_MAPPER.internalNameFor('jointproposer-dateofbirth')).toBe('dateOfBirth');
+  });
+
+  it('exposes the slots each product allows, which is also the ceiling on people', () => {
+    expect(MOTOR_PAYLOAD_MAPPER.personSlots).toEqual(MOTOR_DRIVER_SLOTS);
+    expect(PROPERTY_PAYLOAD_MAPPER.personSlots).toEqual(PROPERTY_PROPOSER_SLOTS);
+
+    // Four driver slots means the customer plus three others.
+    expect(MOTOR_DRIVER_SLOTS).toHaveLength(4);
+    expect(ADDITIONAL_DRIVER_SLOTS).toEqual(['driver-2', 'driver-3', 'driver-4']);
+    // One joint proposer, never more.
+    expect(PROPERTY_PROPOSER_SLOTS).toHaveLength(2);
+  });
+
+  it('does not treat a property policy as having driver slots', () => {
+    expect(PROPERTY_PAYLOAD_MAPPER.internalNameFor('driver-2-name-surname')).toBe(
+      'driver-2-name-surname',
+    );
   });
 
   it('differs per product where the products differ', () => {

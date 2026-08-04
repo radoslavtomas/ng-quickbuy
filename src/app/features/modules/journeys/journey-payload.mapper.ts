@@ -13,29 +13,60 @@ import type {
 export const POLICY_START_DATE_FIELD = 'startDate';
 
 /**
- * Names the insurer APIs use, keyed by the internal name.
+ * Wire slot every person's answers are filed under.
  *
- * Anything absent is sent under its internal name, which is the honest default: we
- * only claim a translation where the backend key is actually known. The address keys
- * are shared by both products because the proposer address is the same concept.
+ * The APIs identify people by slot rather than by index: the customer is always
+ * `proposer`, and further people occupy named slots. This is why the existing keys
+ * read `proposer-name-forenames` — the prefix was always a slot.
  */
-const SHARED_KEYS: Readonly<Record<string, string>> = {
-  forenames: 'proposer-name-forenames',
-  surname: 'proposer-name-surname',
-  dateOfBirth: 'proposer-dateofbirth',
-  email: 'proposer-email',
-  phone: 'proposer-daytimetelephone',
-  addressLine1: 'proposer-address-addressline1',
-  addressLine2: 'proposer-address-addressline2',
-  addressLine3: 'proposer-address-addressline3',
-  addressLine4: 'proposer-address-addressline4',
-  postcode: 'proposer-address-postcode',
+export const PROPOSER_SLOT = 'proposer';
+
+/** Slots a motor policy may name, the first being the customer themselves. */
+export const MOTOR_DRIVER_SLOTS: readonly string[] = [
+  PROPOSER_SLOT,
+  'driver-2',
+  'driver-3',
+  'driver-4',
+];
+
+/** Slots a property policy may name for proposers. */
+export const PROPERTY_PROPOSER_SLOTS: readonly string[] = [PROPOSER_SLOT, 'jointproposer'];
+
+/**
+ * Slots available for people other than the customer.
+ *
+ * Derived rather than written out, so the ceiling can never disagree with the
+ * allowed slots: four driver slots means three *additional* drivers.
+ */
+export const ADDITIONAL_DRIVER_SLOTS: readonly string[] = MOTOR_DRIVER_SLOTS.slice(1);
+
+/**
+ * Insurer key suffix for each field a person has.
+ *
+ * Combined with a slot to make the full key, so the same field definition serves the
+ * proposer and any additional driver.
+ */
+const PERSON_KEY_SUFFIXES: Readonly<Record<string, string>> = {
+  forenames: 'name-forenames',
+  surname: 'name-surname',
+  dateOfBirth: 'dateofbirth',
+  email: 'email',
+  phone: 'daytimetelephone',
+  addressLine1: 'address-addressline1',
+  addressLine2: 'address-addressline2',
+  addressLine3: 'address-addressline3',
+  addressLine4: 'address-addressline4',
+  postcode: 'address-postcode',
+};
+
+/** Keys that belong to the policy rather than to a person. */
+const SHARED_POLICY_KEYS: Readonly<Record<string, string>> = {
   startDate: 'policy-inceptiondate',
   voluntaryExcess: 'policy-volxs',
 };
 
 const MOTOR_KEYS: Readonly<Record<string, string>> = {
-  ...SHARED_KEYS,
+  ...SHARED_POLICY_KEYS,
   registration: 'vehicle-regnumber',
   annualMileage: 'policy-totalmileage',
   overnightLocation: 'vehicle-wherekept',
@@ -44,7 +75,7 @@ const MOTOR_KEYS: Readonly<Record<string, string>> = {
 };
 
 const PROPERTY_KEYS: Readonly<Record<string, string>> = {
-  ...SHARED_KEYS,
+  ...SHARED_POLICY_KEYS,
 };
 
 /** Coded values the backend uses, by internal field name. */
@@ -69,6 +100,8 @@ interface MapperConfig {
   readonly version: string;
   readonly keys: Readonly<Record<string, string>>;
   readonly codedValues: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** Slots this product may file people under, the first being the proposer. */
+  readonly personSlots: readonly string[];
 }
 
 /**
@@ -77,12 +110,37 @@ interface MapperConfig {
  * Both directions are derived from a single name map, so a key can never be right
  * outbound and wrong inbound.
  */
-function createMapper({ version, keys, codedValues }: MapperConfig): JourneyPayloadMapper {
-  const internalByBackendKey = new Map(
+function createMapper({
+  version,
+  keys,
+  codedValues,
+  personSlots,
+}: MapperConfig): JourneyPayloadMapper {
+  const backendKeyForSlot = (slot: string, internalName: string): string => {
+    const personSuffix = PERSON_KEY_SUFFIXES[internalName];
+    if (personSuffix) {
+      return `${slot}-${personSuffix}`;
+    }
+
+    // A non-person field asked of a specific person is still filed under that slot.
+    return slot === PROPOSER_SLOT
+      ? (keys[internalName] ?? internalName)
+      : `${slot}-${internalName}`;
+  };
+
+  const backendKeyFor = (internalName: string): string =>
+    backendKeyForSlot(PROPOSER_SLOT, internalName);
+
+  // Reverse lookup covers policy keys plus every person key in every slot, so
+  // hydration can recognise a second driver's answers as readily as the proposer's.
+  const internalByBackendKey = new Map<string, string>(
     Object.entries(keys).map(([internal, key]) => [key, internal]),
   );
-
-  const backendKeyFor = (internalName: string): string => keys[internalName] ?? internalName;
+  for (const slot of personSlots) {
+    for (const internal of Object.keys(PERSON_KEY_SUFFIXES)) {
+      internalByBackendKey.set(backendKeyForSlot(slot, internal), internal);
+    }
+  }
 
   const toWireValueFor = (internalName: string, value: unknown): string | null => {
     const codes = codedValues[internalName];
@@ -95,7 +153,9 @@ function createMapper({ version, keys, codedValues }: MapperConfig): JourneyPayl
 
   return {
     version,
+    personSlots,
     backendKeyFor,
+    backendKeyForSlot,
     toWireValueFor,
 
     internalNameFor(backendKey: string): string {
@@ -135,10 +195,12 @@ export const MOTOR_PAYLOAD_MAPPER = createMapper({
   version: 'motor-1',
   keys: MOTOR_KEYS,
   codedValues: MOTOR_CODED_VALUES,
+  personSlots: MOTOR_DRIVER_SLOTS,
 });
 
 export const PROPERTY_PAYLOAD_MAPPER = createMapper({
   version: 'property-1',
   keys: PROPERTY_KEYS,
   codedValues: {},
+  personSlots: PROPERTY_PROPOSER_SLOTS,
 });
