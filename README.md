@@ -160,12 +160,17 @@ type, label, help text, options, validators, normalization rules and conditional
 }
 ```
 
-`DynamicFormComponent` turns an array of these into a flat `FormGroup`, supported by three services:
+The runtime is **Angular Signal Forms** (`@angular/forms/signals`):
 
-- `FormValidationRegistryService` — validator config to `ValidatorFn`, including named custom
-  validators
-- `FormNormalizationService` — trim/uppercase/lowercase/phone/date/currency coercion on blur
-- `FormValidationMessageService` — resolves which message to show, preferring the field's own text
+- `core/forms/signal-forms-schema.ts` translates `FormFieldConfig` into a Signal Forms schema at
+  runtime. It is the only place that casts, because validator signatures expect concrete types that a
+  configuration-driven model cannot promise. Conditions become `hidden`/`disabled` logic that
+  re-evaluates itself, and existing `ValidatorFn`s are bridged rather than rewritten.
+- `shared/components/signal-form/` renders a section from that schema, binding `[formField]` per
+  field type and exposing `collect()` for the journey shell.
+- `FormNormalizationService` still applies trim/uppercase/phone/date/currency coercion on blur.
+- `FormValidationMessageService` supplies wording for rules with no configured message, keyed by
+  Signal Forms error kind.
 
 Cross-field and domain validators live in `src/app/core/validators/form-validators.ts`
 (`validDateValidator`, `adultOnlyValidator`, `licenseYearsByAgeValidator`).
@@ -173,10 +178,19 @@ Cross-field and domain validators live in `src/app/core/validators/form-validato
 A section gate is separate from field-level conditions: `JourneySection.visibleWhen` receives the
 whole step's answers, which is how the proposer questions stay hidden until an address is resolved.
 
-**Limitations to know before extending it:** the model is flat per section, so repeating groups
-(multiple drivers, claims, convictions) cannot be expressed — `additional-drivers` stores a *count*
-rather than a list. Changing the renderer's `initialValue` input rebuilds its controls, which is why
-`SectionOutletComponent` reads stored answers untracked when seeding a form.
+Things to know before extending it:
+
+- **Rules may only reference fields of their own section.** Reading a path outside the model throws in
+  Signal Forms, so the adapter resolves siblings against the section's field names and returns `null`
+  otherwise. `licenseYearsByAgeValidator` is in that position — it wants the date of birth, owned by
+  the proposer section — so it is currently inert. That is an underwriting gap, not a style issue.
+- **Hidden and disabled fields drop out of validity**, so a question the customer never saw cannot
+  block a step.
+- **Repeating groups are still not expressible**: the model is flat per section, so
+  `additional-drivers` stores a *count* rather than a list. `applyEach` is the route to fixing it.
+- **Radio values arrive as strings**, because the native binding reads `element.value`.
+- The directive owns `disabled`, `required` and `pattern`, so those cannot be bound directly on a
+  `[formField]` host.
 
 ## Journey state
 
@@ -332,6 +346,8 @@ from the definition.
 - Signals first: `input()`/`output()` functions rather than decorators, `computed()` for derived
   state, `viewChild()`/`viewChildren()` rather than decorators, `inject()` rather than constructor
   injection.
+- Forms use Signal Forms. Note `form()` registers an effect internally, so it cannot be created
+  inside a `computed()` — build field trees in `ngOnInit` or the constructor.
 - Native control flow (`@if`, `@for`, `@switch`); `class`/`style` bindings rather than `ngClass`/`ngStyle`.
 - Do not set `standalone: true` or `changeDetection: OnPush` explicitly; both are defaults now.
 - The app is **zoneless** — there is no `zone.js`. Anything relying on automatic change detection
