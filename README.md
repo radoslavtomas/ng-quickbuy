@@ -81,8 +81,12 @@ Five nouns explain most of the codebase:
 - **Journey** — the questionnaire a module runs. Two exist, `motor` and `property`; several modules
   share one.
 - **Step** — one screen of a journey, e.g. `your-details`, `your-vehicle`, `your-quotes`.
-- **Section** — one card within a step. Either `fields` (rendered from field configuration) or
-  `custom` (a bespoke component such as address lookup). Answers are stored per section.
+- **Section** — one card within a step: `fields` (rendered from field configuration), `repeat` (a list
+  of items answering the same questions, such as additional drivers) or `custom` (a bespoke component
+  such as address lookup). Answers are stored per section.
+- **Slot** — how the APIs identify a person: the customer is `proposer`, and others occupy named slots
+  such as `driver-2` or `jointproposer`. The slot list is also the ceiling on how many people a policy
+  can name.
 
 Journeys today:
 
@@ -187,8 +191,10 @@ Things to know before extending it:
   the proposer section — so it is currently inert. That is an underwriting gap, not a style issue.
 - **Hidden and disabled fields drop out of validity**, so a question the customer never saw cannot
   block a step.
-- **Repeating groups are still not expressible**: the model is flat per section, so
-  `additional-drivers` stores a *count* rather than a list. `applyEach` is the route to fixing it.
+- **Repeating groups use a `repeat` section**, which declares the questions asked of each item and the
+  wire slots they occupy. Slots are assigned by position, so removing an item re-packs the rest, and
+  the number of slots is the maximum number of items. Each item is rendered by the ordinary field
+  renderer. Cross-item rules would need the items to share one field tree via `applyEach`.
 - **Radio values arrive as strings**, because the native binding reads `element.value`.
 - The directive owns `disabled`, `required` and `pattern`, so those cannot be bound directly on a
   `[formField]` host.
@@ -383,10 +389,9 @@ survive in `sessionStorage` — but nothing reads the partial back yet, so there
 
 Deliberate, known gaps — check here before assuming something is a bug:
 
-1. **No repeatable groups.** The flat per-section model cannot express multiple drivers, claims or
-   convictions. Being addressed by moving to a nested typed model and Angular Signal Forms
-   (`@angular/forms/signals`), whose `applyEach`/`applyWhen` cover repeatable and conditional
-   sections natively.
+1. **No cross-item validation.** A `repeat` section renders one form per item, so a rule spanning
+   items — rejecting two drivers with the same date of birth, say — cannot be expressed. `applyEach`
+   would give the items a shared field tree when that is needed.
 2. **The mapper's key coverage is partial.** Every product has a versioned mapper owning the
    translation, but a field with no confirmed insurer key is sent under its internal name. Those are
    the names to check against the backend contract: `vehicleUse`, `hasAdditionalDrivers`,
