@@ -2,9 +2,16 @@ import type { JourneyDefinition, StepAnswers } from '../../../core/models/journe
 import { hasAddressState } from '../specific-modules/config/shared/common';
 import { MOTOR_YOUR_DETAILS_FIELDS } from '../specific-modules/config/motor/steps/your-details.fields';
 import { MOTOR_YOUR_VEHICLE_FIELDS } from '../specific-modules/config/motor/steps/your-vehicle.fields';
-import { MOTOR_ADDITIONAL_DRIVERS_FIELDS } from '../specific-modules/config/motor/steps/additional-drivers.fields';
+import {
+  MOTOR_ADDITIONAL_DRIVERS_FIELDS,
+  MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS,
+} from '../specific-modules/config/motor/steps/additional-drivers.fields';
 import { MOTOR_YOUR_POLICY_FIELDS } from '../specific-modules/config/motor/steps/your-policy.fields';
-import { MOTOR_PAYLOAD_MAPPER } from './journey-payload.mapper';
+import {
+  ADDITIONAL_DRIVERS_SECTION_ID,
+  ADDITIONAL_DRIVER_SLOTS,
+  MOTOR_PAYLOAD_MAPPER,
+} from './journey-payload.mapper';
 
 /** The proposer's details are only worth asking for once we know where they live. */
 function addressIsResolved(answers: StepAnswers): boolean {
@@ -78,6 +85,15 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
             hasAdditionalDrivers: 'no',
             noClaimsBonusYears: '3',
           },
+        },
+        {
+          kind: 'repeat',
+          id: ADDITIONAL_DRIVERS_SECTION_ID,
+          title: 'Additional driver details',
+          itemLabel: 'Additional driver',
+          itemFields: MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS,
+          slots: ADDITIONAL_DRIVER_SLOTS,
+          visibleWhen: answers => answers['drivers']?.['hasAdditionalDrivers'] === 'yes',
         },
       ],
     },

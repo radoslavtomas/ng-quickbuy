@@ -102,6 +102,8 @@ interface MapperConfig {
   readonly codedValues: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** Slots this product may file people under, the first being the proposer. */
   readonly personSlots: readonly string[];
+  /** Wire slots for each repeat section's items, by section id. */
+  readonly repeatSlots: Readonly<Record<string, readonly string[]>>;
 }
 
 /**
@@ -115,6 +117,7 @@ function createMapper({
   keys,
   codedValues,
   personSlots,
+  repeatSlots,
 }: MapperConfig): JourneyPayloadMapper {
   const backendKeyForSlot = (slot: string, internalName: string): string => {
     const personSuffix = PERSON_KEY_SUFFIXES[internalName];
@@ -175,13 +178,34 @@ function createMapper({
     toStoreFields(answers: JourneyAnswers): Record<string, string> {
       const fields: Record<string, string> = {};
 
+      const write = (key: string, internalName: string, value: unknown): void => {
+        const wireValue = toWireValueFor(internalName, value);
+        if (wireValue !== null) {
+          fields[key] = wireValue;
+        }
+      };
+
       for (const sections of Object.values(answers)) {
-        for (const values of Object.values(sections)) {
+        for (const [sectionId, values] of Object.entries(sections)) {
+          const slots = repeatSlots[sectionId];
+          const items = values['items'];
+
+          if (slots && Array.isArray(items)) {
+            // Slots come from position, so a removed item re-packs the rest. Items
+            // beyond the available slots are dropped rather than silently merged.
+            items.slice(0, slots.length).forEach((item, index) => {
+              const slot = slots[index];
+              for (const [internalName, value] of Object.entries(
+                item as Record<string, unknown>,
+              )) {
+                write(backendKeyForSlot(slot, internalName), internalName, value);
+              }
+            });
+            continue;
+          }
+
           for (const [internalName, value] of Object.entries(values)) {
-            const wireValue = toWireValueFor(internalName, value);
-            if (wireValue !== null) {
-              fields[backendKeyFor(internalName)] = wireValue;
-            }
+            write(backendKeyFor(internalName), internalName, value);
           }
         }
       }
@@ -191,11 +215,15 @@ function createMapper({
   };
 }
 
+/** Section id of the motor journey's additional drivers list. */
+export const ADDITIONAL_DRIVERS_SECTION_ID = 'additionalDrivers';
+
 export const MOTOR_PAYLOAD_MAPPER = createMapper({
   version: 'motor-1',
   keys: MOTOR_KEYS,
   codedValues: MOTOR_CODED_VALUES,
   personSlots: MOTOR_DRIVER_SLOTS,
+  repeatSlots: { [ADDITIONAL_DRIVERS_SECTION_ID]: ADDITIONAL_DRIVER_SLOTS },
 });
 
 export const PROPERTY_PAYLOAD_MAPPER = createMapper({
@@ -203,4 +231,5 @@ export const PROPERTY_PAYLOAD_MAPPER = createMapper({
   keys: PROPERTY_KEYS,
   codedValues: {},
   personSlots: PROPERTY_PROPOSER_SLOTS,
+  repeatSlots: {},
 });

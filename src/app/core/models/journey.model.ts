@@ -42,7 +42,26 @@ export interface JourneyCustomSection extends JourneySectionBase {
   readonly component: string;
 }
 
-export type JourneySection = JourneyFieldsSection | JourneyCustomSection;
+/**
+ * A section capturing a list of people or items, each answering the same questions.
+ *
+ * Items are ordered and their wire slot comes from their position, so removing one
+ * re-packs the rest: delete the second of three drivers and the third becomes
+ * `driver-2`. The number of slots is therefore also the maximum number of items.
+ */
+export interface JourneyRepeatSection extends JourneySectionBase {
+  readonly kind: 'repeat';
+  /** Questions asked of every item. */
+  readonly itemFields: readonly FormFieldConfig[];
+  /** Singular noun for one item, e.g. `Additional driver`. */
+  readonly itemLabel: string;
+  /** Wire slots items are filed under, assigned by position. */
+  readonly slots: readonly string[];
+  /** Items required once the section is shown at all. Defaults to 1. */
+  readonly minItems?: number;
+}
+
+export type JourneySection = JourneyFieldsSection | JourneyCustomSection | JourneyRepeatSection;
 
 export interface JourneyStepDefinition {
   /** URL slug for the step, e.g. `your-details`. */

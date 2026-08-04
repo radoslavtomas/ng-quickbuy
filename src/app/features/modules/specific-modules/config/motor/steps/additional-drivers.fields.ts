@@ -1,14 +1,5 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { ADDITIONAL_DRIVER_SLOTS } from '../../../../journeys/journey-payload.mapper';
-
-/**
- * How many additional drivers a policy can name.
- *
- * Derived from the wire slots rather than written as a literal: the insurer allows
- * four driver slots and the customer occupies the first, so three remain. The
- * previous limit of four would have let a customer enter a driver with nowhere to go.
- */
-const MAX_ADDITIONAL_DRIVERS = ADDITIONAL_DRIVER_SLOTS.length;
+import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
 
 export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
   {
@@ -23,22 +14,6 @@ export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
     metadata: { radioLayout: 'row' },
   },
   {
-    type: 'number',
-    label: 'How many additional drivers?',
-    name: 'additionalDriverCount',
-    validators: [
-      { type: 'min', value: 1 },
-      {
-        type: 'max',
-        value: MAX_ADDITIONAL_DRIVERS,
-        message: `You can add up to ${MAX_ADDITIONAL_DRIVERS} additional drivers.`,
-      },
-    ],
-    visibleWhen: [{ field: 'hasAdditionalDrivers', operator: 'equals', value: 'yes' }],
-    enabledWhen: [{ field: 'hasAdditionalDrivers', operator: 'equals', value: 'yes' }],
-    metadata: { placeholder: '1' },
-  },
-  {
     type: 'select',
     label: 'Main driver no-claims bonus',
     name: 'noClaimsBonusYears',
@@ -51,6 +26,54 @@ export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
       { label: '4 years', value: '4' },
       { label: '5+ years', value: '5_plus' },
     ],
+  },
+];
+
+/**
+ * Questions asked of each additional driver.
+ *
+ * The same field names the proposer uses, because the wire format files them under a
+ * slot rather than renaming them: `forenames` becomes `driver-2-name-forenames` for
+ * the second driver and `proposer-name-forenames` for the customer.
+ */
+export const MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS: readonly FormFieldConfig[] = [
+  {
+    type: 'text',
+    label: 'First name',
+    name: 'forenames',
+    validators: [{ type: 'required' }],
+    normalization: ['trim'],
+    metadata: { autocomplete: 'off', placeholder: 'Jordan' },
+  },
+  {
+    type: 'text',
+    label: 'Surname',
+    name: 'surname',
+    validators: [{ type: 'required' }],
+    normalization: ['trim'],
+    metadata: { autocomplete: 'off', placeholder: 'Taylor' },
+  },
+  {
+    type: 'date',
+    label: 'Date of birth',
+    name: 'dateOfBirth',
+    validators: [
+      { type: 'required' },
+      {
+        type: 'custom',
+        name: 'validDate',
+        message: 'Enter a valid date in DD/MM/YYYY format.',
+        validatorFn: validDateValidator,
+      },
+      {
+        type: 'custom',
+        name: 'adultOnly',
+        message: 'A driver must be at least 18 years old.',
+        validatorFn: adultOnlyValidator,
+      },
+    ],
+    normalization: ['trim', 'date'],
+    metadata: { autocomplete: 'off' },
   },
 ];
 

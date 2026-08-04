@@ -108,6 +108,66 @@ describe('journey payload mappers', () => {
     );
   });
 
+  it('files list items under slots by position', () => {
+    const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+      'additional-drivers': {
+        additionalDrivers: {
+          items: [
+            { forenames: 'Jordan', surname: 'Taylor', dateOfBirth: '01/09/1990' },
+            { forenames: 'Sam', surname: 'Patel', dateOfBirth: '02/10/1985' },
+          ],
+        },
+      },
+    });
+
+    expect(fields['driver-2-name-forenames']).toBe('Jordan');
+    expect(fields['driver-2-dateofbirth']).toBe('01/09/1990');
+    expect(fields['driver-3-name-forenames']).toBe('Sam');
+    expect(fields['driver-3-name-surname']).toBe('Patel');
+
+    // The customer's own slot is untouched by the list.
+    expect(fields['proposer-name-forenames']).toBeUndefined();
+  });
+
+  it('re-packs slots when an item is removed', () => {
+    // Three drivers, then the middle one removed: the survivors take slots 2 and 3.
+    const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+      'additional-drivers': {
+        additionalDrivers: { items: [{ forenames: 'Jordan' }, { forenames: 'Ravi' }] },
+      },
+    });
+
+    expect(fields['driver-2-name-forenames']).toBe('Jordan');
+    expect(fields['driver-3-name-forenames']).toBe('Ravi');
+    expect(fields['driver-4-name-forenames']).toBeUndefined();
+  });
+
+  it('drops items beyond the available slots rather than merging them', () => {
+    const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+      'additional-drivers': {
+        additionalDrivers: {
+          items: [
+            { forenames: 'One' },
+            { forenames: 'Two' },
+            { forenames: 'Three' },
+            { forenames: 'Overflow' },
+          ],
+        },
+      },
+    });
+
+    expect(fields['driver-4-name-forenames']).toBe('Three');
+    expect(Object.values(fields)).not.toContain('Overflow');
+  });
+
+  it('treats a section with no slot mapping as ordinary answers', () => {
+    const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+      'your-vehicle': { vehicle: { registration: 'AB12CDE' } },
+    });
+
+    expect(fields['vehicle-regnumber']).toBe('AB12CDE');
+  });
+
   it('differs per product where the products differ', () => {
     // Cover type is a motor concept; property has no mapping or codes for it.
     expect(MOTOR_PAYLOAD_MAPPER.backendKeyFor('coverType')).toBe('policy-cover');

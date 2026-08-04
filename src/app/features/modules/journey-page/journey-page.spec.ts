@@ -210,6 +210,62 @@ describe('journey flow', () => {
     );
   });
 
+  it('hides the driver list until additional drivers are declared', async () => {
+    const fixture = await renderAt('/PC/additional-drivers');
+    const host = fixture.nativeElement as HTMLElement;
+
+    // Defaults to no, so the list is not shown.
+    expect(host.querySelector('app-repeat-section')).toBeNull();
+
+    journeyState.setSectionAnswers('PC', 'additional-drivers', 'drivers', {
+      hasAdditionalDrivers: 'yes',
+      noClaimsBonusYears: '3',
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.querySelector('app-repeat-section')).not.toBeNull();
+    expect(host.textContent).toContain('Additional driver 1');
+  });
+
+  it('adds and removes drivers up to the slots available', async () => {
+    journeyState.setSectionAnswers('PC', 'additional-drivers', 'drivers', {
+      hasAdditionalDrivers: 'yes',
+      noClaimsBonusYears: '3',
+    });
+
+    const fixture = await renderAt('/PC/additional-drivers');
+    const host = fixture.nativeElement as HTMLElement;
+
+    const addButton = () =>
+      Array.from(host.querySelectorAll('button')).find(button =>
+        button.textContent?.includes('Add another'),
+      ) as HTMLButtonElement | undefined;
+
+    expect(host.textContent).toContain('Additional driver 1');
+
+    addButton()?.click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Additional driver 2');
+
+    addButton()?.click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Additional driver 3');
+
+    // Three slots beyond the proposer, so no fourth.
+    expect(addButton()).toBeUndefined();
+    expect(host.textContent).toContain('up to 3 additional drivers');
+
+    const removeButton = Array.from(host.querySelectorAll('button')).find(button =>
+      button.textContent?.includes('Remove'),
+    ) as HTMLButtonElement | undefined;
+    removeButton?.click();
+    fixture.detectChanges();
+
+    expect(host.textContent).not.toContain('Additional driver 3');
+    expect(addButton()).toBeDefined();
+  });
+
   it('drives the property journey from the same shell', async () => {
     const fixture = await renderAt('/HC/your-property');
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';

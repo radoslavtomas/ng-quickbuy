@@ -6,6 +6,7 @@ import { SignalFormComponent } from '../../../shared/components/signal-form/sign
 import { StepCardComponent } from '../../../shared/components/step-card/step-card';
 import { AddressSectionComponent } from './sections/address-section.component';
 import { QuoteResultsSectionComponent } from './sections/quote-results-section.component';
+import { RepeatSectionComponent } from './sections/repeat-section.component';
 
 /** What the journey shell needs back from a section when the customer continues. */
 export interface SectionResult {
@@ -29,6 +30,7 @@ export interface SectionResult {
     SignalFormComponent,
     AddressSectionComponent,
     QuoteResultsSectionComponent,
+    RepeatSectionComponent,
   ],
   template: `
     <ng-template #body>
@@ -38,6 +40,13 @@ export interface SectionResult {
             [fields]="fields()"
             [initialValue]="initialValue()"
             (valueChanged)="onValueChanged($event)"
+          />
+        }
+        @case ('repeat') {
+          <app-repeat-section
+            [section]="repeatSection()"
+            [moduleCode]="moduleCode()"
+            [stepName]="stepName()"
           />
         }
         @case ('custom') {
@@ -84,6 +93,17 @@ export class SectionOutletComponent {
   private readonly signalForm = viewChild(SignalFormComponent);
   private readonly addressSection = viewChild(AddressSectionComponent);
   private readonly quoteResults = viewChild(QuoteResultsSectionComponent);
+  private readonly repeatSectionComponent = viewChild(RepeatSectionComponent);
+
+  /** Narrowed view of the section for the repeat renderer's required input. */
+  readonly repeatSection = computed(() => {
+    const section = this.section();
+    if (section.kind !== 'repeat') {
+      throw new Error(`Section "${section.id}" is not a repeat section.`);
+    }
+
+    return section;
+  });
 
   readonly fields = computed(() => {
     const section = this.section();
@@ -131,6 +151,10 @@ export class SectionOutletComponent {
 
     if (section.kind === 'fields') {
       return this.signalForm()?.collect() ?? { valid: true, values: {} };
+    }
+
+    if (section.kind === 'repeat') {
+      return this.repeatSectionComponent()?.collect() ?? { valid: true, values: {} };
     }
 
     return this.addressSection()?.collect() ?? this.quoteResults()?.collect() ?? { valid: true, values: {} };
