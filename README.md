@@ -210,9 +210,11 @@ Environment files carry per-target configuration:
   divergence is a compile error rather than a runtime surprise
 
 `APP_DOMAIN` is resolved at **runtime** from the hostname, not baked into the build, because one build
-serves every brand and the brand is itself derived from the hostname. `environment.domainOverride`
-exists only for local development, where the hostname is `localhost` and the API needs a real brand
-domain; it is empty in production.
+serves every brand and the brand is itself derived from the hostname. It is reduced to the bare domain
+label the APIs expect, with subdomains and the public suffix removed: both
+`quickbuyv3-dev.quotelinedirect.co.uk` and `quotelinedirect.co.uk` resolve to `quotelinedirect`, and
+`ajg.com` to `ajg`. `environment.domainOverride` stands in for the hostname during local development,
+where `localhost` carries no brand; it is empty in production.
 
 `API_BASE_URL` (`src/app/core/config/api.config.ts`) is injected wherever a service needs the host;
 no service hardcodes a URL. `apiInterceptor` (`src/app/core/http/api.interceptor.ts`) applies a

@@ -11,10 +11,12 @@ export interface AppEnvironment {
   /** Base URL for the QuickBuy API, without a trailing slash. */
   readonly apiBaseUrl: string;
   /**
-   * Domain sent to the APIs instead of the real hostname.
+   * Hostname to use in place of the real one when resolving the API domain.
    *
-   * Only for environments where the hostname is not a brand domain, such as
-   * `localhost`. Leave empty in production so the real hostname is used.
+   * Only for environments where the hostname carries no brand, such as `localhost`.
+   * The public suffix is stripped either way, so `quotelinedirect.co.uk` and
+   * `quotelinedirect` are equivalent. Leave empty in production so the real
+   * hostname the customer arrived on is used.
    */
   readonly domainOverride: string;
 }
