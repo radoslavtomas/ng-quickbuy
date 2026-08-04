@@ -89,6 +89,10 @@ export class DynamicFormComponent {
     return `${field.name}-messages`;
   }
 
+  labelId(field: FormFieldConfig): string {
+    return `${field.name}-label`;
+  }
+
   helpId(field: FormFieldConfig): string {
     return `${field.name}-help`;
   }

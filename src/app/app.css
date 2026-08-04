@@ -2,6 +2,32 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  position: relative;
+}
+
+/* Visible only while focused, so keyboard users can bypass the header */
+.skip-link {
+  position: absolute;
+  top: -3.5rem;
+  left: 0.5rem;
+  z-index: 50;
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 0.25rem 0.25rem;
+  background-color: #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: none;
+  transition: top 150ms ease-out;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #0ea5e9;
+  outline-offset: 2px;
+}
+
+.main-content:focus {
+  outline: none;
 }
 
 .main-content {

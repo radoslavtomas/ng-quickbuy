@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { BrandService } from '../../../core/services/brand.service';
 
 @Component({
   selector: 'app-footer',
-  imports: [NgOptimizedImage],
+  imports: [NgOptimizedImage, RouterLink],
   templateUrl: './footer.html',
   styleUrl: './footer.css',
 })
