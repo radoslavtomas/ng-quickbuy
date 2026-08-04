@@ -21,12 +21,23 @@ interface JourneySectionBase {
   readonly visibleWhen?: (answers: StepAnswers) => boolean;
 }
 
+/**
+ * Which form runtime renders a fields section.
+ *
+ * Temporary, for the migration from the reactive renderer to Signal Forms: sections
+ * move over one at a time so every commit stays shippable. Once all sections are on
+ * `signal`, this option and the reactive renderer both go away.
+ */
+export type SectionFormEngine = 'reactive' | 'signal';
+
 /** A section rendered from field configuration by the generic form renderer. */
 export interface JourneyFieldsSection extends JourneySectionBase {
   readonly kind: 'fields';
   readonly fields: readonly FormFieldConfig[];
   /** Seed values applied when the customer has not answered this section yet. */
   readonly defaults?: Readonly<Record<string, unknown>>;
+  /** Defaults to `reactive` while the Signal Forms migration is in progress. */
+  readonly engine?: SectionFormEngine;
 }
 
 /**

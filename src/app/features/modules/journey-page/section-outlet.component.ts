@@ -3,6 +3,7 @@ import { Component, computed, inject, input, untracked, viewChild } from '@angul
 import type { JourneySection } from '../../../core/models/journey.model';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
 import { DynamicFormComponent } from '../../../shared/components/dynamic-form/dynamic-form';
+import { SignalFormComponent } from '../../../shared/components/signal-form/signal-form';
 import { StepCardComponent } from '../../../shared/components/step-card/step-card';
 import { AddressSectionComponent } from './sections/address-section.component';
 import { QuoteResultsSectionComponent } from './sections/quote-results-section.component';
@@ -27,6 +28,7 @@ export interface SectionResult {
     NgTemplateOutlet,
     StepCardComponent,
     DynamicFormComponent,
+    SignalFormComponent,
     AddressSectionComponent,
     QuoteResultsSectionComponent,
   ],
@@ -34,12 +36,20 @@ export interface SectionResult {
     <ng-template #body>
       @switch (section().kind) {
         @case ('fields') {
-          <app-dynamic-form
-            [fields]="fields()"
-            [initialValue]="initialValue()"
-            [showSubmitButton]="false"
-            (valueChanged)="onValueChanged($event)"
-          />
+          @if (usesSignalForms()) {
+            <app-signal-form
+              [fields]="fields()"
+              [initialValue]="initialValue()"
+              (valueChanged)="onValueChanged($event)"
+            />
+          } @else {
+            <app-dynamic-form
+              [fields]="fields()"
+              [initialValue]="initialValue()"
+              [showSubmitButton]="false"
+              (valueChanged)="onValueChanged($event)"
+            />
+          }
         }
         @case ('custom') {
           @switch (customComponent()) {
@@ -83,8 +93,15 @@ export class SectionOutletComponent {
 
   private readonly journeyState = inject(JourneyStateService);
   private readonly dynamicForm = viewChild(DynamicFormComponent);
+  private readonly signalForm = viewChild(SignalFormComponent);
   private readonly addressSection = viewChild(AddressSectionComponent);
   private readonly quoteResults = viewChild(QuoteResultsSectionComponent);
+
+  /** True for sections already migrated to the Signal Forms renderer. */
+  readonly usesSignalForms = computed(() => {
+    const section = this.section();
+    return section.kind === 'fields' && section.engine === 'signal';
+  });
 
   readonly fields = computed(() => {
     const section = this.section();
@@ -131,6 +148,11 @@ export class SectionOutletComponent {
     const section = this.section();
 
     if (section.kind === 'fields') {
+      const signalForm = this.signalForm();
+      if (signalForm) {
+        return signalForm.collect();
+      }
+
       const form = this.dynamicForm();
       if (!form) {
         return { valid: true, values: {} };

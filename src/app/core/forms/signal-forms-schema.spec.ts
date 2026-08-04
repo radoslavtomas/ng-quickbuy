@@ -206,7 +206,8 @@ describe('buildSectionModel', () => {
       { type: 'number', label: 'C', name: 'c' },
     ];
 
-    expect(buildSectionModel(fields, {})).toEqual({ a: '', b: false, c: '' });
+    // Numbers seed as null so the native numeric binding applies; see emptyValueFor.
+    expect(buildSectionModel(fields, {})).toEqual({ a: '', b: false, c: null });
   });
 
   it('prefers provided values and ignores keys with no field', () => {

@@ -129,6 +129,78 @@ describe('journey flow', () => {
     expect(continueButton(fixture)).toBeNull();
   });
 
+  it('renders the migrated section with the Signal Forms engine, others with the reactive one', async () => {
+    const policyStep = await renderAt('/PC/your-policy');
+    expect((policyStep.nativeElement as HTMLElement).querySelector('app-signal-form')).not.toBeNull();
+    expect((policyStep.nativeElement as HTMLElement).querySelector('app-dynamic-form')).toBeNull();
+
+    const vehicleStep = await renderAt('/PC/your-vehicle');
+    expect((vehicleStep.nativeElement as HTMLElement).querySelector('app-dynamic-form')).not.toBeNull();
+    expect((vehicleStep.nativeElement as HTMLElement).querySelector('app-signal-form')).toBeNull();
+  });
+
+  it('renders every field type of the Signal Forms section', async () => {
+    const fixture = await renderAt('/PC/your-policy');
+    const host = fixture.nativeElement as HTMLElement;
+
+    // date rendered as text, radio group, numbers with prefix/suffix, and a checkbox.
+    expect(host.querySelector('#policy-inceptiondate')).not.toBeNull();
+    expect(host.querySelectorAll('input[type=radio]').length).toBe(3);
+    expect(host.querySelector('#policy-volxs')).not.toBeNull();
+    expect(host.querySelector('#licenseYearsHeld')).not.toBeNull();
+    expect(host.querySelector('#declarationAccepted')).not.toBeNull();
+    // The radio group is named by a real legend, as the reactive renderer is.
+    expect(host.querySelector('fieldset legend')?.textContent).toContain('Level of cover');
+  });
+
+  it('blocks the Signal Forms section when required answers are missing', async () => {
+    const fixture = await renderAt('/PC/your-policy');
+
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toContain('/PC/your-policy');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('is required');
+  });
+
+  it('advances past the Signal Forms section once it is valid', async () => {
+    journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
+      'policy-inceptiondate': '01/09/2026',
+      'policy-cover': 'comprehensive',
+      'policy-volxs': 250,
+      licenseYearsHeld: 8,
+      declarationAccepted: true,
+    });
+
+    const fixture = await renderAt('/PC/your-policy');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+
+    expect(router.url).toContain('/PC/your-quotes');
+    expect(journeyState.isStepComplete('PC', 'your-policy')).toBe(true);
+  });
+
+  it('rejects an invalid date through the bridged validator', async () => {
+    journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
+      'policy-inceptiondate': '31/02/2026',
+      'policy-cover': 'comprehensive',
+      'policy-volxs': 250,
+      licenseYearsHeld: 8,
+      declarationAccepted: true,
+    });
+
+    const fixture = await renderAt('/PC/your-policy');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toContain('/PC/your-policy');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Enter a valid date in DD/MM/YYYY format.',
+    );
+  });
+
   it('drives the property journey from the same shell', async () => {
     const fixture = await renderAt('/HC/your-property');
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';

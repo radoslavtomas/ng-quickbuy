@@ -90,6 +90,10 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
           id: 'policy',
           title: 'Your policy',
           fields: MOTOR_YOUR_POLICY_FIELDS,
+          // First section migrated to Signal Forms. Chosen because it exercises the
+          // most: a date, a radio group, numbers with prefix/suffix, a required
+          // checkbox and two custom validators.
+          engine: 'signal',
           defaults: {
             'policy-cover': 'comprehensive',
             'policy-volxs': 250,

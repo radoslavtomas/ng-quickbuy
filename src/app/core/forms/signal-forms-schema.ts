@@ -36,16 +36,24 @@ type SectionPath = Record<string, unknown>;
  * outside this module should need to cast.
  */
 export function buildSectionSchema(fields: readonly FormFieldConfig[]) {
+  // The path object resolves any key, and reading one that is not in the model
+  // throws at validation time, so rules may only reference fields of this section.
+  const fieldNames = new Set(fields.map(field => field.name));
+
   return schema<SectionModel>(path => {
     const sectionPath = path as unknown as SectionPath;
 
     for (const field of fields) {
-      applyFieldRules(field, sectionPath);
+      applyFieldRules(field, sectionPath, fieldNames);
     }
   });
 }
 
-function applyFieldRules(field: FormFieldConfig, path: SectionPath): void {
+function applyFieldRules(
+  field: FormFieldConfig,
+  path: SectionPath,
+  fieldNames: ReadonlySet<string>,
+): void {
   const target = path[field.name] as never;
 
   for (const validator of field.validators ?? []) {
@@ -86,19 +94,19 @@ function applyFieldRules(field: FormFieldConfig, path: SectionPath): void {
         }
         break;
       case 'custom':
-        applyCustomValidator(field, validator.validatorFn, message, target, path);
+        applyCustomValidator(field, validator.validatorFn, message, target, path, fieldNames);
         break;
     }
   }
 
   if (field.visibleWhen?.length) {
     const conditions = field.visibleWhen;
-    hidden(target, { when: ctx => !conditionsPass(conditions, path, ctx) });
+    hidden(target, { when: ctx => !conditionsPass(conditions, path, fieldNames, ctx) });
   }
 
   if (field.enabledWhen?.length) {
     const conditions = field.enabledWhen;
-    disabled(target, { when: ctx => !conditionsPass(conditions, path, ctx) });
+    disabled(target, { when: ctx => !conditionsPass(conditions, path, fieldNames, ctx) });
   }
 }
 
@@ -109,11 +117,13 @@ function applyFieldRules(field: FormFieldConfig, path: SectionPath): void {
  * so rather than rewrite them this presents a control-shaped view backed by the
  * field's value and its siblings.
  *
- * KNOWN GAP: a validator reaching for a sibling that lives in a *different* section
- * finds nothing, because each section is its own form. `licenseYearsByAgeValidator`
- * is in exactly that position — it wants `dateOfBirth`, which the proposer section
- * owns — so it silently passes. That predates this adapter and is fixed by the
- * typed model, where the rule can be expressed across the whole journey.
+ * KNOWN GAP: a validator reaching for a sibling in a *different* section gets `null`,
+ * because each section is its own form. `licenseYearsByAgeValidator` is in exactly
+ * that position — it wants `dateOfBirth`, which the proposer section owns — so it
+ * always passes. That predates this adapter (the reactive renderer had the same
+ * blind spot, just silently) and is fixed by the typed model, where the rule can be
+ * expressed across the whole journey. Until then the licence-years-versus-age check
+ * is inert, which is an underwriting gap worth tracking.
  */
 function applyCustomValidator(
   field: FormFieldConfig,
@@ -121,6 +131,7 @@ function applyCustomValidator(
   message: string | undefined,
   target: never,
   path: SectionPath,
+  fieldNames: ReadonlySet<string>,
 ): void {
   if (!validatorFn) {
     return;
@@ -130,10 +141,8 @@ function applyCustomValidator(
     const control = {
       value: ctx.value(),
       parent: {
-        get: (name: string) => {
-          const siblingPath = path[name];
-          return siblingPath === undefined ? null : { value: ctx.valueOf(siblingPath as never) };
-        },
+        get: (name: string) =>
+          fieldNames.has(name) ? { value: ctx.valueOf(path[name] as never) } : null,
       },
     } as unknown as AbstractControl;
 
@@ -147,15 +156,22 @@ function applyCustomValidator(
   });
 }
 
-/** Evaluates configuration conditions against sibling values, reactively. */
+/**
+ * Evaluates configuration conditions against sibling values, reactively.
+ *
+ * A condition naming a field outside this section reads as `undefined` rather than
+ * throwing, so a mis-scoped condition degrades instead of breaking the form.
+ */
 function conditionsPass(
   conditions: readonly FieldCondition[],
   path: SectionPath,
+  fieldNames: ReadonlySet<string>,
   ctx: { valueOf: (p: never) => unknown },
 ): boolean {
   return conditions.every(condition => {
-    const siblingPath = path[condition.field];
-    const value = siblingPath === undefined ? undefined : ctx.valueOf(siblingPath as never);
+    const value = fieldNames.has(condition.field)
+      ? ctx.valueOf(path[condition.field] as never)
+      : undefined;
 
     switch (condition.operator) {
       case 'equals':
@@ -199,5 +215,12 @@ export function buildSectionModel(
 }
 
 function emptyValueFor(field: FormFieldConfig): unknown {
-  return field.type === 'checkbox' || field.type === 'toggle' ? false : '';
+  if (field.type === 'checkbox' || field.type === 'toggle') {
+    return false;
+  }
+
+  // `null` rather than `''` for numbers on purpose: the native binding only reads
+  // `valueAsNumber` when the model value is already a number or null, so seeding an
+  // empty string would make a numeric field report strings and break min/max.
+  return field.type === 'number' ? null : '';
 }
