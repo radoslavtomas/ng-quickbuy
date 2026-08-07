@@ -112,15 +112,15 @@ There is one screen for every product and step:
 
 ```mermaid
 flowchart TD
-  Route["/GV/your-vehicle"] --> JP["JourneyPageComponent<br/>progress, heading, prev/next"]
-  JP --> REG["journey-registry<br/>module code -> journey -> step"]
+  Route["/GV/your-vehicle"] --> JP["JourneyPageComponent\nprogress, heading, prev/next"]
+  JP --> REG["journey-registry\nmodule code -> journey -> step"]
   REG --> SEC["step.sections"]
-  SEC --> SO["SectionOutletComponent<br/>per section"]
-  SO -->|kind: fields| SF["SignalFormComponent<br/>renders field config"]
-  SO -->|kind: repeat| RS["RepeatSectionComponent<br/>one SignalForm per item"]
+  SEC --> SO["SectionOutletComponent\nper section"]
+  SO -->|kind: fields| SF["SignalFormComponent\nrenders field config"]
+  SO -->|kind: repeat| RS["RepeatSectionComponent\none SignalForm per item"]
   SO -->|kind: custom| CUS["AddressSection / QuoteResultsSection"]
-  JP --> ST["JourneyStateService<br/>answers per module/step/section"]
-  JP --> PS["JourneyPersistenceService<br/>partial quote via the mapper"]
+  JP --> ST["JourneyStateService\nanswers per module/step/section"]
+  JP --> PS["JourneyPersistenceService\npartial quote via the mapper"]
 ```
 
 `BrandService` resolves the brand once from the hostname and derives the active module code from
