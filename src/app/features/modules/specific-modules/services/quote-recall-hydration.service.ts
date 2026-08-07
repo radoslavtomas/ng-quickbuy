@@ -24,6 +24,24 @@ const ADDRESS_FIELDS: readonly string[] = [
 /** Section id that holds the proposer address, by convention in both journeys. */
 const ADDRESS_SECTION_ID = 'address';
 
+/** Section id that holds the proposer occupation, by convention in both journeys. */
+const OCCUPATION_SECTION_ID = 'occupation';
+
+/** Internal names of the occupation fields the occupation section owns. */
+const OCCUPATION_FIELDS: readonly string[] = [
+  'employmentStatus',
+  'occupationCode',
+  'occupationDescription',
+  'industryCode',
+  'industryDescription',
+  'hasParttime',
+  'ptEmploymentStatus',
+  'ptOccupationCode',
+  'ptOccupationDescription',
+  'ptIndustryCode',
+  'ptIndustryDescription',
+];
+
 @Injectable({ providedIn: 'root' })
 export class QuoteRecallHydrationService {
   private readonly journeyState = inject(JourneyStateService);
@@ -73,6 +91,13 @@ export class QuoteRecallHydrationService {
         const address = this.pickAddress(source, mapper, consumedKeys);
         if (Object.keys(address).length > 0) {
           stepValues[ADDRESS_SECTION_ID] = address;
+        }
+      }
+
+      if (step.sections.some(section => section.id === OCCUPATION_SECTION_ID)) {
+        const occupation = this.pickOccupation(source, mapper, consumedKeys);
+        if (Object.keys(occupation).length > 0) {
+          stepValues[OCCUPATION_SECTION_ID] = occupation;
         }
       }
 
@@ -146,6 +171,28 @@ export class QuoteRecallHydrationService {
     }
 
     return address;
+  }
+
+  private pickOccupation(
+    source: Record<string, unknown>,
+    mapper: JourneyPayloadMapper,
+    consumedKeys: Set<string>,
+  ): Record<string, unknown> {
+    const occupation: Record<string, unknown> = {};
+
+    for (const internalName of OCCUPATION_FIELDS) {
+      const backendKey = mapper.backendKeyFor(internalName);
+      const value = source[backendKey] ?? source[internalName];
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+
+      consumedKeys.add(backendKey);
+      consumedKeys.add(internalName);
+      occupation[internalName] = value;
+    }
+
+    return occupation;
   }
 
   private normalizeValue(field: FormFieldConfig, value: unknown): unknown {

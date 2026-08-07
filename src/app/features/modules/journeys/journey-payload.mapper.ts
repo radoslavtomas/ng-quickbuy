@@ -57,6 +57,13 @@ const PERSON_KEY_SUFFIXES: Readonly<Record<string, string>> = {
   addressLine3: 'address-addressline3',
   addressLine4: 'address-addressline4',
   postcode: 'address-postcode',
+  // TODO: confirm wire key names with backend
+  employmentStatus: 'employmentstatus',
+  occupationCode: 'occupationcode',
+  industryCode: 'industrycode',
+  ptEmploymentStatus: 'pt-employmentstatus',
+  ptOccupationCode: 'pt-occupationcode',
+  ptIndustryCode: 'pt-industrycode',
 };
 
 /** Keys that belong to the policy rather than to a person. */

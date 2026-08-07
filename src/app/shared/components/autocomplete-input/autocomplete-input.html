@@ -1,0 +1,58 @@
+<div class="relative w-full">
+  <input
+    [id]="name()"
+    type="text"
+    role="combobox"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="listboxId()"
+    aria-autocomplete="list"
+    [attr.aria-activedescendant]="activeDescendantId()"
+    [attr.aria-invalid]="invalid()"
+    [disabled]="disabled()"
+    [value]="inputValue()"
+    (input)="onInput($event)"
+    (keydown)="onKeydown($event)"
+    (blur)="onBlur()"
+    class="h-11 w-full min-w-0 rounded-md border bg-white px-2.5 text-[0.95rem] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-500"
+    [class.border-slate-400]="!invalid() && !valid()"
+    [class.border-red-500]="invalid()"
+    [class.bg-red-50]="invalid()"
+    [class.border-green-500]="valid()"
+    [class.bg-green-50]="valid()"
+  />
+
+  @if (loading()) {
+    <span
+      class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"
+      aria-hidden="true"
+    >
+      <i class="fa-solid fa-spinner fa-spin"></i>
+    </span>
+  }
+
+  @if (isOpen() && options().length > 0) {
+    <ul
+      [id]="listboxId()"
+      role="listbox"
+      class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg"
+    >
+      @for (option of options(); track option.code; let i = $index) {
+        <li
+          [id]="optionId(i)"
+          role="option"
+          [attr.aria-selected]="i === activeIndex()"
+          class="cursor-pointer px-2.5 py-2 text-[0.9rem] text-slate-900"
+          [class.bg-sky-100]="i === activeIndex()"
+          (mousedown)="selectOption(option)"
+          (mouseenter)="activeIndex.set(i)"
+        >
+          {{ option.description }}
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+@if (error(); as errorMsg) {
+  <p class="mt-1 text-[0.82rem] text-red-700" role="alert">{{ errorMsg }}</p>
+}

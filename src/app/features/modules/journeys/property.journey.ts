@@ -40,6 +40,13 @@ export const PROPERTY_JOURNEY: JourneyDefinition = {
           fields: PROPERTY_YOUR_DETAILS_FIELDS,
           visibleWhen: addressIsResolved,
         },
+        {
+          kind: 'custom',
+          id: 'occupation',
+          title: 'Occupation',
+          component: 'occupation',
+          visibleWhen: addressIsResolved,
+        },
       ],
     },
     {

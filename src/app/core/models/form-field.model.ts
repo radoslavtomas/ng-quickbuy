@@ -10,7 +10,8 @@ export type FormFieldType =
   | 'select'
   | 'checkbox'
   | 'radio'
-  | 'toggle';
+  | 'toggle'
+  | 'autocomplete';
 
 export type ConditionOperator =
   | 'equals'
@@ -50,6 +51,12 @@ export interface FieldCondition {
   value?: unknown;
 }
 
+export interface AutocompleteConfig {
+  endpoint: 'occupation' | 'industry';
+  codeField: string;
+  descriptionField: string;
+}
+
 export interface FieldMetadata {
   autocomplete?: string;
   placeholder?: string;
@@ -59,6 +66,9 @@ export interface FieldMetadata {
   maskPattern?: string;
   radioLayout?: 'row' | 'column';
   valueTransform?: 'booleanYN' | 'numberString';
+  autocompleteConfig?: AutocompleteConfig;
+  /** When this field's value changes, write sibling values from the matching entry. */
+  autoValues?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 
 export interface FieldValidatorConfig {

@@ -148,6 +148,16 @@ describe('journey flow', () => {
     expect(host.textContent).toContain('Find address');
   });
 
+  it('renders the occupation section forms with the Signal Forms renderer too', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+
+    const fixture = await renderAt('/PC/your-details');
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('app-occupation-section app-signal-form')).not.toBeNull();
+    expect(host.querySelector('app-occupation-section app-autocomplete-input')).toBeNull();
+  });
+
   it('renders every field type of the Signal Forms section', async () => {
     const fixture = await renderAt('/PC/your-policy');
     const host = fixture.nativeElement as HTMLElement;

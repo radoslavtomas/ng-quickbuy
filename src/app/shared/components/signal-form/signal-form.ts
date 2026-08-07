@@ -18,6 +18,8 @@ import {
 import type { FormFieldConfig } from '../../../core/models/form-field.model';
 import { FormNormalizationService } from '../../../core/services/form-normalization.service';
 import { FormValidationMessageService } from '../../../core/services/form-validation-message.service';
+import { OccupationSearchService } from '../../../core/services/occupation-search.service';
+import { AutocompleteInputComponent, type AutocompleteOption } from '../autocomplete-input/autocomplete-input';
 
 /** Error shape the schema produces, narrowed for template use. */
 interface FieldError {
@@ -55,7 +57,7 @@ interface FormInstance {
 
 @Component({
   selector: 'app-signal-form',
-  imports: [FormField],
+  imports: [FormField, AutocompleteInputComponent],
   templateUrl: './signal-form.html',
 })
 export class SignalFormComponent implements OnInit {
@@ -67,6 +69,7 @@ export class SignalFormComponent implements OnInit {
   private readonly injector = inject(Injector);
   private readonly normalization = inject(FormNormalizationService);
   private readonly messages = inject(FormValidationMessageService);
+  private readonly occupationSearch = inject(OccupationSearchService);
 
   /** Reveals errors for untouched fields once the customer has tried to continue. */
   private readonly submitAttempted = signal(false);
@@ -262,5 +265,72 @@ export class SignalFormComponent implements OnInit {
     root.markAsTouched();
 
     return { valid: root.valid(), values: { ...instance.model() } };
+  }
+
+  /** Resolves the search function for an autocomplete field from its config. */
+  autocompleteSearchFn(field: FormFieldConfig): (keyword: string) => import('rxjs').Observable<AutocompleteOption[]> {
+    const endpoint = field.metadata?.autocompleteConfig?.endpoint;
+    if (endpoint === 'industry') {
+      return (keyword: string) => this.occupationSearch.searchIndustries(keyword);
+    }
+    return (keyword: string) => this.occupationSearch.searchOccupations(keyword);
+  }
+
+  autocompleteInitialDescription(field: FormFieldConfig): string {
+    const instance = this.instance();
+    if (!instance) return '';
+    const descField = field.metadata?.autocompleteConfig?.descriptionField;
+    if (!descField) return '';
+    return (instance.model()[descField] as string) ?? '';
+  }
+
+  autocompleteInitialCode(field: FormFieldConfig): string {
+    const instance = this.instance();
+    if (!instance) return '';
+    const codeField = field.metadata?.autocompleteConfig?.codeField;
+    if (!codeField) return '';
+    return (instance.model()[codeField] as string) ?? '';
+  }
+
+  onAutocompleteSelected(field: FormFieldConfig, option: AutocompleteOption): void {
+    const instance = this.instance();
+    if (!instance) return;
+
+    const config = field.metadata?.autocompleteConfig;
+    if (!config) return;
+
+    instance.model.update(model => ({
+      ...model,
+      [field.name]: option.description,
+      [config.codeField]: option.code,
+      [config.descriptionField]: option.description,
+    }));
+  }
+
+  onAutocompleteCleared(field: FormFieldConfig): void {
+    const instance = this.instance();
+    if (!instance) return;
+
+    const config = field.metadata?.autocompleteConfig;
+    if (!config) return;
+
+    instance.model.update(model => ({
+      ...model,
+      [field.name]: '',
+      [config.codeField]: '',
+      [config.descriptionField]: '',
+    }));
+  }
+
+  /** Applies autoValues when a field with the metadata option changes. */
+  onSelectChange(field: FormFieldConfig, event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    const instance = this.instance();
+    if (!instance) return;
+
+    const autoValues = field.metadata?.autoValues;
+    if (autoValues && autoValues[value]) {
+      instance.model.update(model => ({ ...model, ...autoValues[value] }));
+    }
   }
 }

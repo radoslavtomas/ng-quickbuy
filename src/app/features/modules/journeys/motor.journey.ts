@@ -48,6 +48,13 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
           fields: MOTOR_YOUR_DETAILS_FIELDS,
           visibleWhen: addressIsResolved,
         },
+        {
+          kind: 'custom',
+          id: 'occupation',
+          title: 'Occupation',
+          component: 'occupation',
+          visibleWhen: addressIsResolved,
+        },
       ],
     },
     {
