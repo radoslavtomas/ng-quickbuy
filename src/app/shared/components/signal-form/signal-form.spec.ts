@@ -9,7 +9,7 @@ import {
   type AutocompleteSource,
 } from '../../../core/services/autocomplete-source.service';
 import { createOccupationFields } from '../../../features/modules/specific-modules/config/shared/occupation.fields';
-import { SEARCH_DEBOUNCE_MS } from '../autocomplete-input/autocomplete-input';
+import { SEARCH_DEBOUNCE_MS } from './autocomplete-input/autocomplete-input';
 import { SignalFormComponent } from './signal-form';
 
 const OCCUPATIONS: readonly AutocompleteOption[] = [

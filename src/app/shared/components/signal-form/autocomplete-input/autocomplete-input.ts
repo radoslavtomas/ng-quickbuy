@@ -16,8 +16,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { FormValueControl } from '@angular/forms/signals';
 import { Subject, catchError, debounceTime, defer, map, of, switchMap } from 'rxjs';
-import type { AutocompleteOption } from '../../../core/models/autocomplete-option.model';
-import type { AutocompleteSource } from '../../../core/services/autocomplete-source.service';
+import type { AutocompleteOption } from '../../../../core/models/autocomplete-option.model';
+import type { AutocompleteSource } from '../../../../core/services/autocomplete-source.service';
 
 /** Shortest keyword the search backends accept. */
 export const MIN_KEYWORD_LENGTH = 3;

@@ -26,7 +26,7 @@ import {
 } from '../../../core/services/autocomplete-source.service';
 import { FormNormalizationService } from '../../../core/services/form-normalization.service';
 import { FormValidationMessageService } from '../../../core/services/form-validation-message.service';
-import { AutocompleteInputComponent } from '../autocomplete-input/autocomplete-input';
+import { AutocompleteInputComponent } from './autocomplete-input/autocomplete-input';
 
 /**
  * Distinguishes one rendered section from another.
@@ -77,6 +77,7 @@ interface FormInstance {
   selector: 'app-signal-form',
   imports: [FormField, AutocompleteInputComponent],
   templateUrl: './signal-form.html',
+  styleUrl: './signal-form.css',
 })
 export class SignalFormComponent implements OnInit {
   readonly fields = input.required<readonly FormFieldConfig[]>();
@@ -286,7 +287,6 @@ export class SignalFormComponent implements OnInit {
   }
 
   radioGridTemplate(field: FormFieldConfig): string | null {
-    console.log('radioGridTemplate', field.name, this.radioLayout(field), field.options?.length);
     if (this.radioLayout(field) !== 'row') {
       return null;
     }

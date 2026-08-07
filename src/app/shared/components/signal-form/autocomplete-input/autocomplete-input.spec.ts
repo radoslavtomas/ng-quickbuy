@@ -2,8 +2,8 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
-import type { AutocompleteOption } from '../../../core/models/autocomplete-option.model';
-import type { AutocompleteSource } from '../../../core/services/autocomplete-source.service';
+import type { AutocompleteOption } from '../../../../core/models/autocomplete-option.model';
+import type { AutocompleteSource } from '../../../../core/services/autocomplete-source.service';
 import {
   AutocompleteInputComponent,
   MIN_KEYWORD_LENGTH,
@@ -119,7 +119,7 @@ describe('AutocompleteInputComponent', () => {
   });
 
   it('does not search below the minimum keyword length, and says why', () => {
-    search('pro');
+    search('wo');
 
     expect(listbox()).toBeNull();
     expect(statusText()).toBe(`Type at least ${MIN_KEYWORD_LENGTH} characters to search.`);
