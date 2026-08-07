@@ -13,6 +13,7 @@ import {
   validate,
 } from '@angular/forms/signals';
 import type { FieldCondition, FormFieldConfig } from '../models/form-field.model';
+import { evaluateCondition } from './field-conditions';
 
 /**
  * Model shape for a config-driven section.
@@ -27,6 +28,50 @@ export type SectionModel = Record<string, unknown>;
 type SectionPath = Record<string, unknown>;
 
 /**
+ * Fields the customer actually answers.
+ *
+ * A `derived` field is not a control: it has no node in the tree, no rules and no
+ * key in the model, because its value is recomputed from the answers whenever the
+ * section is read. Leaving it out is what stops it from going stale.
+ */
+export function getControlFields(
+  fields: readonly FormFieldConfig[],
+): readonly FormFieldConfig[] {
+  return fields.filter(field => field.type !== 'derived');
+}
+
+/** Fields assembled from the answers rather than asked for. */
+export function getDerivedFields(
+  fields: readonly FormFieldConfig[],
+): readonly FormFieldConfig[] {
+  return fields.filter(field => field.type === 'derived' && !!field.derived);
+}
+
+/**
+ * Applies every `derived` field to a set of answers.
+ *
+ * Derivations read the answers as they are now, so a customer who changes their
+ * employment status cannot leave behind the occupation code the previous status
+ * produced.
+ */
+export function applyDerivedValues(
+  fields: readonly FormFieldConfig[],
+  values: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  const derived = getDerivedFields(fields);
+  if (derived.length === 0) {
+    return { ...values };
+  }
+
+  const result: Record<string, unknown> = { ...values };
+  for (const field of derived) {
+    result[field.name] = field.derived?.from(values);
+  }
+
+  return result;
+}
+
+/**
  * Builds a Signal Forms schema from field configuration.
  *
  * This is the single boundary between configuration (untyped by nature, since a
@@ -36,14 +81,16 @@ type SectionPath = Record<string, unknown>;
  * outside this module should need to cast.
  */
 export function buildSectionSchema(fields: readonly FormFieldConfig[]) {
+  const controlFields = getControlFields(fields);
+
   // The path object resolves any key, and reading one that is not in the model
   // throws at validation time, so rules may only reference fields of this section.
-  const fieldNames = new Set(fields.map(field => field.name));
+  const fieldNames = new Set(controlFields.map(field => field.name));
 
   return schema<SectionModel>(path => {
     const sectionPath = path as unknown as SectionPath;
 
-    for (const field of fields) {
+    for (const field of controlFields) {
       applyFieldRules(field, sectionPath, fieldNames);
     }
   });
@@ -173,22 +220,7 @@ function conditionsPass(
       ? ctx.valueOf(path[condition.field] as never)
       : undefined;
 
-    switch (condition.operator) {
-      case 'equals':
-        return value === condition.value;
-      case 'notEquals':
-        return value !== condition.value;
-      case 'in':
-        return Array.isArray(condition.value) ? condition.value.includes(value) : false;
-      case 'notIn':
-        return Array.isArray(condition.value) ? !condition.value.includes(value) : true;
-      case 'truthy':
-        return Boolean(value);
-      case 'falsy':
-        return !value;
-      default:
-        return true;
-    }
+    return evaluateCondition(condition, value);
   });
 }
 
@@ -206,7 +238,7 @@ export function buildSectionModel(
 ): SectionModel {
   const model: SectionModel = {};
 
-  for (const field of fields) {
+  for (const field of getControlFields(fields)) {
     const provided = values[field.name];
     model[field.name] = provided !== undefined ? provided : emptyValueFor(field);
   }
@@ -222,5 +254,11 @@ function emptyValueFor(field: FormFieldConfig): unknown {
   // `null` rather than `''` for numbers on purpose: the native binding only reads
   // `valueAsNumber` when the model value is already a number or null, so seeding an
   // empty string would make a numeric field report strings and break min/max.
-  return field.type === 'number' ? null : '';
+  if (field.type === 'number') {
+    return null;
+  }
+
+  // An unresolved search field is `null` rather than `''`, which is also what
+  // `required` treats as empty, so typed-but-unmatched text is not an answer.
+  return field.type === 'autocomplete' ? null : '';
 }

@@ -3,6 +3,7 @@ import {
   Injector,
   type OnInit,
   type WritableSignal,
+  computed,
   effect,
   inject,
   input,
@@ -11,13 +12,32 @@ import {
 } from '@angular/core';
 import { type Field, FormField, form } from '@angular/forms/signals';
 import {
+  applyDerivedValues,
   buildSectionModel,
   buildSectionSchema,
+  getControlFields,
   type SectionModel,
 } from '../../../core/forms/signal-forms-schema';
+import type { AutocompleteOption } from '../../../core/models/autocomplete-option.model';
 import type { FormFieldConfig } from '../../../core/models/form-field.model';
+import {
+  AutocompleteSourceService,
+  type AutocompleteSource,
+} from '../../../core/services/autocomplete-source.service';
 import { FormNormalizationService } from '../../../core/services/form-normalization.service';
 import { FormValidationMessageService } from '../../../core/services/form-validation-message.service';
+import { AutocompleteInputComponent } from './autocomplete-input/autocomplete-input';
+
+/**
+ * Distinguishes one rendered section from another.
+ *
+ * Element ids have to be unique across the document, and a repeat section renders
+ * the same field configuration once per item. Without this, three additional
+ * drivers would share one `occupation` id, every `<label for>` would point at the
+ * first driver's box, and the combobox `aria-controls` would name a listbox
+ * belonging to someone else.
+ */
+let nextFormInstanceId = 0;
 
 /** Error shape the schema produces, narrowed for template use. */
 interface FieldError {
@@ -55,8 +75,9 @@ interface FormInstance {
 
 @Component({
   selector: 'app-signal-form',
-  imports: [FormField],
+  imports: [FormField, AutocompleteInputComponent],
   templateUrl: './signal-form.html',
+  styleUrl: './signal-form.css',
 })
 export class SignalFormComponent implements OnInit {
   readonly fields = input.required<readonly FormFieldConfig[]>();
@@ -67,6 +88,12 @@ export class SignalFormComponent implements OnInit {
   private readonly injector = inject(Injector);
   private readonly normalization = inject(FormNormalizationService);
   private readonly messages = inject(FormValidationMessageService);
+  private readonly autocompleteSources = inject(AutocompleteSourceService);
+
+  private readonly instanceId = `form-${nextFormInstanceId++}`;
+
+  /** Only the fields that are rendered; derived values have no control. */
+  readonly controlFields = computed(() => getControlFields(this.fields()));
 
   /** Reveals errors for untouched fields once the customer has tried to continue. */
   private readonly submitAttempted = signal(false);
@@ -94,9 +121,20 @@ export class SignalFormComponent implements OnInit {
     effect(() => {
       const instance = this.instance();
       if (instance) {
-        this.valueChanged.emit({ ...instance.model() });
+        this.valueChanged.emit(this.withDerived(instance.model()));
       }
     });
+  }
+
+  /**
+   * The answers plus anything assembled from them.
+   *
+   * Derived values are computed here rather than stored, so they always describe
+   * the current answers. There is no path by which yesterday's occupation code
+   * survives a change of employment status.
+   */
+  private withDerived(values: Readonly<SectionModel>): Record<string, unknown> {
+    return applyDerivedValues(this.fields(), values);
   }
 
   /**
@@ -125,6 +163,11 @@ export class SignalFormComponent implements OnInit {
   /** For text-like inputs, whose value may be a string, number or null. */
   inputField(field: FormFieldConfig): Field<string | number | boolean | Date | null> {
     return this.treeFor(field) as Field<string | number | boolean | Date | null>;
+  }
+
+  /** For the search combobox, which edits a whole option rather than a string. */
+  optionField(field: FormFieldConfig): Field<AutocompleteOption | null> {
+    return this.treeFor(field) as Field<AutocompleteOption | null>;
   }
 
   /**
@@ -202,16 +245,28 @@ export class SignalFormComponent implements OnInit {
     return this.valueOf(field) === true;
   }
 
+  /**
+   * Element id for a field's control, unique to this rendered section.
+   *
+   * Field names are only unique within a section, and a repeat section renders the
+   * same section several times over, so the instance id is what keeps ids unique
+   * across the page. Tests should match on `data-field` instead, which stays
+   * readable.
+   */
+  controlId(field: FormFieldConfig): string {
+    return `${this.instanceId}-${field.name}`;
+  }
+
   messageId(field: FormFieldConfig): string {
-    return `${field.name}-messages`;
+    return `${this.controlId(field)}-messages`;
   }
 
   labelId(field: FormFieldConfig): string {
-    return `${field.name}-label`;
+    return `${this.controlId(field)}-label`;
   }
 
   helpId(field: FormFieldConfig): string {
-    return `${field.name}-help`;
+    return `${this.controlId(field)}-help`;
   }
 
   private readonly expandedHelp = signal<Record<string, boolean>>({});
@@ -261,6 +316,13 @@ export class SignalFormComponent implements OnInit {
     this.submitAttempted.set(true);
     root.markAsTouched();
 
-    return { valid: root.valid(), values: { ...instance.model() } };
+    return { valid: root.valid(), values: this.withDerived(instance.model()) };
+  }
+
+  /** The backend a search field queries, resolved from its `endpoint` key. */
+  autocompleteSource(field: FormFieldConfig): AutocompleteSource {
+    return this.autocompleteSources.forEndpoint(
+      field.metadata?.autocompleteConfig?.endpoint ?? 'occupation',
+    );
   }
 }

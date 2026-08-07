@@ -57,7 +57,33 @@ const PERSON_KEY_SUFFIXES: Readonly<Record<string, string>> = {
   addressLine3: 'address-addressline3',
   addressLine4: 'address-addressline4',
   postcode: 'address-postcode',
+  // TODO: confirm wire key names with backend
+  employmentStatus: 'employmentstatus',
+  occupationCode: 'occupationcode',
+  industryCode: 'industrycode',
+  ptEmploymentStatus: 'pt-employmentstatus',
+  ptOccupationCode: 'pt-occupationcode',
+  ptIndustryCode: 'pt-industrycode',
 };
+
+/**
+ * Answers that exist only to help the customer answer, and never leave the browser.
+ *
+ * A search field holds a code and the wording that goes with it so the customer can
+ * recognise their choice; the insurer wants the code alone, and it arrives through
+ * the derived `occupationCode`. Without this list the wording would be posted under
+ * its internal name, because the mapper falls back to that for unmapped keys.
+ */
+const UI_ONLY_FIELDS: ReadonlySet<string> = new Set([
+  'occupation',
+  'industry',
+  'occupationFte',
+  'hasParttime',
+  'ptOccupation',
+  'ptIndustry',
+  'ptOccupationFte',
+  'houseNameNumber',
+]);
 
 /** Keys that belong to the policy rather than to a person. */
 const SHARED_POLICY_KEYS: Readonly<Record<string, string>> = {
@@ -93,6 +119,13 @@ function toWireValue(value: unknown): string | null {
     return value ? 'Y' : 'N';
   }
 
+  // An object has no sensible string form, and `[object Object]` on a quote is
+  // worse than a missing key: it would be stored and never questioned. Anything
+  // structured must reach the wire through a mapped or derived scalar instead.
+  if (typeof value === 'object') {
+    return null;
+  }
+
   return `${value}`;
 }
 
@@ -104,6 +137,13 @@ interface MapperConfig {
   readonly personSlots: readonly string[];
   /** Wire slots for each repeat section's items, by section id. */
   readonly repeatSlots: Readonly<Record<string, readonly string[]>>;
+  /**
+   * Sections whose person answers belong to somebody other than the customer.
+   *
+   * The joint proposer answers the same questions under the same field names, so
+   * without this their surname would overwrite the customer's own.
+   */
+  readonly sectionSlots?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -118,6 +158,7 @@ function createMapper({
   codedValues,
   personSlots,
   repeatSlots,
+  sectionSlots = {},
 }: MapperConfig): JourneyPayloadMapper {
   const backendKeyForSlot = (slot: string, internalName: string): string => {
     const personSuffix = PERSON_KEY_SUFFIXES[internalName];
@@ -154,12 +195,26 @@ function createMapper({
     return toWireValue(value);
   };
 
+  /**
+   * Only a person's own answers move to their slot. A question such as "is there a
+   * joint proposer?" is about the policy, not about them, and stays where the
+   * product's key map puts it.
+   */
+  const keyForSection = (sectionId: string, internalName: string): string => {
+    const sectionSlot = sectionSlots[sectionId];
+    return sectionSlot && PERSON_KEY_SUFFIXES[internalName]
+      ? backendKeyForSlot(sectionSlot, internalName)
+      : backendKeyFor(internalName);
+  };
+
   return {
     version,
     personSlots,
     backendKeyFor,
     backendKeyForSlot,
     toWireValueFor,
+
+    backendKeyForSection: keyForSection,
 
     internalNameFor(backendKey: string): string {
       return internalByBackendKey.get(backendKey) ?? backendKey;
@@ -179,6 +234,10 @@ function createMapper({
       const fields: Record<string, string> = {};
 
       const write = (key: string, internalName: string, value: unknown): void => {
+        if (UI_ONLY_FIELDS.has(internalName)) {
+          return;
+        }
+
         const wireValue = toWireValueFor(internalName, value);
         if (wireValue !== null) {
           fields[key] = wireValue;
@@ -205,7 +264,7 @@ function createMapper({
           }
 
           for (const [internalName, value] of Object.entries(values)) {
-            write(backendKeyFor(internalName), internalName, value);
+            write(keyForSection(sectionId, internalName), internalName, value);
           }
         }
       }
@@ -226,10 +285,14 @@ export const MOTOR_PAYLOAD_MAPPER = createMapper({
   repeatSlots: { [ADDITIONAL_DRIVERS_SECTION_ID]: ADDITIONAL_DRIVER_SLOTS },
 });
 
+/** Section id of the property journey's joint proposer questions. */
+export const JOINT_PROPOSER_SECTION_ID = 'jointProposer';
+
 export const PROPERTY_PAYLOAD_MAPPER = createMapper({
   version: 'property-1',
   keys: PROPERTY_KEYS,
   codedValues: {},
   personSlots: PROPERTY_PROPOSER_SLOTS,
   repeatSlots: {},
+  sectionSlots: { [JOINT_PROPOSER_SECTION_ID]: 'jointproposer' },
 });

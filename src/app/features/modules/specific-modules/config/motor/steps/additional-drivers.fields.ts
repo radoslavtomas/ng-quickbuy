@@ -1,5 +1,9 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
+import {
+  adultOnlyValidator,
+  validDateValidator,
+} from '../../../../../../core/validators/form-validators';
+import { createOccupationFields } from '../../shared/occupation.fields';
 
 export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
   {
@@ -35,6 +39,10 @@ export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
  * The same field names the proposer uses, because the wire format files them under a
  * slot rather than renaming them: `forenames` becomes `driver-2-name-forenames` for
  * the second driver and `proposer-name-forenames` for the customer.
+ *
+ * Occupation comes from the shared factory, so a driver is asked exactly what the
+ * proposer is asked. "Limited Company" is deliberately not offered: an additional
+ * driver is a person, whatever the policyholder may be.
  */
 export const MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS: readonly FormFieldConfig[] = [
   {
@@ -75,5 +83,6 @@ export const MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS: readonly FormFieldConfig[] = [
     normalization: ['trim', 'date'],
     metadata: { autocomplete: 'off' },
   },
+  ...createOccupationFields({ includeSecondJob: true }),
 ];
 

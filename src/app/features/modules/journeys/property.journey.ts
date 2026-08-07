@@ -1,11 +1,15 @@
 import type { JourneyDefinition, StepAnswers } from '../../../core/models/journey.model';
 import { hasAddressState } from '../specific-modules/config/shared/common';
+import { createOccupationFields } from '../specific-modules/config/shared/occupation.fields';
 import { PROPERTY_YOUR_DETAILS_FIELDS } from '../specific-modules/config/property/steps/your-details.fields';
 import { PROPERTY_YOUR_PROPERTY_FIELDS } from '../specific-modules/config/property/steps/your-property.fields';
 import { PROPERTY_JOINT_PROPOSER_FIELDS } from '../specific-modules/config/property/steps/joint-proposer.fields';
 import { PROPERTY_YOUR_POLICY_FIELDS } from '../specific-modules/config/property/steps/your-policy.fields';
 import { PROPERTY_ASSUMPTIONS_FIELDS } from '../specific-modules/config/property/steps/assumptions.fields';
-import { PROPERTY_PAYLOAD_MAPPER } from './journey-payload.mapper';
+import {
+  JOINT_PROPOSER_SECTION_ID,
+  PROPERTY_PAYLOAD_MAPPER,
+} from './journey-payload.mapper';
 
 /** The proposer's details are only worth asking for once we know where they live. */
 function addressIsResolved(answers: StepAnswers): boolean {
@@ -40,6 +44,13 @@ export const PROPERTY_JOURNEY: JourneyDefinition = {
           fields: PROPERTY_YOUR_DETAILS_FIELDS,
           visibleWhen: addressIsResolved,
         },
+        {
+          kind: 'fields',
+          id: 'occupation',
+          title: 'Occupation',
+          fields: createOccupationFields({ includeSecondJob: true }),
+          visibleWhen: addressIsResolved,
+        },
       ],
     },
     {
@@ -70,7 +81,7 @@ export const PROPERTY_JOURNEY: JourneyDefinition = {
       sections: [
         {
           kind: 'fields',
-          id: 'jointProposer',
+          id: JOINT_PROPOSER_SECTION_ID,
           title: 'Joint proposer details',
           fields: PROPERTY_JOINT_PROPOSER_FIELDS,
           defaults: { hasJointProposer: 'no' },

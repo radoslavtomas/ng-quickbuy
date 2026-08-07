@@ -39,6 +39,16 @@ export interface JourneyPayloadMapper {
   /** The backend key for a field belonging to the person in a given slot. */
   backendKeyForSlot(slot: string, internalName: string): string;
 
+  /**
+   * The backend key for a field as answered in a particular section.
+   *
+   * The joint proposer's section reuses the customer's field names, so both
+   * directions of the translation have to agree on whose answers they are looking
+   * at. Outbound and inbound both go through this, which is what keeps them from
+   * disagreeing.
+   */
+  backendKeyForSection(sectionId: string, internalName: string): string;
+
   /** The internal field name for a backend key, or the key itself if unmapped. */
   internalNameFor(backendKey: string): string;
 

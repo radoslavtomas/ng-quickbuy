@@ -1,6 +1,30 @@
-import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
+import type {
+  FieldCondition,
+  FormFieldConfig,
+} from '../../../../../../core/models/form-field.model';
+import {
+  adultOnlyValidator,
+  validDateValidator,
+} from '../../../../../../core/validators/form-validators';
+import { createOccupationFields } from '../../shared/occupation.fields';
 
+/** Nothing about a joint proposer is asked until the customer says there is one. */
+const WHEN_DECLARED: readonly FieldCondition[] = [
+  { field: 'hasJointProposer', operator: 'equals', value: 'yes' },
+];
+
+/**
+ * The joint proposer's details.
+ *
+ * They are a person on the policy, so they use the same field names as the customer
+ * and every additional driver: the mapper files this section under the
+ * `jointproposer` slot, which is what turns `surname` into
+ * `jointproposer-name-surname`. That is also why their occupation comes from the
+ * shared factory — the insurer wants it for them as much as for the customer.
+ *
+ * Everything here is required once a joint proposer is declared, and drops out of
+ * validity entirely when one is not, because a hidden field cannot block the step.
+ */
 export const PROPERTY_JOINT_PROPOSER_FIELDS: readonly FormFieldConfig[] = [
   {
     type: 'radio',
@@ -15,19 +39,28 @@ export const PROPERTY_JOINT_PROPOSER_FIELDS: readonly FormFieldConfig[] = [
   },
   {
     type: 'text',
-    label: 'Joint proposer full name',
-    name: 'jointProposerName',
-    validators: [{ type: 'maxLength', value: 80 }],
-    visibleWhen: [{ field: 'hasJointProposer', operator: 'equals', value: 'yes' }],
-    enabledWhen: [{ field: 'hasJointProposer', operator: 'equals', value: 'yes' }],
+    label: 'Joint proposer first name',
+    name: 'forenames',
+    validators: [{ type: 'required' }, { type: 'maxLength', value: 40 }],
+    visibleWhen: WHEN_DECLARED,
     normalization: ['trim'],
-    metadata: { placeholder: 'Jordan Taylor' },
+    metadata: { autocomplete: 'off', placeholder: 'Jordan' },
+  },
+  {
+    type: 'text',
+    label: 'Joint proposer surname',
+    name: 'surname',
+    validators: [{ type: 'required' }, { type: 'maxLength', value: 40 }],
+    visibleWhen: WHEN_DECLARED,
+    normalization: ['trim'],
+    metadata: { autocomplete: 'off', placeholder: 'Taylor' },
   },
   {
     type: 'date',
     label: 'Joint proposer date of birth',
-    name: 'jointProposerDob',
+    name: 'dateOfBirth',
     validators: [
+      { type: 'required' },
       {
         type: 'custom',
         name: 'validDate',
@@ -37,13 +70,12 @@ export const PROPERTY_JOINT_PROPOSER_FIELDS: readonly FormFieldConfig[] = [
       {
         type: 'custom',
         name: 'adultOnly',
-        message: 'Joint proposer must be at least 18 years old.',
+        message: 'A joint proposer must be at least 18 years old.',
         validatorFn: adultOnlyValidator,
       },
     ],
     normalization: ['trim', 'date'],
-    visibleWhen: [{ field: 'hasJointProposer', operator: 'equals', value: 'yes' }],
-    enabledWhen: [{ field: 'hasJointProposer', operator: 'equals', value: 'yes' }],
+    visibleWhen: WHEN_DECLARED,
   },
+  ...createOccupationFields({ gate: WHEN_DECLARED }),
 ];
-

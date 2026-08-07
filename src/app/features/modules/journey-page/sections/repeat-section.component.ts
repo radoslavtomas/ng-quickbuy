@@ -2,6 +2,7 @@ import { Component, computed, inject, input, signal, viewChildren } from '@angul
 import type { JourneyRepeatSection } from '../../../../core/models/journey.model';
 import { JourneyStateService } from '../../../../core/services/journey-state.service';
 import { SignalFormComponent } from '../../../../shared/components/signal-form/signal-form';
+import { resolveFields } from '../../journeys/journey-registry';
 
 /** Values captured for one item of the list. */
 type ItemValues = Record<string, unknown>;
@@ -41,7 +42,7 @@ type ItemValues = Record<string, unknown>;
         </legend>
 
         <app-signal-form
-          [fields]="section().itemFields"
+          [fields]="itemFields()"
           [initialValue]="item"
           (valueChanged)="onItemChanged($index, $event)"
         />
@@ -70,6 +71,11 @@ export class RepeatSectionComponent {
 
   private readonly journeyState = inject(JourneyStateService);
   private readonly itemForms = viewChildren(SignalFormComponent);
+
+  /** The per-item questions, which some products vary by module. */
+  readonly itemFields = computed(() =>
+    resolveFields(this.section().itemFields, this.moduleCode()),
+  );
 
   /**
    * The list being edited.

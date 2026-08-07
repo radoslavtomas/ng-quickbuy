@@ -216,4 +216,122 @@ describe('journey payload mappers', () => {
   it('produces nothing for a journey with no answers', () => {
     expect(MOTOR_PAYLOAD_MAPPER.toStoreFields({})).toEqual({});
   });
+
+  describe('occupation', () => {
+    it('sends the derived codes for the customer', () => {
+      const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+        'your-details': {
+          occupation: {
+            employmentStatus: 'E',
+            occupationCode: '394',
+            industryCode: '021',
+          },
+        },
+      });
+
+      expect(fields['proposer-employmentstatus']).toBe('E');
+      expect(fields['proposer-occupationcode']).toBe('394');
+      expect(fields['proposer-industrycode']).toBe('021');
+    });
+
+    it('sends a second job under its own keys', () => {
+      const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+        'your-details': {
+          occupation: {
+            employmentStatus: 'R',
+            occupationCode: 'R09',
+            industryCode: '947',
+            ptEmploymentStatus: 'E',
+            ptOccupationCode: '394',
+            ptIndustryCode: '021',
+          },
+        },
+      });
+
+      expect(fields['proposer-occupationcode']).toBe('R09');
+      expect(fields['proposer-pt-occupationcode']).toBe('394');
+      expect(fields['proposer-pt-industrycode']).toBe('021');
+    });
+
+    it('files each driver\u2019s occupation under their own slot', () => {
+      const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+        'additional-drivers': {
+          additionalDrivers: {
+            items: [
+              { forenames: 'Jordan', employmentStatus: 'FTE', occupationCode: 'S51' },
+              { forenames: 'Sam', employmentStatus: 'R', occupationCode: 'R09' },
+            ],
+          },
+        },
+      });
+
+      expect(fields['driver-2-occupationcode']).toBe('S51');
+      expect(fields['driver-3-occupationcode']).toBe('R09');
+      expect(fields['proposer-occupationcode']).toBeUndefined();
+    });
+
+    it('files the joint proposer under their slot rather than over the customer', () => {
+      const fields = PROPERTY_PAYLOAD_MAPPER.toStoreFields({
+        'your-details': {
+          proposer: { forenames: 'Alex' },
+          occupation: { employmentStatus: 'E', occupationCode: '394' },
+        },
+        'joint-proposer': {
+          jointProposer: {
+            hasJointProposer: 'yes',
+            forenames: 'Jordan',
+            surname: 'Taylor',
+            employmentStatus: 'R',
+            occupationCode: 'R09',
+          },
+        },
+      });
+
+      expect(fields['proposer-name-forenames']).toBe('Alex');
+      expect(fields['proposer-occupationcode']).toBe('394');
+      expect(fields['jointproposer-name-forenames']).toBe('Jordan');
+      expect(fields['jointproposer-name-surname']).toBe('Taylor');
+      expect(fields['jointproposer-occupationcode']).toBe('R09');
+
+      // Whether there is a joint proposer is a fact about the policy, not about them.
+      expect(fields['hasJointProposer']).toBe('yes');
+    });
+
+    it('keeps the wording the customer read out of the payload', () => {
+      const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+        'your-details': {
+          occupation: {
+            employmentStatus: 'E',
+            occupation: { code: '394', description: 'Applications Programmer' },
+            industry: { code: '021', description: 'Computing' },
+            occupationFte: '',
+            hasParttime: 'no',
+            occupationCode: '394',
+            industryCode: '021',
+          },
+        },
+      });
+
+      expect(Object.keys(fields).sort()).toEqual([
+        'proposer-employmentstatus',
+        'proposer-industrycode',
+        'proposer-occupationcode',
+      ]);
+    });
+
+    it('never stringifies a structured answer onto the wire', () => {
+      expect(
+        MOTOR_PAYLOAD_MAPPER.toWireValueFor('occupation', {
+          code: '394',
+          description: 'Applications Programmer',
+        }),
+      ).toBeNull();
+
+      const fields = MOTOR_PAYLOAD_MAPPER.toStoreFields({
+        'your-details': { proposer: { somethingStructured: { a: 1 } } },
+      });
+
+      expect(Object.values(fields)).not.toContain('[object Object]');
+    });
+  });
 });

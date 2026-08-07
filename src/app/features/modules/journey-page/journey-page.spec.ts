@@ -50,6 +50,17 @@ describe('journey flow', () => {
     return buttons.find(button => button.getAttribute('aria-label')?.startsWith('Continue')) ?? null;
   }
 
+  /**
+   * Finds a control by its configured field name.
+   *
+   * Element ids are scoped to the rendered section so a repeat section cannot emit
+   * duplicates, which makes them unstable to assert on; `data-field` is the stable
+   * hook.
+   */
+  function field(fixture: ComponentFixture<App>, name: string): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector(`[data-field="${name}"]`);
+  }
+
   it('renders the step heading and progress from the journey definition', async () => {
     const fixture = await renderAt('/PC/your-vehicle');
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -87,24 +98,20 @@ describe('journey flow', () => {
     journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
 
     const fixture = await renderAt('/PC/your-vehicle');
-    const registration = (fixture.nativeElement as HTMLElement).querySelector(
-      '#registration',
-    ) as HTMLInputElement | null;
+    const registration = field(fixture, 'registration') as HTMLInputElement | null;
 
     expect(registration?.value).toBe('AB12CDE');
   });
 
   it('hides the proposer questions until an address is resolved', async () => {
     const withoutAddress = await renderAt('/PC/your-details');
-    expect((withoutAddress.nativeElement as HTMLElement).querySelector('#email')).toBeNull();
+    expect(field(withoutAddress, 'email')).toBeNull();
 
     journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
     withoutAddress.detectChanges();
     await withoutAddress.whenStable();
 
-    expect(
-      (withoutAddress.nativeElement as HTMLElement).querySelector('#email'),
-    ).not.toBeNull();
+    expect(field(withoutAddress, 'email')).not.toBeNull();
   });
 
   it('blocks the first step until the address section is satisfied', async () => {
@@ -148,16 +155,70 @@ describe('journey flow', () => {
     expect(host.textContent).toContain('Find address');
   });
 
+  it('asks for an occupation from ordinary field configuration, not a bespoke section', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+
+    const fixture = await renderAt('/PC/your-details');
+
+    expect(field(fixture, 'employmentStatus')).not.toBeNull();
+    // Nothing further is asked until we know the status.
+    expect(field(fixture, 'occupation')).toBeNull();
+    expect(field(fixture, 'occupationFte')).toBeNull();
+  });
+
+  it('asks how to describe the occupation according to the employment status', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+    journeyState.setSectionAnswers('PC', 'your-details', 'occupation', {
+      employmentStatus: 'E',
+    });
+
+    const employed = await renderAt('/PC/your-details');
+    expect(employed.nativeElement.querySelectorAll('app-autocomplete-input').length).toBe(2);
+    expect(field(employed, 'occupationFte')).toBeNull();
+
+    journeyState.setSectionAnswers('PC', 'your-details', 'occupation', {
+      employmentStatus: 'FTE',
+    });
+
+    const studying = await renderAt('/PC/your-details');
+    expect(field(studying, 'occupationFte')).not.toBeNull();
+    expect(studying.nativeElement.querySelectorAll('app-autocomplete-input').length).toBe(0);
+  });
+
+  it('asks a retired customer nothing further, because the status says it all', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+    journeyState.setSectionAnswers('PC', 'your-details', 'occupation', {
+      employmentStatus: 'R',
+    });
+
+    const fixture = await renderAt('/PC/your-details');
+
+    expect(field(fixture, 'occupation')).toBeNull();
+    expect(field(fixture, 'occupationFte')).toBeNull();
+    // The second-job question still applies to them.
+    expect(field(fixture, 'hasParttime')).not.toBeNull();
+  });
+
+  it('offers a limited company to a van customer only', async () => {
+    journeyState.setSectionAnswers('GV', 'your-details', 'address', RESOLVED_ADDRESS);
+    const van = await renderAt('/GV/your-details');
+    expect(field(van, 'employmentStatus')?.textContent).toContain('Limited Company');
+
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+    const car = await renderAt('/PC/your-details');
+    expect(field(car, 'employmentStatus')?.textContent).not.toContain('Limited Company');
+  });
+
   it('renders every field type of the Signal Forms section', async () => {
     const fixture = await renderAt('/PC/your-policy');
     const host = fixture.nativeElement as HTMLElement;
 
     // date rendered as text, radio group, numbers with prefix/suffix, and a checkbox.
-    expect(host.querySelector('#startDate')).not.toBeNull();
+    expect(field(fixture, 'startDate')).not.toBeNull();
     expect(host.querySelectorAll('input[type=radio]').length).toBe(3);
-    expect(host.querySelector('#voluntaryExcess')).not.toBeNull();
-    expect(host.querySelector('#licenseYearsHeld')).not.toBeNull();
-    expect(host.querySelector('#declarationAccepted')).not.toBeNull();
+    expect(field(fixture, 'voluntaryExcess')).not.toBeNull();
+    expect(field(fixture, 'licenseYearsHeld')).not.toBeNull();
+    expect(field(fixture, 'declarationAccepted')).not.toBeNull();
     // The radio group is named by a real legend, as the reactive renderer is.
     expect(host.querySelector('fieldset legend')?.textContent).toContain('Level of cover');
   });
@@ -273,5 +334,38 @@ describe('journey flow', () => {
     expect(text).toContain('Your property');
     expect(text).toContain('Step 2 of 6');
     expect(text).toContain('Property details');
+  });
+
+  it('asks nothing about a joint proposer until one is declared', async () => {
+    const fixture = await renderAt('/HC/joint-proposer');
+
+    expect(field(fixture, 'hasJointProposer')).not.toBeNull();
+    expect(field(fixture, 'forenames')).toBeNull();
+    expect(field(fixture, 'employmentStatus')).toBeNull();
+  });
+
+  it('does not let unanswered joint proposer questions block the step', async () => {
+    // Defaults to no, so every question about them is hidden and cannot object.
+    const fixture = await renderAt('/HC/joint-proposer');
+
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+
+    expect(router.url).toContain('/HC/your-policy');
+    expect(journeyState.isStepComplete('HC', 'joint-proposer')).toBe(true);
+  });
+
+  it('asks a declared joint proposer for their occupation as well as their name', async () => {
+    journeyState.setSectionAnswers('HC', 'joint-proposer', 'jointProposer', {
+      hasJointProposer: 'yes',
+      employmentStatus: 'E',
+    });
+
+    const fixture = await renderAt('/HC/joint-proposer');
+
+    expect(field(fixture, 'forenames')).not.toBeNull();
+    expect(field(fixture, 'surname')).not.toBeNull();
+    expect(field(fixture, 'dateOfBirth')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('app-autocomplete-input').length).toBe(2);
   });
 });

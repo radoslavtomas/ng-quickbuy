@@ -10,6 +10,7 @@ import {
   getFieldsSections,
   getJourneyForModule,
   getQuestionSteps,
+  resolveFields,
 } from '../../journeys/journey-registry';
 
 /** Internal names of the address fields the address section owns. */
@@ -63,7 +64,8 @@ export class QuoteRecallHydrationService {
       const stepValues: Record<string, Record<string, unknown>> = {};
 
       for (const section of getFieldsSections(step)) {
-        const values = this.pickSectionValues(source, section.fields, mapper, consumedKeys);
+        const fields = resolveFields(section.fields, moduleCode);
+        const values = this.pickSectionValues(source, section.id, fields, mapper, consumedKeys);
         if (Object.keys(values).length > 0) {
           stepValues[section.id] = values;
         }
@@ -102,17 +104,25 @@ export class QuoteRecallHydrationService {
    * Fields are looked up by the backend key the mapper reports, so a rename of an
    * internal name cannot break hydration. The internal name is also accepted, which
    * covers fields with no known backend key.
+   *
+   * Derived values come back as a single code, so a second pass asks each derivation
+   * to rebuild the answers behind it — an occupation code becomes either a search
+   * result to re-describe or a choice from the student list, depending on the
+   * employment status that arrived with it. That pass runs last so every plain
+   * answer it depends on has already been read.
    */
   private pickSectionValues(
     source: Record<string, unknown>,
+    sectionId: string,
     fields: readonly FormFieldConfig[],
     mapper: JourneyPayloadMapper,
     consumedKeys: Set<string>,
   ): Record<string, unknown> {
     const values: Record<string, unknown> = {};
+    const derivedValues: Record<string, unknown> = {};
 
     for (const field of fields) {
-      const backendKey = mapper.backendKeyFor(field.name);
+      const backendKey = mapper.backendKeyForSection(sectionId, field.name);
       const rawValue = source[backendKey] ?? source[field.name];
       if (rawValue === undefined) {
         continue;
@@ -120,7 +130,22 @@ export class QuoteRecallHydrationService {
 
       consumedKeys.add(backendKey);
       consumedKeys.add(field.name);
-      values[field.name] = this.normalizeValue(field, mapper.fromWireValueFor(field.name, rawValue));
+
+      const value = this.normalizeValue(field, mapper.fromWireValueFor(field.name, rawValue));
+      if (field.type === 'derived') {
+        derivedValues[field.name] = value;
+      } else {
+        values[field.name] = value;
+      }
+    }
+
+    for (const field of fields) {
+      const derived = field.derived;
+      if (field.type !== 'derived' || !derived?.toAnswers) {
+        continue;
+      }
+
+      Object.assign(values, derived.toAnswers(derivedValues[field.name], values));
     }
 
     return values;

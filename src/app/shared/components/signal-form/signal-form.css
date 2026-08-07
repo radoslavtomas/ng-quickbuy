@@ -1,0 +1,9 @@
+.radio-options {
+  grid-template-columns: var(--radio-grid-template, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .radio-options--stack-sm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

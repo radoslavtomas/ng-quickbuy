@@ -1,5 +1,7 @@
 import { findModuleByCode } from '../../../core/config/module-catalogue';
+import type { FormFieldConfig } from '../../../core/models/form-field.model';
 import type {
+  FieldsProvider,
   JourneyDefinition,
   JourneyFieldsSection,
   JourneyId,
@@ -86,4 +88,17 @@ export function getFieldsSections(step: JourneyStepDefinition): readonly Journey
   return step.sections.filter(
     (section): section is JourneyFieldsSection => section.kind === 'fields',
   );
+}
+
+/**
+ * The questions a section asks for one module.
+ *
+ * The only place that decides whether a section's fields are fixed or
+ * module-specific, so callers never have to know which kind they were given.
+ */
+export function resolveFields(
+  provider: FieldsProvider,
+  moduleCode: string,
+): readonly FormFieldConfig[] {
+  return typeof provider === 'function' ? provider(moduleCode) : provider;
 }
