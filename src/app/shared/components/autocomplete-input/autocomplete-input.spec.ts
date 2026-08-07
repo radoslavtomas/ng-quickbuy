@@ -1,46 +1,47 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
-import { AutocompleteInputComponent, type AutocompleteOption } from './autocomplete-input';
+import type { AutocompleteOption } from '../../../core/models/autocomplete-option.model';
+import type { AutocompleteSource } from '../../../core/services/autocomplete-source.service';
+import {
+  AutocompleteInputComponent,
+  MIN_KEYWORD_LENGTH,
+  SEARCH_DEBOUNCE_MS,
+} from './autocomplete-input';
+
+const MATCHES: readonly AutocompleteOption[] = [
+  { code: '394', description: 'Applications Programmer' },
+  { code: 'C57', description: 'Computer Programmer' },
+  { code: '51D', description: 'Web Programmer' },
+];
 
 @Component({
   imports: [AutocompleteInputComponent],
   template: `
     <app-autocomplete-input
-      label="Occupation"
-      name="occupation"
-      [searchFn]="searchFn"
-      [initialCode]="initialCode()"
-      [initialDescription]="initialDescription()"
-      [disabled]="false"
-      [invalid]="false"
-      [valid]="false"
-      (selected)="onSelected($event)"
-      (cleared)="onCleared()"
+      [(value)]="value"
+      [source]="source()"
+      controlId="occupation"
+      describedBy="occupation-messages"
+      [showInvalid]="false"
+      [showValid]="false"
+      (touch)="touched = true"
     />
   `,
 })
 class TestHostComponent {
-  searchFn = (keyword: string) =>
-    of<AutocompleteOption[]>([
-      { code: '394', description: 'Applications Programmer' },
-      { code: 'C57', description: 'Computer Programmer' },
-      { code: '51D', description: 'Web Programmer' },
-    ]);
+  readonly value = signal<AutocompleteOption | null>(null);
 
-  initialCode = signal('');
-  initialDescription = signal('');
-  selectedOption: AutocompleteOption | null = null;
-  cleared = false;
+  search: (keyword: string) => Observable<AutocompleteOption[]> = () => of([...MATCHES]);
+  describe: (code: string) => Observable<string> = () => of('');
 
-  onSelected(option: AutocompleteOption): void {
-    this.selectedOption = option;
-  }
+  readonly source = signal<AutocompleteSource>({
+    search: keyword => this.search(keyword),
+    describe: code => this.describe(code),
+  });
 
-  onCleared(): void {
-    this.cleared = true;
-  }
+  touched = false;
 }
 
 describe('AutocompleteInputComponent', () => {
@@ -50,9 +51,7 @@ describe('AutocompleteInputComponent', () => {
   beforeEach(async () => {
     vi.useFakeTimers();
 
-    await TestBed.configureTestingModule({
-      imports: [TestHostComponent],
-    }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [TestHostComponent] }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);
     host = fixture.componentInstance;
@@ -63,120 +62,216 @@ describe('AutocompleteInputComponent', () => {
     vi.useRealTimers();
   });
 
-  function getInput(): HTMLInputElement {
+  function input(): HTMLInputElement {
     return fixture.nativeElement.querySelector('input[role="combobox"]');
   }
 
-  function getListbox(): HTMLUListElement | null {
+  function listbox(): HTMLElement | null {
     return fixture.nativeElement.querySelector('[role="listbox"]');
   }
 
-  function typeValue(value: string): void {
-    const input = getInput();
-    input.value = value;
-    input.dispatchEvent(new Event('input'));
+  function optionElements(): HTMLElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('[role="option"]'));
   }
 
-  it('renders a combobox input', () => {
-    const input = getInput();
-    expect(input).toBeTruthy();
-    expect(input.getAttribute('role')).toBe('combobox');
-    expect(input.getAttribute('aria-autocomplete')).toBe('list');
+  function statusText(): string {
+    return fixture.nativeElement.querySelector('[role="status"]')?.textContent?.trim() ?? '';
+  }
+
+  function type(value: string): void {
+    const element = input();
+    element.value = value;
+    element.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  }
+
+  function search(keyword = 'prog'): void {
+    type(keyword);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+    fixture.detectChanges();
+  }
+
+  function press(key: string): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key, cancelable: true });
+    input().dispatchEvent(event);
+    fixture.detectChanges();
+    return event;
+  }
+
+  it('renders a combobox described by the section messages and its own status', () => {
+    const element = input();
+
+    expect(element.getAttribute('role')).toBe('combobox');
+    expect(element.getAttribute('aria-autocomplete')).toBe('list');
+    expect(element.getAttribute('autocomplete')).toBe('off');
+    expect(element.getAttribute('aria-describedby')).toBe(
+      'occupation-messages occupation-status',
+    );
   });
 
-  it('does not search when keyword is shorter than 4 characters', () => {
-    typeValue('pro');
-    vi.advanceTimersByTime(300);
-    fixture.detectChanges();
-    expect(getListbox()).toBeNull();
+  it('derives every element id from the control id, so repeated sections cannot collide', () => {
+    search();
+
+    expect(input().id).toBe('occupation');
+    expect(listbox()?.id).toBe('occupation-listbox');
+    expect(optionElements()[0].id).toBe('occupation-option-0');
+    expect(input().getAttribute('aria-controls')).toBe('occupation-listbox');
   });
 
-  it('searches after 300ms debounce with 4+ characters', () => {
-    typeValue('prog');
-    vi.advanceTimersByTime(300);
-    fixture.detectChanges();
-    expect(getListbox()).toBeTruthy();
-    const options = fixture.nativeElement.querySelectorAll('[role="option"]');
-    expect(options.length).toBe(3);
+  it('does not search below the minimum keyword length, and says why', () => {
+    search('pro');
+
+    expect(listbox()).toBeNull();
+    expect(statusText()).toBe(`Type at least ${MIN_KEYWORD_LENGTH} characters to search.`);
   });
 
-  it('limits displayed results to 5', () => {
-    host.searchFn = () =>
-      of(
-        Array.from({ length: 8 }, (_, i) => ({
-          code: `${i}`,
-          description: `Option ${i}`,
-        })),
-      );
-    typeValue('test');
-    vi.advanceTimersByTime(300);
-    fixture.detectChanges();
-    const options = fixture.nativeElement.querySelectorAll('[role="option"]');
-    expect(options.length).toBe(5);
+  it('searches once typing settles and announces how many matches there are', () => {
+    search();
+
+    expect(optionElements()).toHaveLength(3);
+    expect(statusText()).toContain('3 results available');
   });
 
-  it('selects option on click', () => {
-    typeValue('prog');
-    vi.advanceTimersByTime(300);
-    fixture.detectChanges();
+  it('shows at most five matches', () => {
+    host.search = () =>
+      of(Array.from({ length: 8 }, (_, i) => ({ code: `${i}`, description: `Option ${i}` })));
 
-    const firstOption = fixture.nativeElement.querySelector('[role="option"]');
-    firstOption.dispatchEvent(new Event('mousedown'));
-    fixture.detectChanges();
+    search('test');
 
-    expect(host.selectedOption?.code).toBe('394');
-    expect(getInput().value).toBe('Applications Programmer');
+    expect(optionElements()).toHaveLength(5);
   });
 
-  it('shows error message on search failure', () => {
-    host.searchFn = () => throwError(() => new Error('Network error'));
-    typeValue('fail');
-    vi.advanceTimersByTime(300);
-    fixture.detectChanges();
+  it('says so when nothing matched', () => {
+    host.search = () => of([]);
 
-    const errorEl = fixture.nativeElement.querySelector('[role="alert"]');
-    expect(errorEl).toBeTruthy();
-    expect(errorEl.textContent).toContain('Search unavailable');
+    search('zzzz');
+
+    expect(statusText()).toBe('No matches found.');
   });
 
-  it('clears error on next input', () => {
-    host.searchFn = () => throwError(() => new Error('Network error'));
-    fixture.detectChanges();
-    typeValue('fail');
-    vi.advanceTimersByTime(300);
+  it('records the whole option when one is chosen with the mouse', () => {
+    search();
+    optionElements()[0].dispatchEvent(new MouseEvent('mousedown', { cancelable: true }));
     fixture.detectChanges();
 
-    // Confirm error is shown
-    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeTruthy();
-
-    // Typing clears the error immediately
-    typeValue('test');
-    fixture.detectChanges();
-
-    const errorEl = fixture.nativeElement.querySelector('[role="alert"]');
-    expect(errorEl).toBeNull();
+    expect(host.value()).toEqual({ code: '394', description: 'Applications Programmer' });
+    expect(input().value).toBe('Applications Programmer');
+    expect(listbox()).toBeNull();
   });
 
-  it('emits cleared when user types after selection', () => {
-    typeValue('prog');
-    vi.advanceTimersByTime(300);
-    fixture.detectChanges();
+  it('keeps focus in the box when a match is clicked', () => {
+    search();
 
-    const firstOption = fixture.nativeElement.querySelector('[role="option"]');
-    firstOption.dispatchEvent(new Event('mousedown'));
-    fixture.detectChanges();
-    host.cleared = false;
+    const event = new MouseEvent('mousedown', { cancelable: true });
+    optionElements()[0].dispatchEvent(event);
 
-    typeValue('new');
-    fixture.detectChanges();
-    expect(host.cleared).toBe(true);
+    expect(event.defaultPrevented).toBe(true);
   });
 
-  it('populates input with initial description', () => {
-    host.initialCode.set('394');
-    host.initialDescription.set('Applications Programmer');
+  it('moves through matches with the arrow keys and chooses with Enter', () => {
+    search();
+
+    press('ArrowDown');
+    expect(input().getAttribute('aria-activedescendant')).toBe('occupation-option-0');
+
+    press('ArrowDown');
+    expect(input().getAttribute('aria-activedescendant')).toBe('occupation-option-1');
+
+    press('ArrowUp');
+    expect(input().getAttribute('aria-activedescendant')).toBe('occupation-option-0');
+
+    press('Enter');
+    expect(host.value()).toEqual({ code: '394', description: 'Applications Programmer' });
+  });
+
+  it('jumps to the first and last match with Home and End', () => {
+    search();
+    press('ArrowDown');
+
+    press('End');
+    expect(input().getAttribute('aria-activedescendant')).toBe('occupation-option-2');
+
+    press('Home');
+    expect(input().getAttribute('aria-activedescendant')).toBe('occupation-option-0');
+  });
+
+  it('closes the list on Escape without choosing anything', () => {
+    search();
+    press('ArrowDown');
+    press('Escape');
+
+    expect(listbox()).toBeNull();
+    expect(host.value()).toBeNull();
+  });
+
+  it('does not choose a match on Enter when none is highlighted', () => {
+    search();
+
+    const event = press('Enter');
+
+    expect(host.value()).toBeNull();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  /**
+   * The heart of it: an unresolved answer must stay unresolved. Choosing the first
+   * match for the customer could record an occupation they never saw.
+   */
+  it('never chooses a match on blur', () => {
+    search();
+
+    input().dispatchEvent(new Event('blur'));
+    // Generously past any delay a deferred auto-select might have used.
+    vi.advanceTimersByTime(1000);
     fixture.detectChanges();
 
-    expect(getInput().value).toBe('Applications Programmer');
+    expect(host.value()).toBeNull();
+    expect(listbox()).toBeNull();
+  });
+
+  it('reports blur so the field can be marked touched', () => {
+    input().dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+
+    expect(host.touched).toBe(true);
+  });
+
+  it('unresolves the answer when the text is edited, keeping what was typed', () => {
+    search();
+    optionElements()[0].dispatchEvent(new MouseEvent('mousedown', { cancelable: true }));
+    fixture.detectChanges();
+
+    type('Applications Programme');
+
+    expect(host.value()).toBeNull();
+    expect(input().value).toBe('Applications Programme');
+  });
+
+  it('shows a recalled option once the backend says what its code means', () => {
+    host.describe = () => of('Retired');
+    host.value.set({ code: 'R09', description: '' });
+    fixture.detectChanges();
+
+    expect(host.value()).toEqual({ code: 'R09', description: 'Retired' });
+    expect(input().value).toBe('Retired');
+  });
+
+  it('reports a failed search rather than pretending there were no matches', () => {
+    host.search = () => throwError(() => new Error('Network error'));
+
+    search('fail');
+
+    const alert = fixture.nativeElement.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Search unavailable');
+  });
+
+  it('clears the failure as soon as the customer types again', () => {
+    host.search = () => throwError(() => new Error('Network error'));
+    search('fail');
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
+
+    type('test');
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
   });
 });

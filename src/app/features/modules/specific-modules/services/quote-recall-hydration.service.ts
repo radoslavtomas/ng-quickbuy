@@ -10,6 +10,7 @@ import {
   getFieldsSections,
   getJourneyForModule,
   getQuestionSteps,
+  resolveFields,
 } from '../../journeys/journey-registry';
 
 /** Internal names of the address fields the address section owns. */
@@ -23,24 +24,6 @@ const ADDRESS_FIELDS: readonly string[] = [
 
 /** Section id that holds the proposer address, by convention in both journeys. */
 const ADDRESS_SECTION_ID = 'address';
-
-/** Section id that holds the proposer occupation, by convention in both journeys. */
-const OCCUPATION_SECTION_ID = 'occupation';
-
-/** Internal names of the occupation fields the occupation section owns. */
-const OCCUPATION_FIELDS: readonly string[] = [
-  'employmentStatus',
-  'occupationCode',
-  'occupationDescription',
-  'industryCode',
-  'industryDescription',
-  'hasParttime',
-  'ptEmploymentStatus',
-  'ptOccupationCode',
-  'ptOccupationDescription',
-  'ptIndustryCode',
-  'ptIndustryDescription',
-];
 
 @Injectable({ providedIn: 'root' })
 export class QuoteRecallHydrationService {
@@ -81,7 +64,8 @@ export class QuoteRecallHydrationService {
       const stepValues: Record<string, Record<string, unknown>> = {};
 
       for (const section of getFieldsSections(step)) {
-        const values = this.pickSectionValues(source, section.fields, mapper, consumedKeys);
+        const fields = resolveFields(section.fields, moduleCode);
+        const values = this.pickSectionValues(source, section.id, fields, mapper, consumedKeys);
         if (Object.keys(values).length > 0) {
           stepValues[section.id] = values;
         }
@@ -91,13 +75,6 @@ export class QuoteRecallHydrationService {
         const address = this.pickAddress(source, mapper, consumedKeys);
         if (Object.keys(address).length > 0) {
           stepValues[ADDRESS_SECTION_ID] = address;
-        }
-      }
-
-      if (step.sections.some(section => section.id === OCCUPATION_SECTION_ID)) {
-        const occupation = this.pickOccupation(source, mapper, consumedKeys);
-        if (Object.keys(occupation).length > 0) {
-          stepValues[OCCUPATION_SECTION_ID] = occupation;
         }
       }
 
@@ -127,17 +104,25 @@ export class QuoteRecallHydrationService {
    * Fields are looked up by the backend key the mapper reports, so a rename of an
    * internal name cannot break hydration. The internal name is also accepted, which
    * covers fields with no known backend key.
+   *
+   * Derived values come back as a single code, so a second pass asks each derivation
+   * to rebuild the answers behind it — an occupation code becomes either a search
+   * result to re-describe or a choice from the student list, depending on the
+   * employment status that arrived with it. That pass runs last so every plain
+   * answer it depends on has already been read.
    */
   private pickSectionValues(
     source: Record<string, unknown>,
+    sectionId: string,
     fields: readonly FormFieldConfig[],
     mapper: JourneyPayloadMapper,
     consumedKeys: Set<string>,
   ): Record<string, unknown> {
     const values: Record<string, unknown> = {};
+    const derivedValues: Record<string, unknown> = {};
 
     for (const field of fields) {
-      const backendKey = mapper.backendKeyFor(field.name);
+      const backendKey = mapper.backendKeyForSection(sectionId, field.name);
       const rawValue = source[backendKey] ?? source[field.name];
       if (rawValue === undefined) {
         continue;
@@ -145,7 +130,22 @@ export class QuoteRecallHydrationService {
 
       consumedKeys.add(backendKey);
       consumedKeys.add(field.name);
-      values[field.name] = this.normalizeValue(field, mapper.fromWireValueFor(field.name, rawValue));
+
+      const value = this.normalizeValue(field, mapper.fromWireValueFor(field.name, rawValue));
+      if (field.type === 'derived') {
+        derivedValues[field.name] = value;
+      } else {
+        values[field.name] = value;
+      }
+    }
+
+    for (const field of fields) {
+      const derived = field.derived;
+      if (field.type !== 'derived' || !derived?.toAnswers) {
+        continue;
+      }
+
+      Object.assign(values, derived.toAnswers(derivedValues[field.name], values));
     }
 
     return values;
@@ -171,28 +171,6 @@ export class QuoteRecallHydrationService {
     }
 
     return address;
-  }
-
-  private pickOccupation(
-    source: Record<string, unknown>,
-    mapper: JourneyPayloadMapper,
-    consumedKeys: Set<string>,
-  ): Record<string, unknown> {
-    const occupation: Record<string, unknown> = {};
-
-    for (const internalName of OCCUPATION_FIELDS) {
-      const backendKey = mapper.backendKeyFor(internalName);
-      const value = source[backendKey] ?? source[internalName];
-      if (value === undefined || value === null || value === '') {
-        continue;
-      }
-
-      consumedKeys.add(backendKey);
-      consumedKeys.add(internalName);
-      occupation[internalName] = value;
-    }
-
-    return occupation;
   }
 
   private normalizeValue(field: FormFieldConfig, value: unknown): unknown {

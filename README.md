@@ -150,6 +150,16 @@ and never appear on the wire: `journey-payload.mapper.ts` translates them to ins
 values with them, so `coverType: 'comprehensive'` leaves as `policy-cover: 'C'`. Renaming a field is
 therefore safe, and a contract change is confined to the mapper.
 
+Every person answers the **same** field names — `forenames`, `employmentStatus`, `occupationCode` —
+and the mapper decides whose they are. Repeat items take their slot from position (`repeatSlots`), and
+a section that belongs to a named person declares it (`sectionSlots`), which is what turns the joint
+proposer's `surname` into `jointproposer-name-surname` rather than overwriting the customer's.
+
+`shared/occupation.fields.ts` is the one definition of the occupation questions. The proposer, each
+additional driver and the joint proposer all call `createOccupationFields()`, differing only in
+whether a limited company is offered, whether a second job is asked about, and what gates the whole
+set. Occupation is not a bespoke section: it is ordinary field configuration.
+
 ## The form engine
 
 `FormFieldConfig` (`src/app/core/models/form-field.model.ts`) is the contract. A field declares its
@@ -158,13 +168,37 @@ type, label, help text, options, validators, normalization rules and conditional
 ```ts
 {
   type: 'text',
-  label: 'Joint proposer full name',
-  name: 'jointProposerName',
-  validators: [{ type: 'maxLength', value: 80 }],
+  label: 'Joint proposer surname',
+  name: 'surname',
+  validators: [{ type: 'required' }, { type: 'maxLength', value: 40 }],
   visibleWhen: [{ field: 'hasJointProposer', operator: 'equals', value: 'yes' }],
-  enabledWhen: [{ field: 'hasJointProposer', operator: 'equals', value: 'yes' }],
   normalization: ['trim'],
-  metadata: { placeholder: 'Jordan Taylor' },
+  metadata: { placeholder: 'Taylor' },
+}
+```
+
+Two field types are not plain inputs:
+
+- **`autocomplete`** is a search box whose answer is a whole `AutocompleteOption` (`{ code,
+  description }`), not the text in the box. It names a backend with
+  `metadata.autocompleteConfig.endpoint`, which `AutocompleteSourceService` resolves to a real
+  service. Typed text that matched nothing leaves the value `null`, so `required` rejects it — a
+  match is never chosen on the customer's behalf.
+- **`derived`** is not a question at all. It has no control, no node in the field tree and no key in
+  the model; its `derived.from(values)` runs whenever the section is read. Use it when one insurer
+  key can be answered several ways, so the value is recomputed rather than stored and cannot go
+  stale when the customer changes their mind. `derived.toAnswers` is the inverse, used by recall to
+  rebuild the answers behind a code.
+
+```ts
+{
+  type: 'derived',
+  label: 'Occupation code',
+  name: 'occupationCode',
+  derived: {
+    from: values => occupationCodeFor(values),
+    toAnswers: (code, values) => ({ occupation: { code, description: '' } }),
+  },
 }
 ```
 
@@ -193,7 +227,15 @@ Things to know before extending it:
   otherwise. `licenseYearsByAgeValidator` is in that position — it wants the date of birth, owned by
   the proposer section — so it is currently inert. That is an underwriting gap, not a style issue.
 - **Hidden and disabled fields drop out of validity**, so a question the customer never saw cannot
-  block a step.
+  block a step. Their answers stay in the model, so going back restores them, and anything the
+  insurer sees is derived from the current answers rather than read from a field that may be stale.
+- **A section's fields may depend on the module.** `JourneyFieldsSection.fields` and
+  `JourneyRepeatSection.itemFields` accept either an array or `(moduleCode) => array`, resolved
+  through `resolveFields()`. Several products share one journey, and only a van may be held by a
+  limited company; this expresses that without duplicating a journey.
+- **Element ids are scoped to the rendered section**, because a repeat section renders the same field
+  configuration once per item and duplicate ids break both `<label for>` and AXE. Tests should match
+  on the `data-field` attribute, which is stable.
 - **Repeating groups use a `repeat` section**, which declares the questions asked of each item and the
   wire slots they occupy. Slots are assigned by position, so removing an item re-packs the rest, and
   the number of slots is the maximum number of items. Each item is rendered by the ordinary field
@@ -258,6 +300,9 @@ Services and endpoints:
   `quotes.quotes_allow_buyonline`/`switches.cpd_buyonline_suppressed` are available for buy-online.
 - `QuotePartialStoreService` — `POST /api/miscellaneous/quote/post/store`, see
   [Journey state](#journey-state).
+- `OccupationSearchService` — `GET /api/occupation/{occupations,employers}/get/{bysearch,bycode}`,
+  reached through `AutocompleteSourceService` rather than directly, so an `autocomplete` field names
+  an endpoint in configuration and the renderer stays unaware of what is being searched.
 - `QuoteRecallService` — `POST /api/quote/get/recall/`, with `QuoteRecallHydrationService` mapping a
   response onto journey sections. Implemented and tested, but **not yet wired into a screen**.
 
@@ -273,6 +318,11 @@ In place: radio groups named by a real `<legend>`; exactly one label per checkbo
 polite live regions for validation messages; single `banner` and `contentinfo` landmarks; a skip link
 to `<main id="main-content">`; and focus moved to the step heading with a polite "Step *n* of *m*"
 announcement on step change.
+
+Search fields follow the ARIA combobox pattern: arrow keys, `Home`, `End`, `Enter` and `Escape`;
+`aria-activedescendant` rather than moving focus; `aria-busy` while searching; and a polite status
+region announcing how many matches there are, or why none appeared. Control ids are scoped per
+rendered section so a list of three drivers cannot emit the same id three times.
 
 Still open: there is no error summary, so an invalid step reveals per-field errors without moving
 focus. Journey step links are not gated on completion, so a later step can be opened before earlier
@@ -300,8 +350,11 @@ src/app/
       specific-modules/
         components/              address search
         config/                  field schemas per journey and step
+          lookups/               shared option lists, such as employment statuses
+          shared/                field factories reused by every person, such as occupation
         services/                quote recall hydration
-  shared/components/             signal-form, step-card, header, footer, not-found
+  shared/components/             signal-form, autocomplete-input, step-card, header, footer,
+                                 not-found
 src/environments/                per-target configuration
 ```
 
@@ -343,7 +396,19 @@ from the definition.
 
 Slots are assigned by position, so removing an item re-packs the rest.
 
+### Add a searchable field
+
+1. Add a `search`/`describe` pair to `AutocompleteSourceService` under a new endpoint key.
+2. Add an `autocomplete` field naming that key in `metadata.autocompleteConfig.endpoint`.
+3. Its answer is an `AutocompleteOption`, which is UI state. Add the field name to `UI_ONLY_FIELDS`
+   in the mapper and send the code through a `derived` field, so the wording the customer read
+   never reaches the insurer.
+
 ### Add a section with bespoke UI
+
+Prefer field configuration: a custom section cannot be reused by another person on the policy, and
+occupation was one until it became a `createOccupationFields()` call. Reach for this only when the
+generic renderer genuinely cannot draw the UI, as with address lookup.
 
 1. Write the component under `journey-page/sections/`, exposing
    `collect(): { valid: boolean; values: Record<string, unknown> }` and writing its values to
@@ -414,8 +479,10 @@ Deliberate, known gaps — check here before assuming something is a bug:
 2. **The mapper's key coverage is partial.** Every product has a versioned mapper owning the
    translation, but a field with no confirmed insurer key is sent under its internal name. Those are
    the names to check against the backend contract: `vehicleUse`, `hasAdditionalDrivers`,
-   `licenseYearsHeld`, `declarationAccepted`, `propertyType`, `bedrooms`, `occupancy`, `yearBuilt`,
-   the joint-proposer fields, `buildingsSumInsured` and `contentsSumInsured`.
+   `hasJointProposer`, `licenseYearsHeld`, `declarationAccepted`, `propertyType`, `bedrooms`,
+   `occupancy`, `yearBuilt`, `buildingsSumInsured` and `contentsSumInsured`. The occupation keys
+   (`*-employmentstatus`, `*-occupationcode`, `*-industrycode` and their `pt-` counterparts) are
+   also unconfirmed and carry a TODO in the mapper.
 3. **No resume entry point.** Partial quotes are saved, but nothing reads one back yet: the recall
    service and its hydration are implemented and unwired, pending confirmation of which identity
    fields are required and how the customer receives the reference. A browser refresh therefore still
@@ -428,3 +495,9 @@ Deliberate, known gaps — check here before assuming something is a bug:
 6. **No step-order gating.** Any step can be opened directly from the progress list, regardless of
    whether earlier steps are complete.
 7. **Demo quotes.** The final step renders fixture data and a payload dump, not live pricing.
+8. **Recall does not rebuild list items.** Hydration walks `fields` sections only, so a recalled
+   quote restores the customer and the joint proposer but not additional drivers; the driver keys
+   land in `unresolvedFields`, which is where to look when wiring resume.
+9. **Occupation search needs four characters.** The backend's minimum, so short job titles such as
+   "vet" cannot be found by typing them alone. The field says so rather than appearing broken, but
+   it is a real gap to raise with the backend.

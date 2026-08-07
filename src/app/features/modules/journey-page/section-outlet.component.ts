@@ -4,8 +4,8 @@ import type { JourneySection } from '../../../core/models/journey.model';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
 import { SignalFormComponent } from '../../../shared/components/signal-form/signal-form';
 import { StepCardComponent } from '../../../shared/components/step-card/step-card';
+import { resolveFields } from '../journeys/journey-registry';
 import { AddressSectionComponent } from './sections/address-section.component';
-import { OccupationSectionComponent } from './sections/occupation-section.component';
 import { QuoteResultsSectionComponent } from './sections/quote-results-section.component';
 import { RepeatSectionComponent } from './sections/repeat-section.component';
 
@@ -30,7 +30,6 @@ export interface SectionResult {
     StepCardComponent,
     SignalFormComponent,
     AddressSectionComponent,
-    OccupationSectionComponent,
     QuoteResultsSectionComponent,
     RepeatSectionComponent,
   ],
@@ -55,13 +54,6 @@ export interface SectionResult {
           @switch (customComponent()) {
             @case ('address-lookup') {
               <app-address-section
-                [moduleCode]="moduleCode()"
-                [stepName]="stepName()"
-                [sectionId]="section().id"
-              />
-            }
-            @case ('occupation') {
-              <app-occupation-section
                 [moduleCode]="moduleCode()"
                 [stepName]="stepName()"
                 [sectionId]="section().id"
@@ -101,7 +93,6 @@ export class SectionOutletComponent {
   private readonly journeyState = inject(JourneyStateService);
   private readonly signalForm = viewChild(SignalFormComponent);
   private readonly addressSection = viewChild(AddressSectionComponent);
-  private readonly occupationSection = viewChild(OccupationSectionComponent);
   private readonly quoteResults = viewChild(QuoteResultsSectionComponent);
   private readonly repeatSectionComponent = viewChild(RepeatSectionComponent);
 
@@ -117,7 +108,7 @@ export class SectionOutletComponent {
 
   readonly fields = computed(() => {
     const section = this.section();
-    return section.kind === 'fields' ? section.fields : [];
+    return section.kind === 'fields' ? resolveFields(section.fields, this.moduleCode()) : [];
   });
 
   readonly customComponent = computed(() => {
@@ -167,6 +158,9 @@ export class SectionOutletComponent {
       return this.repeatSectionComponent()?.collect() ?? { valid: true, values: {} };
     }
 
-    return this.addressSection()?.collect() ?? this.occupationSection()?.collect() ?? this.quoteResults()?.collect() ?? { valid: true, values: {} };
+    return (
+      this.addressSection()?.collect() ??
+      this.quoteResults()?.collect() ?? { valid: true, values: {} }
+    );
   }
 }

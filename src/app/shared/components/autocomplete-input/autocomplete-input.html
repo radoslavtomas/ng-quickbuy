@@ -1,24 +1,28 @@
 <div class="relative w-full">
   <input
-    [id]="name()"
+    #control
+    [id]="controlId()"
     type="text"
     role="combobox"
+    autocomplete="off"
+    aria-autocomplete="list"
     [attr.aria-expanded]="isOpen()"
     [attr.aria-controls]="listboxId()"
-    aria-autocomplete="list"
     [attr.aria-activedescendant]="activeDescendantId()"
-    [attr.aria-invalid]="invalid()"
+    [attr.aria-describedby]="describedByIds()"
+    [attr.aria-invalid]="showInvalid()"
+    [attr.aria-busy]="loading()"
     [disabled]="disabled()"
-    [value]="inputValue()"
+    [value]="text()"
     (input)="onInput($event)"
     (keydown)="onKeydown($event)"
     (blur)="onBlur()"
     class="h-11 w-full min-w-0 rounded-md border bg-white px-2.5 text-[0.95rem] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-500"
-    [class.border-slate-400]="!invalid() && !valid()"
-    [class.border-red-500]="invalid()"
-    [class.bg-red-50]="invalid()"
-    [class.border-green-500]="valid()"
-    [class.bg-green-50]="valid()"
+    [class.border-slate-400]="!showInvalid() && !showValid()"
+    [class.border-red-500]="showInvalid()"
+    [class.bg-red-50]="showInvalid()"
+    [class.border-green-500]="showValid()"
+    [class.bg-green-50]="showValid()"
   />
 
   @if (loading()) {
@@ -43,7 +47,7 @@
           [attr.aria-selected]="i === activeIndex()"
           class="cursor-pointer px-2.5 py-2 text-[0.9rem] text-slate-900"
           [class.bg-sky-100]="i === activeIndex()"
-          (mousedown)="selectOption(option)"
+          (mousedown)="onOptionMousedown($event, option)"
           (mouseenter)="activeIndex.set(i)"
         >
           {{ option.description }}
@@ -52,6 +56,18 @@
     </ul>
   }
 </div>
+
+<!--
+  Two regions saying the same thing to different audiences: the visible hint
+  explains why no list appeared, and the polite status announces result counts and
+  keyboard instructions. The hint is hidden from assistive technology so the news
+  is not read out twice.
+-->
+@if (hint(); as hintText) {
+  <p class="mt-1 text-[0.82rem] text-slate-600" aria-hidden="true">{{ hintText }}</p>
+}
+
+<p [id]="statusId()" class="sr-only" role="status">{{ status() }}</p>
 
 @if (error(); as errorMsg) {
   <p class="mt-1 text-[0.82rem] text-red-700" role="alert">{{ errorMsg }}</p>

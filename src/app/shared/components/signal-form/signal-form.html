@@ -1,5 +1,5 @@
 <div class="grid w-full grid-cols-1 gap-4">
-  @for (field of fields(); track field.name) {
+  @for (field of controlFields(); track field.name) {
     @if (isVisible(field)) {
       <div class="min-w-0 w-full py-1">
         @if (field.type === 'radio') {
@@ -58,6 +58,7 @@
                   <input
                     class="peer sr-only"
                     type="radio"
+                    [attr.data-field]="field.name"
                     [formField]="stringField(field)"
                     [value]="optionValue(option.value)"
                   />
@@ -72,9 +73,10 @@
             </div>
           </fieldset>
         } @else if (field.type === 'checkbox' || field.type === 'toggle') {
-          <label class="inline-flex items-center gap-2 text-slate-900" [for]="field.name">
+          <label class="inline-flex items-center gap-2 text-slate-900" [for]="controlId(field)">
             <input
-              [id]="field.name"
+              [id]="controlId(field)"
+              [attr.data-field]="field.name"
               type="checkbox"
               [formField]="booleanField(field)"
               [attr.role]="field.type === 'toggle' ? 'switch' : null"
@@ -101,7 +103,7 @@
           </label>
         } @else {
           <div class="flex items-start gap-1">
-            <label [for]="field.name" class="block text-[0.95rem] font-bold text-slate-900">
+            <label [for]="controlId(field)" class="block text-[0.95rem] font-bold text-slate-900">
               {{ field.label }}
             </label>
 
@@ -129,11 +131,11 @@
           @if (field.type === 'select') {
             <div class="mt-2 w-full min-w-0">
               <select
-                [id]="field.name"
+                [id]="controlId(field)"
+                [attr.data-field]="field.name"
                 [formField]="stringField(field)"
                 [attr.aria-describedby]="messageId(field)"
                 [attr.aria-invalid]="isInvalid(field)"
-                (change)="onSelectChange(field, $event)"
                 class="h-11 w-full min-w-0 rounded-md border bg-white px-2.5 text-[0.95rem] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-500"
                 [class.border-slate-400]="!isInvalid(field) && !isValid(field)"
                 [class.border-red-500]="isInvalid(field)"
@@ -150,18 +152,18 @@
               </select>
             </div>
           } @else if (field.type === 'autocomplete') {
-            <div class="mt-2">
+            <!--
+              No `disabled` binding: the directive owns disabled state and pushes it
+              into the control's own `disabled` input.
+            -->
+            <div class="mt-2" [attr.data-field]="field.name">
               <app-autocomplete-input
-                [label]="field.label"
-                [name]="field.name"
-                [searchFn]="autocompleteSearchFn(field)"
-                [initialCode]="autocompleteInitialCode(field)"
-                [initialDescription]="autocompleteInitialDescription(field)"
-                [disabled]="isDisabled(field)"
-                [invalid]="isInvalid(field)"
-                [valid]="isValid(field)"
-                (selected)="onAutocompleteSelected(field, $event)"
-                (cleared)="onAutocompleteCleared(field)"
+                [formField]="optionField(field)"
+                [controlId]="controlId(field)"
+                [source]="autocompleteSource(field)"
+                [describedBy]="messageId(field)"
+                [showInvalid]="isInvalid(field)"
+                [showValid]="isValid(field)"
               />
             </div>
           } @else if (field.type === 'textarea') {
@@ -173,7 +175,8 @@
               }
 
               <textarea
-                [id]="field.name"
+                [id]="controlId(field)"
+                [attr.data-field]="field.name"
                 [formField]="stringField(field)"
                 [attr.placeholder]="field.metadata?.placeholder || null"
                 [attr.autocomplete]="field.metadata?.autocomplete || null"
@@ -222,7 +225,8 @@
                 silent DOM constraint.
               -->
               <input
-                [id]="field.name"
+                [id]="controlId(field)"
+                [attr.data-field]="field.name"
                 [type]="field.type === 'date' ? 'text' : field.type"
                 [formField]="inputField(field)"
                 [attr.placeholder]="

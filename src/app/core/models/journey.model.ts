@@ -7,6 +7,18 @@ export type JourneyId = 'motor' | 'property';
 /** Answers captured so far for a single step, keyed by section id. */
 export type StepAnswers = Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 
+/**
+ * The questions a section asks, either fixed or decided by the module.
+ *
+ * Several products share one journey — a car and a van are both `motor` — but they
+ * are not identical: only a van may be insured by a limited company. A function
+ * lets one journey serve both without duplicating a whole journey definition, and
+ * without offering a car customer a question that does not apply to them.
+ */
+export type FieldsProvider =
+  | readonly FormFieldConfig[]
+  | ((moduleCode: string) => readonly FormFieldConfig[]);
+
 interface JourneySectionBase {
   /**
    * Stable identifier, unique within its step. Answers are stored under this key,
@@ -25,7 +37,7 @@ interface JourneySectionBase {
 /** A section rendered from field configuration by the generic form renderer. */
 export interface JourneyFieldsSection extends JourneySectionBase {
   readonly kind: 'fields';
-  readonly fields: readonly FormFieldConfig[];
+  readonly fields: FieldsProvider;
   /** Seed values applied when the customer has not answered this section yet. */
   readonly defaults?: Readonly<Record<string, unknown>>;
 }
@@ -52,7 +64,7 @@ export interface JourneyCustomSection extends JourneySectionBase {
 export interface JourneyRepeatSection extends JourneySectionBase {
   readonly kind: 'repeat';
   /** Questions asked of every item. */
-  readonly itemFields: readonly FormFieldConfig[];
+  readonly itemFields: FieldsProvider;
   /** Singular noun for one item, e.g. `Additional driver`. */
   readonly itemLabel: string;
   /** Wire slots items are filed under, assigned by position. */

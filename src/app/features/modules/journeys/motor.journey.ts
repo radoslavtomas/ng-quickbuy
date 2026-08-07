@@ -1,5 +1,6 @@
 import type { JourneyDefinition, StepAnswers } from '../../../core/models/journey.model';
 import { hasAddressState } from '../specific-modules/config/shared/common';
+import { createOccupationFields } from '../specific-modules/config/shared/occupation.fields';
 import { MOTOR_YOUR_DETAILS_FIELDS } from '../specific-modules/config/motor/steps/your-details.fields';
 import { MOTOR_YOUR_VEHICLE_FIELDS } from '../specific-modules/config/motor/steps/your-vehicle.fields';
 import {
@@ -17,6 +18,12 @@ import {
 function addressIsResolved(answers: StepAnswers): boolean {
   return hasAddressState(answers['address'] ?? {});
 }
+
+/**
+ * Only a van may be insured by a limited company, and the motor journey is shared
+ * by car, van, breakdown and taxi, so the status list is decided per module.
+ */
+const VAN_MODULE_CODE = 'GV';
 
 /**
  * Motor questionnaire, shared by car, van, breakdown and taxi.
@@ -49,10 +56,14 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
           visibleWhen: addressIsResolved,
         },
         {
-          kind: 'custom',
+          kind: 'fields',
           id: 'occupation',
           title: 'Occupation',
-          component: 'occupation',
+          fields: moduleCode =>
+            createOccupationFields({
+              includeLimitedCompany: moduleCode === VAN_MODULE_CODE,
+              includeSecondJob: true,
+            }),
           visibleWhen: addressIsResolved,
         },
       ],
