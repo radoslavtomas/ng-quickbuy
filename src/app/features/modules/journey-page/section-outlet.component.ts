@@ -57,6 +57,7 @@ export interface SectionResult {
                 [moduleCode]="moduleCode()"
                 [stepName]="stepName()"
                 [sectionId]="section().id"
+                [riskAddress]="riskAddressEnabled()"
               />
             }
             @case ('quote-results') {
@@ -114,6 +115,11 @@ export class SectionOutletComponent {
   readonly customComponent = computed(() => {
     const section = this.section();
     return section.kind === 'custom' ? section.component : '';
+  });
+
+  readonly riskAddressEnabled = computed(() => {
+    const section = this.section();
+    return section.kind === 'custom' && section.riskAddress === true;
   });
 
   /**

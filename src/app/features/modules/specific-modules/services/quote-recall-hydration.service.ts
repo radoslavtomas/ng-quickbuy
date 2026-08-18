@@ -12,6 +12,10 @@ import {
   getQuestionSteps,
   resolveFields,
 } from '../../journeys/journey-registry';
+import {
+  RISK_ADDRESS_FIELD_NAMES,
+  RISK_ADDRESS_MATCHES_FIELD,
+} from '../config/shared/common';
 
 /** Internal names of the address fields the address section owns. */
 const ADDRESS_FIELDS: readonly string[] = [
@@ -20,6 +24,7 @@ const ADDRESS_FIELDS: readonly string[] = [
   'addressLine3',
   'addressLine4',
   'postcode',
+  ...RISK_ADDRESS_FIELD_NAMES,
 ];
 
 /** Section id that holds the proposer address, by convention in both journeys. */
@@ -168,6 +173,13 @@ export class QuoteRecallHydrationService {
       consumedKeys.add(backendKey);
       consumedKeys.add(internalName);
       address[internalName] = value;
+    }
+
+    // A recalled quote has no record of which the customer chose, only the
+    // resulting values, so a risk address on the wire is shown for review with
+    // its own search rather than silently assumed to still match the customer's.
+    if (RISK_ADDRESS_FIELD_NAMES.some(name => address[name] !== undefined)) {
+      address[RISK_ADDRESS_MATCHES_FIELD] = 'no';
     }
 
     return address;

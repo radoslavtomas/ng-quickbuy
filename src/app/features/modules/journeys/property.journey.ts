@@ -43,6 +43,7 @@ export const PROPERTY_JOURNEY: JourneyDefinition = {
           id: 'address',
           title: 'Correspondence address',
           component: 'address-lookup',
+          riskAddress: true,
         },
         {
           kind: 'fields',
