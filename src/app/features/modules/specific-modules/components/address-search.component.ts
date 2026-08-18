@@ -11,6 +11,7 @@ import {
   AddressSearchCriteria,
   asString,
 } from '../config/shared/common';
+import { BrandService } from '../../../../core/services/brand.service';
 
 @Component({
   selector: 'app-address-search',
@@ -41,23 +42,28 @@ import {
           (valueChanged)="onCriteriaChanged($event)"
         />
 
-        <button
-          type="button"
-          class="mt-3 inline-flex cursor-pointer items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-200"
-          [disabled]="loading()"
-          (click)="searchForAddress()"
-        >
-          {{ loading() ? 'Searching...' : 'Find address' }}
-          <i class="fa-solid fa-house" aria-hidden="true"></i>
-        </button>
+        <div class="flex justify-center md:justify-end">
+          <button
+            type="button"
+            class="mt-3 inline-flex cursor-pointer items-center justify-center gap-2 rounded-md px-4 py-2 font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-200"
+            [style.background-color]="brand.secondaryColor"
+            [disabled]="loading()"
+            (click)="searchForAddress()"
+          >
+            {{ loading() ? 'Searching...' : 'Find address' }}
+            <i class="fa-solid fa-house" aria-hidden="true"></i>
+          </button>
+        </div>
 
-        <button
-          type="button"
-          class="mt-2 block text-sm font-semibold text-sky-700 underline decoration-sky-400 underline-offset-2 hover:text-sky-800"
-          (click)="useManualEntry()"
-        >
-          Enter the full address manually
-        </button>
+        <div class="flex justify-center md:justify-start">
+          <button
+            type="button"
+            class="mt-4 block text-sm font-semibold text-sky-700 underline decoration-sky-400 underline-offset-2 hover:text-sky-800"
+            (click)="useManualEntry()"
+          >
+            Enter the full address manually
+          </button>
+        </div>
       } @else {
         <app-signal-form
           [fields]="manualFields"
@@ -81,6 +87,9 @@ import {
   `,
 })
 export class AddressSearchComponent {
+  private readonly brandService = inject(BrandService);
+  readonly brand = this.brandService.config;
+    
   readonly initialPostcode = input('');
   readonly initialNumberOrName = input('');
   readonly initialAddress = input<AddressLookupMatch | null>(null);

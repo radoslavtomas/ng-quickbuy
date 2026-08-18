@@ -48,9 +48,9 @@ export interface AddressLookupResponse {
 }
 
 export interface AddressLookupMatch {
+  houseNameNumber: string;
   postcode: string;
   addressLine1: string;
-  houseNameNumber: string;
   addressLine2: string;
   addressLine3: string;
   addressLine4: string;

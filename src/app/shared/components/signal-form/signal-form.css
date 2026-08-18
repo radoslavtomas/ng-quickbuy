@@ -2,6 +2,10 @@
   grid-template-columns: var(--radio-grid-template, minmax(0, 1fr));
 }
 
+.peer:checked + .radio-option-label {
+  background-color: var(--radio-checked-bg);
+}
+
 @media (max-width: 640px) {
   .radio-options--stack-sm {
     grid-template-columns: minmax(0, 1fr);

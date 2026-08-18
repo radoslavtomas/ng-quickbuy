@@ -64,7 +64,8 @@
                   />
 
                   <span
-                    class="flex min-h-11 w-full items-center justify-center px-3 text-slate-700 transition peer-checked:bg-gray-500 peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[-2px] peer-focus-visible:outline-sky-500"
+                    class="radio-option-label flex min-h-11 w-full items-center justify-center px-3 text-slate-700 transition peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[-2px] peer-focus-visible:outline-sky-500"
+                    [style.--radio-checked-bg]="brand.secondaryColor"
                   >
                     {{ option.label }}
                   </span>

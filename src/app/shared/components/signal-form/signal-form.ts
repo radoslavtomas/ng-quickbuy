@@ -27,6 +27,7 @@ import {
 import { FormNormalizationService } from '../../../core/services/form-normalization.service';
 import { FormValidationMessageService } from '../../../core/services/form-validation-message.service';
 import { AutocompleteInputComponent } from './autocomplete-input/autocomplete-input';
+import { BrandService } from '../../../core/services/brand.service';
 
 /**
  * Distinguishes one rendered section from another.
@@ -80,6 +81,9 @@ interface FormInstance {
   styleUrl: './signal-form.css',
 })
 export class SignalFormComponent implements OnInit {
+  private readonly brandService = inject(BrandService);
+  readonly brand = this.brandService.config;
+  
   readonly fields = input.required<readonly FormFieldConfig[]>();
   readonly initialValue = input<Record<string, unknown>>({});
 
