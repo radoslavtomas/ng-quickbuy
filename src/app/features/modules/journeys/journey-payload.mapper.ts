@@ -2,6 +2,10 @@ import type {
   JourneyAnswers,
   JourneyPayloadMapper,
 } from '../../../core/models/journey-payload.model';
+import {
+  RISK_ADDRESS_HOUSE_NAME_NUMBER_FIELD,
+  RISK_ADDRESS_MATCHES_FIELD,
+} from '../specific-modules/config/shared/common';
 
 /**
  * Internal name of the policy start date.
@@ -84,6 +88,8 @@ const UI_ONLY_FIELDS: ReadonlySet<string> = new Set([
   'ptIndustry',
   'ptOccupationFte',
   'houseNameNumber',
+  RISK_ADDRESS_MATCHES_FIELD,
+  RISK_ADDRESS_HOUSE_NAME_NUMBER_FIELD,
 ]);
 
 /** Keys that belong to the policy rather than to a person. */
@@ -103,6 +109,12 @@ const MOTOR_KEYS: Readonly<Record<string, string>> = {
 
 const PROPERTY_KEYS: Readonly<Record<string, string>> = {
   ...SHARED_POLICY_KEYS,
+  // The property being insured, as distinct from the proposer's own address.
+  riskAddressLine1: 'property-riskaddress-addressline1',
+  riskAddressLine2: 'property-riskaddress-addressline2',
+  riskAddressLine3: 'property-riskaddress-addressline3',
+  riskAddressLine4: 'property-riskaddress-addressline4',
+  riskPostcode: 'property-postcode',
 };
 
 /** Coded values the backend uses, by internal field name. */

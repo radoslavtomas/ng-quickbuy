@@ -52,6 +52,12 @@ export interface JourneyFieldsSection extends JourneySectionBase {
 export interface JourneyCustomSection extends JourneySectionBase {
   readonly kind: 'custom';
   readonly component: string;
+  /**
+   * Enables the risk-address question on the `address-lookup` component: once the
+   * correspondence address resolves, the customer is asked whether that is also
+   * the property being insured. Only property journeys ask this.
+   */
+  readonly riskAddress?: boolean;
 }
 
 /**

@@ -334,4 +334,35 @@ describe('journey payload mappers', () => {
       expect(Object.values(fields)).not.toContain('[object Object]');
     });
   });
+
+  describe('risk address', () => {
+    it('sends the risk address under its own property keys, alongside the proposer address', () => {
+      const fields = PROPERTY_PAYLOAD_MAPPER.toStoreFields({
+        'your-details': {
+          address: {
+            addressLine1: '17 Talbot Road',
+            postcode: 'M16 0PQ',
+            riskAddressMatches: 'no',
+            riskHouseNameNumber: '4',
+            riskAddressLine1: '4 Oak Street',
+            riskAddressLine2: '',
+            riskAddressLine3: '',
+            riskAddressLine4: 'Manchester',
+            riskPostcode: 'M1 2AB',
+          },
+        },
+      });
+
+      expect(fields['property-riskaddress-addressline1']).toBe('4 Oak Street');
+      expect(fields['property-riskaddress-addressline4']).toBe('Manchester');
+      expect(fields['property-postcode']).toBe('M1 2AB');
+
+      // The customer's own address keeps its existing, unrelated keys.
+      expect(fields['proposer-address-postcode']).toBe('M16 0PQ');
+
+      // The yes/no answer and the search box only help the customer answer.
+      expect(fields['riskAddressMatches']).toBeUndefined();
+      expect(fields['riskHouseNameNumber']).toBeUndefined();
+    });
+  });
 });

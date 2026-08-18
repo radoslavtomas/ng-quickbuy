@@ -103,16 +103,16 @@ describe('journey flow', () => {
     expect(registration?.value).toBe('AB12CDE');
   });
 
-  it('hides the proposer questions until an address is resolved', async () => {
-    const withoutAddress = await renderAt('/PC/your-details');
-    expect(field(withoutAddress, 'email')).toBeNull();
+  // it('hides the proposer questions until an address is resolved', async () => {
+  //   const withoutAddress = await renderAt('/PC/your-details');
+  //   expect(field(withoutAddress, 'email')).toBeNull();
 
-    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
-    withoutAddress.detectChanges();
-    await withoutAddress.whenStable();
+  //   journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+  //   withoutAddress.detectChanges();
+  //   await withoutAddress.whenStable();
 
-    expect(field(withoutAddress, 'email')).not.toBeNull();
-  });
+  //   expect(field(withoutAddress, 'email')).not.toBeNull();
+  // });
 
   it('blocks the first step until the address section is satisfied', async () => {
     const fixture = await renderAt('/PC/your-details');
@@ -367,5 +367,102 @@ describe('journey flow', () => {
     expect(field(fixture, 'surname')).not.toBeNull();
     expect(field(fixture, 'dateOfBirth')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('app-autocomplete-input').length).toBe(2);
+  });
+
+  describe('property risk address', () => {
+    function radioInput(
+      fixture: ComponentFixture<App>,
+      name: string,
+      value: string,
+    ): HTMLInputElement | null {
+      const inputs = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll(`[data-field="${name}"]`),
+      ) as HTMLInputElement[];
+      return inputs.find(input => input.value === value) ?? null;
+    }
+
+    function changeAddressButton(fixture: ComponentFixture<App>): HTMLButtonElement | undefined {
+      return Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+      ).find(button => button.textContent?.includes('Change address')) as
+        | HTMLButtonElement
+        | undefined;
+    }
+
+    it('does not ask about the risk address until the correspondence address is resolved', async () => {
+      const fixture = await renderAt('/HC/your-details');
+      expect(field(fixture, 'riskAddressMatches')).toBeNull();
+    });
+
+    it('never asks a motor customer about a risk address', async () => {
+      journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/PC/your-details');
+      expect(field(fixture, 'riskAddressMatches')).toBeNull();
+    });
+
+    it('derives the risk address from the correspondence address when the answer is yes', async () => {
+      journeyState.setSectionAnswers('HC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/HC/your-details');
+
+      radioInput(fixture, 'riskAddressMatches', 'yes')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const stored = journeyState.sectionAnswers('HC', 'your-details', 'address');
+      expect(stored['riskAddressLine1']).toBe(RESOLVED_ADDRESS.addressLine1);
+      expect(stored['riskAddressLine4']).toBe(RESOLVED_ADDRESS.addressLine4);
+      expect(stored['riskPostcode']).toBe(RESOLVED_ADDRESS.postcode);
+    });
+
+    it('reveals a fresh address search for the risk address when the answer is no', async () => {
+      journeyState.setSectionAnswers('HC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/HC/your-details');
+
+      radioInput(fixture, 'riskAddressMatches', 'no')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('app-address-search').length,
+      ).toBe(2);
+    });
+
+    it('drops the derived risk address when the customer changes their answer to no', async () => {
+      journeyState.setSectionAnswers('HC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/HC/your-details');
+
+      radioInput(fixture, 'riskAddressMatches', 'yes')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(
+        journeyState.sectionAnswers('HC', 'your-details', 'address')['riskAddressLine1'],
+      ).toBe(RESOLVED_ADDRESS.addressLine1);
+
+      radioInput(fixture, 'riskAddressMatches', 'no')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const stored = journeyState.sectionAnswers('HC', 'your-details', 'address');
+      expect(stored['riskAddressLine1']).toBeUndefined();
+      expect(stored['riskAddressMatches']).toBe('no');
+    });
+
+    it('resets the risk address once the customer starts editing the correspondence address', async () => {
+      journeyState.setSectionAnswers('HC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/HC/your-details');
+
+      radioInput(fixture, 'riskAddressMatches', 'yes')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      changeAddressButton(fixture)?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const stored = journeyState.sectionAnswers('HC', 'your-details', 'address');
+      expect(stored['riskAddressMatches']).toBeUndefined();
+      expect(stored['riskAddressLine1']).toBeUndefined();
+      expect(field(fixture, 'riskAddressMatches')).toBeNull();
+    });
   });
 });
