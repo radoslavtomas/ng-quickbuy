@@ -47,6 +47,7 @@ export const ADDITIONAL_DRIVER_SLOTS: readonly string[] = MOTOR_DRIVER_SLOTS.sli
  * proposer and any additional driver.
  */
 const PERSON_KEY_SUFFIXES: Readonly<Record<string, string>> = {
+  title: 'name-title',
   forenames: 'name-forenames',
   surname: 'name-surname',
   dateOfBirth: 'dateofbirth',

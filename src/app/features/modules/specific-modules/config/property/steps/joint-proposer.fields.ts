@@ -7,6 +7,7 @@ import {
   validDateValidator,
 } from '../../../../../../core/validators/form-validators';
 import { createOccupationFields } from '../../shared/occupation.fields';
+import { PERSON_TITLE_OPTIONS } from '../../lookups/personal-details';
 
 /** Nothing about a joint proposer is asked until the customer says there is one. */
 const WHEN_DECLARED: readonly FieldCondition[] = [
@@ -36,6 +37,14 @@ export const PROPERTY_JOINT_PROPOSER_FIELDS: readonly FormFieldConfig[] = [
       { label: 'Yes', value: 'yes' },
     ],
     metadata: { radioLayout: 'row' },
+  },
+  {
+    type: 'select',
+    label: 'Title',
+    name: 'title',
+    validators: [{ type: 'required' }],
+    options: PERSON_TITLE_OPTIONS,
+    visibleWhen: WHEN_DECLARED,
   },
   {
     type: 'text',

@@ -10,7 +10,7 @@
           >
             <legend class="w-full p-0">
               <span class="flex items-start gap-1">
-                <span [id]="labelId(field)" class="text-[0.95rem] font-bold text-slate-900">
+                <span [id]="labelId(field)" class="text-[0.95rem] font-bold text-slate-700">
                   {{ field.label }}
                 </span>
 
@@ -64,7 +64,7 @@
                   />
 
                   <span
-                    class="flex min-h-11 w-full items-center justify-center px-3 text-slate-900 transition peer-checked:bg-zinc-400 peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[-2px] peer-focus-visible:outline-sky-500"
+                    class="flex min-h-11 w-full items-center justify-center px-3 text-slate-700 transition peer-checked:bg-gray-500 peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-offset-[-2px] peer-focus-visible:outline-sky-500"
                   >
                     {{ option.label }}
                   </span>
@@ -87,7 +87,7 @@
 
             <span
               aria-hidden="true"
-              class="flex h-4 w-4 items-center justify-center rounded border bg-white text-[0.65rem] text-slate-900 transition peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500"
+              class="flex h-4 w-4 items-center justify-center rounded border bg-white text-[0.65rem] text-slate-700 transition peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500"
               [class.border-slate-400]="!isInvalid(field) && !isValid(field)"
               [class.border-red-500]="isInvalid(field)"
               [class.border-green-500]="isValid(field)"
@@ -103,7 +103,7 @@
           </label>
         } @else {
           <div class="flex items-start gap-1">
-            <label [for]="controlId(field)" class="block text-[0.95rem] font-bold text-slate-900">
+            <label [for]="controlId(field)" class="block text-[0.95rem] font-bold text-slate-700">
               {{ field.label }}
             </label>
 

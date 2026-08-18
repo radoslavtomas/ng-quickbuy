@@ -1,7 +1,15 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
 import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
+import { PERSON_TITLE_OPTIONS } from '../../lookups/personal-details';
 
 export const MOTOR_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
+  {
+    type: 'select',
+    label: 'Title',
+    name: 'title',
+    validators: [{ type: 'required' }],
+    options: PERSON_TITLE_OPTIONS,
+  },
   {
     type: 'text',
     label: 'First name',

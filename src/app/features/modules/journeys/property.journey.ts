@@ -32,6 +32,13 @@ export const PROPERTY_JOURNEY: JourneyDefinition = {
       storeStep: 'your-details',
       sections: [
         {
+          kind: 'fields',
+          id: 'proposer',
+          title: 'Your details',
+          fields: PROPERTY_YOUR_DETAILS_FIELDS,
+          // visibleWhen: addressIsResolved,
+        },
+        {
           kind: 'custom',
           id: 'address',
           title: 'Correspondence address',
@@ -39,17 +46,10 @@ export const PROPERTY_JOURNEY: JourneyDefinition = {
         },
         {
           kind: 'fields',
-          id: 'proposer',
-          title: 'Your details',
-          fields: PROPERTY_YOUR_DETAILS_FIELDS,
-          visibleWhen: addressIsResolved,
-        },
-        {
-          kind: 'fields',
           id: 'occupation',
           title: 'Occupation',
           fields: createOccupationFields({ includeSecondJob: true }),
-          visibleWhen: addressIsResolved,
+          // visibleWhen: addressIsResolved,
         },
       ],
     },

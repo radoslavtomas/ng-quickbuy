@@ -4,6 +4,7 @@ import {
   validDateValidator,
 } from '../../../../../../core/validators/form-validators';
 import { createOccupationFields } from '../../shared/occupation.fields';
+import { PERSON_TITLE_OPTIONS } from '../../lookups/personal-details';
 
 export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
   {
@@ -45,6 +46,13 @@ export const MOTOR_ADDITIONAL_DRIVERS_FIELDS: readonly FormFieldConfig[] = [
  * driver is a person, whatever the policyholder may be.
  */
 export const MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS: readonly FormFieldConfig[] = [
+  {
+    type: 'select',
+    label: 'Title',
+    name: 'title',
+    validators: [{ type: 'required' }],
+    options: PERSON_TITLE_OPTIONS,
+  },
   {
     type: 'text',
     label: 'First name',

@@ -43,17 +43,17 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
       storeStep: 'your-details',
       sections: [
         {
-          kind: 'custom',
-          id: 'address',
-          title: 'Correspondence address',
-          component: 'address-lookup',
-        },
-        {
           kind: 'fields',
           id: 'proposer',
           title: 'Your details',
           fields: MOTOR_YOUR_DETAILS_FIELDS,
-          visibleWhen: addressIsResolved,
+          // visibleWhen: addressIsResolved,
+        },
+        {
+          kind: 'custom',
+          id: 'address',
+          title: 'Correspondence address',
+          component: 'address-lookup',
         },
         {
           kind: 'fields',
@@ -64,7 +64,7 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
               includeLimitedCompany: moduleCode === VAN_MODULE_CODE,
               includeSecondJob: true,
             }),
-          visibleWhen: addressIsResolved,
+          // visibleWhen: addressIsResolved,
         },
       ],
     },

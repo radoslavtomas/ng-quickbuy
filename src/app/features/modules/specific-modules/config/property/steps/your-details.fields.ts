@@ -1,7 +1,15 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
 import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
+import { PERSON_GENDER_OPTIONS, PERSON_TITLE_OPTIONS, PERSON_MARITAL_STATUS_OPTIONS } from '../../lookups/personal-details';
 
 export const PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
+  {
+    type: 'select',
+    label: 'Title',
+    name: 'title',
+    validators: [{ type: 'required' }],
+    options: PERSON_TITLE_OPTIONS,
+  },
   {
     type: 'text',
     label: 'First name',
@@ -70,6 +78,33 @@ export const PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
       placeholder: '07123456789',
       maskPattern: '[0-9+ ]*',
     },
+  },
+  {
+    type: 'tel',
+    label: 'Alternative number',
+    name: 'altphone',
+    validators: [{ type: 'required' }, { type: 'minLength', value: 10 }, { type: 'maxLength', value: 15 }],
+    normalization: ['trim', 'phone'],
+    metadata: {
+      autocomplete: 'tel',
+      placeholder: '07123456789',
+      maskPattern: '[0-9+ ]*',
+    },
+  },
+  {
+    type: 'radio',
+    label: 'Gender',
+    name: 'gender',
+    validators: [{ type: 'required' }],
+    options: PERSON_GENDER_OPTIONS,
+    metadata: { radioLayout: 'row' },
+  },
+  {
+    type: 'radio',
+    label: 'Marital status',
+    name: 'marital-status',
+    validators: [{ type: 'required' }],
+    options: PERSON_MARITAL_STATUS_OPTIONS,
   },
 ];
 
