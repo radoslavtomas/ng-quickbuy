@@ -41,7 +41,7 @@ export class JourneySessionService {
     const existing = this.sessions()[key] ?? this.readStored(key);
     if (existing) {
       if (!this.sessions()[key]) {
-        this.sessions.update(current => ({ ...current, [key]: existing }));
+        this.sessions.update((current) => ({ ...current, [key]: existing }));
       }
       return existing;
     }
@@ -79,7 +79,7 @@ export class JourneySessionService {
   clear(moduleCode: string): void {
     const key = this.key(moduleCode);
 
-    this.sessions.update(current => {
+    this.sessions.update((current) => {
       const next = { ...current };
       delete next[key];
       return next;
@@ -124,7 +124,7 @@ export class JourneySessionService {
   }
 
   private write(key: string, session: JourneySession): void {
-    this.sessions.update(current => ({ ...current, [key]: session }));
+    this.sessions.update((current) => ({ ...current, [key]: session }));
 
     try {
       this.storage()?.setItem(STORAGE_PREFIX + key, JSON.stringify(session));

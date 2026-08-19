@@ -181,7 +181,10 @@ export function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-export function hasAddressState(value: { addressLine1?: unknown; postcode?: unknown; houseNameNumber?: unknown }): boolean {
+export function hasAddressState(value: {
+  addressLine1?: unknown;
+  postcode?: unknown;
+  houseNameNumber?: unknown;
+}): boolean {
   return Boolean(asString(value['addressLine1']) && asString(value['postcode']));
 }
-

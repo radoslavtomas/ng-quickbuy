@@ -15,7 +15,10 @@ interface Harness {
 }
 
 /** Builds a live form from field config, the way the renderer will. */
-function harness(fields: readonly FormFieldConfig[], values: Record<string, unknown> = {}): Harness {
+function harness(
+  fields: readonly FormFieldConfig[],
+  values: Record<string, unknown> = {},
+): Harness {
   const injector = TestBed.inject(Injector);
 
   return runInInjectionContext(injector, () => {
@@ -31,14 +34,17 @@ function harness(fields: readonly FormFieldConfig[], values: Record<string, unkn
 
     return {
       model,
-      errorKinds: name => tree[name]().errors().map(error => error.kind),
-      messages: name =>
+      errorKinds: (name) =>
         tree[name]()
           .errors()
-          .map(error => error.message ?? ''),
-      hidden: name => tree[name]().hidden(),
-      disabled: name => tree[name]().disabled(),
-      set: (name, value) => model.update(current => ({ ...current, [name]: value })),
+          .map((error) => error.kind),
+      messages: (name) =>
+        tree[name]()
+          .errors()
+          .map((error) => error.message ?? ''),
+      hidden: (name) => tree[name]().hidden(),
+      disabled: (name) => tree[name]().disabled(),
+      set: (name, value) => model.update((current) => ({ ...current, [name]: value })),
     };
   });
 }
@@ -75,7 +81,10 @@ describe('buildSectionSchema', () => {
         type: 'number',
         label: 'Mileage',
         name: 'mileage',
-        validators: [{ type: 'min', value: 1000 }, { type: 'max', value: 100000 }],
+        validators: [
+          { type: 'min', value: 1000 },
+          { type: 'max', value: 100000 },
+        ],
       },
     ];
 

@@ -12,10 +12,7 @@ import {
   getQuestionSteps,
   resolveFields,
 } from '../../journeys/journey-registry';
-import {
-  RISK_ADDRESS_FIELD_NAMES,
-  RISK_ADDRESS_MATCHES_FIELD,
-} from '../config/shared/common';
+import { RISK_ADDRESS_FIELD_NAMES, RISK_ADDRESS_MATCHES_FIELD } from '../config/shared/common';
 
 /** Internal names of the address fields the address section owns. */
 const ADDRESS_FIELDS: readonly string[] = [
@@ -76,7 +73,7 @@ export class QuoteRecallHydrationService {
         }
       }
 
-      if (step.sections.some(section => section.id === ADDRESS_SECTION_ID)) {
+      if (step.sections.some((section) => section.id === ADDRESS_SECTION_ID)) {
         const address = this.pickAddress(source, mapper, consumedKeys);
         if (Object.keys(address).length > 0) {
           stepValues[ADDRESS_SECTION_ID] = address;
@@ -178,7 +175,7 @@ export class QuoteRecallHydrationService {
     // A recalled quote has no record of which the customer chose, only the
     // resulting values, so a risk address on the wire is shown for review with
     // its own search rather than silently assumed to still match the customer's.
-    if (RISK_ADDRESS_FIELD_NAMES.some(name => address[name] !== undefined)) {
+    if (RISK_ADDRESS_FIELD_NAMES.some((name) => address[name] !== undefined)) {
       address[RISK_ADDRESS_MATCHES_FIELD] = 'no';
     }
 

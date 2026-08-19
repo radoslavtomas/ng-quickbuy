@@ -24,7 +24,7 @@ export class BrandService {
   readonly requestedModuleCode: Signal<string | null> = toSignal(
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-      map(e => this.extractRequestedModuleCode(e.urlAfterRedirects)),
+      map((e) => this.extractRequestedModuleCode(e.urlAfterRedirects)),
       startWith(this.extractRequestedModuleCode(this.router.url)),
     ),
     { initialValue: this.extractRequestedModuleCode(this.router.url) },
@@ -33,18 +33,18 @@ export class BrandService {
   readonly currentModuleCode: Signal<string | null> = toSignal(
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd),
-      map(e => this.extractModuleCode(e.urlAfterRedirects)),
+      map((e) => this.extractModuleCode(e.urlAfterRedirects)),
       startWith(this.extractModuleCode(this.router.url)),
     ),
     { initialValue: this.extractModuleCode(this.router.url) },
   );
 
-  readonly hasInvalidModuleRequest = computed(() =>
-    this.requestedModuleCode() !== null && this.currentModuleCode() === null,
+  readonly hasInvalidModuleRequest = computed(
+    () => this.requestedModuleCode() !== null && this.currentModuleCode() === null,
   );
 
   private resolveModules(): readonly ModuleDefinition[] {
-    return this.config.moduleCodes.flatMap(code => {
+    return this.config.moduleCodes.flatMap((code) => {
       const module = findModuleByCode(code);
       if (!module) {
         // A brand listing a code that is not in the catalogue is a configuration

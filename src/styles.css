@@ -3,27 +3,27 @@
 @import 'tailwindcss';
 
 @font-face {
-	font-family: 'ArialCustom';
-	src: url('/fonts/arial/ARIAL.woff') format('woff');
-	font-style: normal;
-	font-weight: 400;
-	font-display: swap;
+  font-family: 'ArialCustom';
+  src: url('/fonts/arial/ARIAL.woff') format('woff');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
 }
 
 html,
 body {
-	margin: 0;
-	width: 100%;
-	min-height: 100%;
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
 }
 
 app-root {
-	display: block;
-	width: 100%;
-	min-height: 100vh;
+  display: block;
+  width: 100%;
+  min-height: 100vh;
 }
 
 body {
-	font-family: 'ArialCustom', Arial, sans-serif;
-	font-weight: 400;
+  font-family: 'ArialCustom', Arial, sans-serif;
+  font-weight: 400;
 }

@@ -137,7 +137,9 @@ export class AutocompleteInputComponent implements FormValueControl<Autocomplete
     this.keyword
       .pipe(
         debounceTime(SEARCH_DEBOUNCE_MS),
-        switchMap(keyword => this.runSearch(keyword).pipe(map(results => ({ keyword, results })))),
+        switchMap((keyword) =>
+          this.runSearch(keyword).pipe(map((results) => ({ keyword, results }))),
+        ),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(({ keyword, results }) => {
@@ -190,7 +192,7 @@ export class AutocompleteInputComponent implements FormValueControl<Autocomplete
         }
 
         this.isOpen.set(true);
-        this.activeIndex.update(index => Math.min(index + 1, lastIndex));
+        this.activeIndex.update((index) => Math.min(index + 1, lastIndex));
         break;
 
       case 'ArrowUp':
@@ -200,7 +202,7 @@ export class AutocompleteInputComponent implements FormValueControl<Autocomplete
         }
 
         this.isOpen.set(true);
-        this.activeIndex.update(index => (index <= 0 ? 0 : index - 1));
+        this.activeIndex.update((index) => (index <= 0 ? 0 : index - 1));
         break;
 
       case 'Home':
@@ -300,7 +302,7 @@ export class AutocompleteInputComponent implements FormValueControl<Autocomplete
         catchError(() => of('')),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(description => {
+      .subscribe((description) => {
         const current = this.value();
         // The customer may have moved on while the lookup was in flight.
         if (description && current?.code === code && !current.description) {

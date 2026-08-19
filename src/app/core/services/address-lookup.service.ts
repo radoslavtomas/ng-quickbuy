@@ -83,7 +83,11 @@ export class AddressLookupService {
     return {
       postcode: this.normalizePostcode(response.address.postcode),
       addressLine1,
-      houseNameNumber: (response.address.numberorname || response.parameters.numberorname || '').trim(),
+      houseNameNumber: (
+        response.address.numberorname ||
+        response.parameters.numberorname ||
+        ''
+      ).trim(),
       addressLine2,
       addressLine3,
       addressLine4,

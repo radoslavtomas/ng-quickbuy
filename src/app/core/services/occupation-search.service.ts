@@ -28,28 +28,30 @@ export class OccupationSearchService {
   searchOccupations(keyword: string): Observable<OccupationOption[]> {
     const params = new HttpParams().set('keyword', keyword);
     return this.http
-      .get<OccupationsResponse>(`${this.baseUrl}/api/occupation/occupations/get/bysearch`, { params })
-      .pipe(map(response => response.occupations ?? []));
+      .get<OccupationsResponse>(`${this.baseUrl}/api/occupation/occupations/get/bysearch`, {
+        params,
+      })
+      .pipe(map((response) => response.occupations ?? []));
   }
 
   searchIndustries(keyword: string): Observable<OccupationOption[]> {
     const params = new HttpParams().set('keyword', keyword);
     return this.http
       .get<EmployersResponse>(`${this.baseUrl}/api/occupation/employers/get/bysearch`, { params })
-      .pipe(map(response => response.employers ?? []));
+      .pipe(map((response) => response.employers ?? []));
   }
 
   getOccupationByCode(code: string): Observable<string> {
     const params = new HttpParams().set('code', code);
     return this.http
       .get<DescriptionResponse>(`${this.baseUrl}/api/occupation/occupations/get/bycode`, { params })
-      .pipe(map(response => response.description ?? ''));
+      .pipe(map((response) => response.description ?? ''));
   }
 
   getIndustryByCode(code: string): Observable<string> {
     const params = new HttpParams().set('code', code);
     return this.http
       .get<DescriptionResponse>(`${this.baseUrl}/api/occupation/employers/get/bycode`, { params })
-      .pipe(map(response => response.description ?? ''));
+      .pipe(map((response) => response.description ?? ''));
   }
 }

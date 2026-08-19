@@ -88,7 +88,9 @@ describe('journey payload mappers', () => {
   it('recognises any slot on the way back in', () => {
     expect(MOTOR_PAYLOAD_MAPPER.internalNameFor('driver-3-name-surname')).toBe('surname');
     expect(MOTOR_PAYLOAD_MAPPER.internalNameFor('proposer-dateofbirth')).toBe('dateOfBirth');
-    expect(PROPERTY_PAYLOAD_MAPPER.internalNameFor('jointproposer-dateofbirth')).toBe('dateOfBirth');
+    expect(PROPERTY_PAYLOAD_MAPPER.internalNameFor('jointproposer-dateofbirth')).toBe(
+      'dateOfBirth',
+    );
   });
 
   it('exposes the slots each product allows, which is also the ceiling on people', () => {

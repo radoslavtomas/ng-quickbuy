@@ -49,7 +49,7 @@ export function extractDomainName(hostname: string): string {
     return host;
   }
 
-  const labels = host.split('.').filter(label => label.length > 0);
+  const labels = host.split('.').filter((label) => label.length > 0);
   if (labels.length <= 1) {
     return labels[0] ?? '';
   }

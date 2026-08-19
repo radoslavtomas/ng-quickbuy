@@ -33,7 +33,7 @@ describe('OccupationSearchService', () => {
         ],
       };
 
-      service.searchOccupations('prog').subscribe(results => {
+      service.searchOccupations('prog').subscribe((results) => {
         expect(results).toEqual(mockResponse.occupations);
       });
 
@@ -45,7 +45,7 @@ describe('OccupationSearchService', () => {
     });
 
     it('returns empty array when response has no occupations', () => {
-      service.searchOccupations('xyz').subscribe(results => {
+      service.searchOccupations('xyz').subscribe((results) => {
         expect(results).toEqual([]);
       });
 
@@ -65,7 +65,7 @@ describe('OccupationSearchService', () => {
         ],
       };
 
-      service.searchIndustries('comp').subscribe(results => {
+      service.searchIndustries('comp').subscribe((results) => {
         expect(results).toEqual(mockResponse.employers);
       });
 
@@ -77,7 +77,7 @@ describe('OccupationSearchService', () => {
     });
 
     it('returns empty array when response has no employers', () => {
-      service.searchIndustries('xyz').subscribe(results => {
+      service.searchIndustries('xyz').subscribe((results) => {
         expect(results).toEqual([]);
       });
 
@@ -90,7 +90,7 @@ describe('OccupationSearchService', () => {
 
   describe('getOccupationByCode', () => {
     it('sends code as a query parameter and returns description', () => {
-      service.getOccupationByCode('R09').subscribe(description => {
+      service.getOccupationByCode('R09').subscribe((description) => {
         expect(description).toBe('Retired');
       });
 
@@ -102,7 +102,7 @@ describe('OccupationSearchService', () => {
     });
 
     it('returns empty string when description is missing', () => {
-      service.getOccupationByCode('XXX').subscribe(description => {
+      service.getOccupationByCode('XXX').subscribe((description) => {
         expect(description).toBe('');
       });
 
@@ -115,13 +115,11 @@ describe('OccupationSearchService', () => {
 
   describe('getIndustryByCode', () => {
     it('sends code as a query parameter and returns description', () => {
-      service.getIndustryByCode('186').subscribe(description => {
+      service.getIndustryByCode('186').subscribe((description) => {
         expect(description).toBe('Not Applicable');
       });
 
-      const req = httpTesting.expectOne(
-        `${baseUrl}/api/occupation/employers/get/bycode?code=186`,
-      );
+      const req = httpTesting.expectOne(`${baseUrl}/api/occupation/employers/get/bycode?code=186`);
       expect(req.request.method).toBe('GET');
       req.flush({ description: 'Not Applicable' });
     });

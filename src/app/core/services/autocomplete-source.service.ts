@@ -32,12 +32,12 @@ export class AutocompleteSourceService {
 
   private readonly sources: Readonly<Record<AutocompleteEndpoint, AutocompleteSource>> = {
     occupation: {
-      search: keyword => this.occupations.searchOccupations(keyword),
-      describe: code => this.occupations.getOccupationByCode(code),
+      search: (keyword) => this.occupations.searchOccupations(keyword),
+      describe: (code) => this.occupations.getOccupationByCode(code),
     },
     industry: {
-      search: keyword => this.occupations.searchIndustries(keyword),
-      describe: code => this.occupations.getIndustryByCode(code),
+      search: (keyword) => this.occupations.searchIndustries(keyword),
+      describe: (code) => this.occupations.getIndustryByCode(code),
     },
   };
 

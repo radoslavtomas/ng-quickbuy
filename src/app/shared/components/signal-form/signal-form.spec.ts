@@ -55,9 +55,7 @@ describe('SignalFormComponent with a search field', () => {
 
     await TestBed.configureTestingModule({
       imports: [TestHostComponent],
-      providers: [
-        { provide: AutocompleteSourceService, useClass: StubAutocompleteSourceService },
-      ],
+      providers: [{ provide: AutocompleteSourceService, useClass: StubAutocompleteSourceService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);
@@ -168,7 +166,7 @@ describe('SignalFormComponent with a search field', () => {
     const shown = Array.from(
       recalled.nativeElement.querySelectorAll('input[role="combobox"]'),
     ) as HTMLInputElement[];
-    expect(shown.map(box => box.value)).toEqual(['Applications Programmer', 'Computing']);
+    expect(shown.map((box) => box.value)).toEqual(['Applications Programmer', 'Computing']);
 
     const values = recalled.componentInstance.form().collect().values;
     expect(values['occupationCode']).toBe('394');

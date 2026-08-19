@@ -93,4 +93,3 @@ export const MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS: readonly FormFieldConfig[] = [
   },
   ...createOccupationFields({ includeSecondJob: true }),
 ];
-

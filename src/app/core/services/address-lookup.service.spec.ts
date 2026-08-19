@@ -37,11 +37,15 @@ describe('AddressLookupService', () => {
     const mockResponse = buildLookupResponse();
     let result: AddressLookupResponse | undefined;
 
-    service.lookupByPostcode({ postcode: ' m16   0pq ', numberOrNameForSearch: ' 17 ' }).subscribe((res) => {
-      result = res;
-    });
+    service
+      .lookupByPostcode({ postcode: ' m16   0pq ', numberOrNameForSearch: ' 17 ' })
+      .subscribe((res) => {
+        result = res;
+      });
 
-    const request = httpMock.expectOne((req) => req.url.includes('/api/miscellaneous/address/get/bypostcode'));
+    const request = httpMock.expectOne((req) =>
+      req.url.includes('/api/miscellaneous/address/get/bypostcode'),
+    );
     expect(request.request.method).toBe('GET');
     expect(request.request.params.get('numberorname')).toBe('17');
     expect(request.request.params.get('postcode')).toBe('M16 0PQ');

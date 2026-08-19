@@ -33,9 +33,9 @@ import { DEMO_QUOTES } from '../../specific-modules/config/shared/common';
       <summary class="cursor-pointer text-sm font-semibold text-slate-900">
         View submitted journey payload
       </summary>
-      <pre
-        class="mt-3 overflow-auto rounded bg-slate-900 p-3 text-xs text-slate-100"
-      >{{ payloadPretty() }}</pre>
+      <pre class="mt-3 overflow-auto rounded bg-slate-900 p-3 text-xs text-slate-100">{{
+        payloadPretty()
+      }}</pre>
     </details>
   `,
 })
@@ -50,7 +50,10 @@ export class QuoteResultsSectionComponent {
 
   readonly payloadPretty = computed(() =>
     JSON.stringify(
-      { moduleCode: this.moduleCode(), answers: this.journeyState.moduleAnswers(this.moduleCode()) },
+      {
+        moduleCode: this.moduleCode(),
+        answers: this.journeyState.moduleAnswers(this.moduleCode()),
+      },
       null,
       2,
     ),

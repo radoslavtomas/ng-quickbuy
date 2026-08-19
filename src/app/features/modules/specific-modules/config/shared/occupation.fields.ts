@@ -174,7 +174,7 @@ function jobFields(
       label: labelFor(labelPrefix, 'Occupation code'),
       name: names.occupationCode,
       derived: {
-        from: values => (isActive(values) ? occupationCodeFor(names, values) : ''),
+        from: (values) => (isActive(values) ? occupationCodeFor(names, values) : ''),
         toAnswers: (value, values) => occupationAnswersFor(names, value, values),
       },
     },
@@ -183,7 +183,7 @@ function jobFields(
       label: labelFor(labelPrefix, 'Industry code'),
       name: names.industryCode,
       derived: {
-        from: values => (isActive(values) ? industryCodeFor(names, values) : ''),
+        from: (values) => (isActive(values) ? industryCodeFor(names, values) : ''),
         toAnswers: (value, values) => industryAnswersFor(names, value, values),
       },
     },
@@ -218,10 +218,7 @@ function occupationCodeFor(
   return SEARCHABLE_STATUSES.includes(status) ? autocompleteCode(values[names.occupation]) : '';
 }
 
-function industryCodeFor(
-  names: JobFieldNames,
-  values: Readonly<Record<string, unknown>>,
-): string {
+function industryCodeFor(names: JobFieldNames, values: Readonly<Record<string, unknown>>): string {
   const status = asString(values[names.status]);
 
   if (isSelfDescribingStatus(status)) {

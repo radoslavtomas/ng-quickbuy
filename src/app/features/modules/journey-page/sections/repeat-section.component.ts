@@ -73,9 +73,7 @@ export class RepeatSectionComponent {
   private readonly itemForms = viewChildren(SignalFormComponent);
 
   /** The per-item questions, which some products vary by module. */
-  readonly itemFields = computed(() =>
-    resolveFields(this.section().itemFields, this.moduleCode()),
-  );
+  readonly itemFields = computed(() => resolveFields(this.section().itemFields, this.moduleCode()));
 
   /**
    * The list being edited.
@@ -121,14 +119,14 @@ export class RepeatSectionComponent {
 
   /** Section contract: every item must be valid for the list to be. */
   collect(): { valid: boolean; values: Record<string, unknown> } {
-    const results = this.itemForms().map(form => form.collect());
-    const values = results.map(result => result.values);
+    const results = this.itemForms().map((form) => form.collect());
+    const values = results.map((result) => result.values);
 
     // Keep whatever the customer typed even when invalid, so nothing is lost.
     this.setItems(values);
 
     return {
-      valid: results.every(result => result.valid),
+      valid: results.every((result) => result.valid),
       values: { items: values },
     };
   }

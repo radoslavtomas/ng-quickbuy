@@ -47,7 +47,7 @@ export class JourneyStateService {
   ): void {
     const module = this.key(moduleCode);
 
-    this.state.update(current => {
+    this.state.update((current) => {
       const moduleState = current.answers[module] ?? {};
       const stepState = moduleState[stepName] ?? {};
 
@@ -71,7 +71,7 @@ export class JourneyStateService {
   markStepComplete(moduleCode: string, stepName: string): void {
     const module = this.key(moduleCode);
 
-    this.state.update(current => {
+    this.state.update((current) => {
       const completed = current.completedSteps[module] ?? [];
       if (completed.includes(stepName)) {
         return current;
@@ -88,7 +88,7 @@ export class JourneyStateService {
   resetModule(moduleCode: string): void {
     const module = this.key(moduleCode);
 
-    this.state.update(current => {
+    this.state.update((current) => {
       const answers = { ...current.answers };
       const completedSteps = { ...current.completedSteps };
       delete answers[module];

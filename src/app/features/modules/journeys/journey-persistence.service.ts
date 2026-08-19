@@ -14,8 +14,8 @@ import { getJourneyForModule, getQuestionSteps } from './journey-registry';
 /** Backend key for the policy start date, which the store endpoint requires by name. */
 const INCEPTION_DATE_KEY = 'policy-inceptiondate';
 
-/** The "undefined" step ZERO of a new quote journey. 
- * 
+/** The "undefined" step ZERO of a new quote journey.
+ *
  * Only used to properly initialize the journey and get the reference.
  */
 const NEW_QUOTE_STEP: JourneyStepDefinition = {

@@ -60,7 +60,7 @@ describe('journey registry', () => {
     }
 
     expect(property.steps).toHaveLength(6);
-    expect(getQuestionSteps(property).map(step => step.name)).toEqual([
+    expect(getQuestionSteps(property).map((step) => step.name)).toEqual([
       'your-details',
       'your-property',
       'joint-proposer',
@@ -87,8 +87,8 @@ describe('journey registry', () => {
         throw new Error(`expected a journey for ${module.code}`);
       }
 
-      const names = journey.steps.map(step => step.name);
-      const storeSteps = journey.steps.map(step => step.storeStep);
+      const names = journey.steps.map((step) => step.name);
+      const storeSteps = journey.steps.map((step) => step.storeStep);
       expect(new Set(names).size).toBe(names.length);
       expect(new Set(storeSteps).size).toBe(storeSteps.length);
     }
@@ -102,14 +102,14 @@ describe('journey registry', () => {
       }
 
       for (const step of journey.steps) {
-        const ids = step.sections.map(section => section.id);
+        const ids = step.sections.map((section) => section.id);
         expect(new Set(ids).size).toBe(ids.length);
       }
     }
   });
 
   it('only lets brands sell modules that exist in the catalogue', () => {
-    const catalogued = new Set(MODULE_CATALOGUE.map(module => module.code));
+    const catalogued = new Set(MODULE_CATALOGUE.map((module) => module.code));
 
     for (const brand of Object.values(BRAND_CONFIGS)) {
       for (const code of brand.moduleCodes) {

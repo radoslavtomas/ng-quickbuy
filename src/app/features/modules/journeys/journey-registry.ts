@@ -24,7 +24,9 @@ export function getJourney(journeyId: JourneyId): JourneyDefinition {
  * catalogue. Deliberately returns null rather than defaulting to a journey: a
  * wrong default would show a customer the wrong product's questions.
  */
-export function getJourneyForModule(moduleCode: string | null | undefined): JourneyDefinition | null {
+export function getJourneyForModule(
+  moduleCode: string | null | undefined,
+): JourneyDefinition | null {
   const module = findModuleByCode(moduleCode);
   return module ? JOURNEYS[module.journeyId] : null;
 }
@@ -38,7 +40,7 @@ export function findStep(
   }
 
   const normalized = stepName.toLowerCase();
-  return journey.steps.find(step => step.name === normalized) ?? null;
+  return journey.steps.find((step) => step.name === normalized) ?? null;
 }
 
 export function getFirstStep(journey: JourneyDefinition): JourneyStepDefinition {
@@ -46,7 +48,7 @@ export function getFirstStep(journey: JourneyDefinition): JourneyStepDefinition 
 }
 
 export function getStepIndex(journey: JourneyDefinition, stepName: string): number {
-  return journey.steps.findIndex(step => step.name === stepName.toLowerCase());
+  return journey.steps.findIndex((step) => step.name === stepName.toLowerCase());
 }
 
 export function getPreviousStep(
@@ -81,7 +83,7 @@ export function isValidStepForModule(moduleCode: string, stepName: string): bool
 
 /** Every step that captures answers, i.e. everything before the outcome screen. */
 export function getQuestionSteps(journey: JourneyDefinition): readonly JourneyStepDefinition[] {
-  return journey.steps.filter(step => !step.isOutcome);
+  return journey.steps.filter((step) => !step.isOutcome);
 }
 
 export function getFieldsSections(step: JourneyStepDefinition): readonly JourneyFieldsSection[] {

@@ -1,5 +1,8 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
+import {
+  adultOnlyValidator,
+  validDateValidator,
+} from '../../../../../../core/validators/form-validators';
 import { PERSON_TITLE_OPTIONS } from '../../lookups/personal-details';
 
 export const MOTOR_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
@@ -71,7 +74,11 @@ export const MOTOR_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
     type: 'tel',
     label: 'Mobile number',
     name: 'phone',
-    validators: [{ type: 'required' }, { type: 'minLength', value: 10 }, { type: 'maxLength', value: 15 }],
+    validators: [
+      { type: 'required' },
+      { type: 'minLength', value: 10 },
+      { type: 'maxLength', value: 15 },
+    ],
     normalization: ['trim', 'phone'],
     metadata: {
       autocomplete: 'tel',
@@ -80,4 +87,3 @@ export const MOTOR_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
     },
   },
 ];
-

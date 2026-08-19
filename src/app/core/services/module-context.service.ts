@@ -101,10 +101,10 @@ export class ModuleContextService {
       const parameters = await firstValueFrom(
         this.moduleParameters.fetchParameters(this.brandService.config.id, key, this.domain),
       );
-      this.state.update(current => ({ ...current, [key]: { parameters, failed: false } }));
+      this.state.update((current) => ({ ...current, [key]: { parameters, failed: false } }));
       return parameters;
     } catch {
-      this.state.update(current => ({ ...current, [key]: { ...EMPTY, failed: true } }));
+      this.state.update((current) => ({ ...current, [key]: { ...EMPTY, failed: true } }));
       return null;
     } finally {
       this.inFlight.delete(key);

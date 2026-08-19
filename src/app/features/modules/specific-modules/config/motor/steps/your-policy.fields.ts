@@ -1,5 +1,8 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { licenseYearsByAgeValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
+import {
+  licenseYearsByAgeValidator,
+  validDateValidator,
+} from '../../../../../../core/validators/form-validators';
 
 export const MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
   {
@@ -67,7 +70,8 @@ export const MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
     type: 'checkbox',
     label: 'I confirm the details are correct',
     name: 'declarationAccepted',
-    validators: [{ type: 'required', message: 'You must confirm details before requesting quotes.' }],
+    validators: [
+      { type: 'required', message: 'You must confirm details before requesting quotes.' },
+    ],
   },
 ];
-

@@ -58,7 +58,12 @@ function toApiError(error: unknown, requestUrl: string): ApiError {
   }
 
   if (error instanceof HttpErrorResponse) {
-    return new ApiError(error.status, messageForStatus(error.status), error.url ?? requestUrl, error);
+    return new ApiError(
+      error.status,
+      messageForStatus(error.status),
+      error.url ?? requestUrl,
+      error,
+    );
   }
 
   return new ApiError(

@@ -54,16 +54,16 @@ a step the journey does not have, renders the not-found view.
 
 ## Commands
 
-| Command | Purpose |
-| --- | --- |
-| `npm start` | Dev server on port 4200 |
-| `npm run build` | Production build into `dist/ng-quickbuy` |
-| `npm run watch` | Development build in watch mode |
-| `npm test` | Unit tests in **watch mode** (does not exit) |
-| `npm run test:ci` | Unit tests once, then exit — use this in scripts and CI |
-| `npm run lint` | ESLint over `src/**/*.ts` and `src/**/*.html` |
-| `npm run format` | Prettier write |
-| `npm run format:check` | Prettier check |
+| Command                | Purpose                                                 |
+| ---------------------- | ------------------------------------------------------- |
+| `npm start`            | Dev server on port 4200                                 |
+| `npm run build`        | Production build into `dist/ng-quickbuy`                |
+| `npm run watch`        | Development build in watch mode                         |
+| `npm test`             | Unit tests in **watch mode** (does not exit)            |
+| `npm run test:ci`      | Unit tests once, then exit — use this in scripts and CI |
+| `npm run lint`         | ESLint over `src/**/*.ts` and `src/**/*.html`           |
+| `npm run format`       | Prettier write                                          |
+| `npm run format:check` | Prettier check                                          |
 
 CI (`.github/workflows/ci.yml`) runs lint, `test:ci` and build on every push and pull request.
 `format:check` is deliberately not wired in yet: the tree predates Prettier enforcement and needs one
@@ -180,7 +180,7 @@ type, label, help text, options, validators, normalization rules and conditional
 Two field types are not plain inputs:
 
 - **`autocomplete`** is a search box whose answer is a whole `AutocompleteOption` (`{ code,
-  description }`), not the text in the box. It names a backend with
+description }`), not the text in the box. It names a backend with
   `metadata.autocompleteConfig.endpoint`, which `AutocompleteSourceService` resolves to a real
   service. Typed text that matched nothing leaves the value `null`, so `required` rejects it — a
   match is never chosen on the customer's behalf.
@@ -265,7 +265,7 @@ Answers are also saved server-side as a **partial quote**, so an abandoned journ
 - Every field goes through the product's `JourneyPayloadMapper`, so what is stored server-side uses
   insurer keys and coded values, not the internal names the forms use.
 
-What is still missing is *resume*: reading a partial back needs the recall entry point, and the
+What is still missing is _resume_: reading a partial back needs the recall entry point, and the
 identity fields required for it are an open question with the backend.
 
 ## HTTP, environments and APIs
@@ -316,7 +316,7 @@ The bar is WCAG AA and clean AXE checks. `angular-eslint`'s template accessibili
 
 In place: radio groups named by a real `<legend>`; exactly one label per checkbox/toggle; per-field
 polite live regions for validation messages; single `banner` and `contentinfo` landmarks; a skip link
-to `<main id="main-content">`; and focus moved to the step heading with a polite "Step *n* of *m*"
+to `<main id="main-content">`; and focus moved to the step heading with a polite "Step _n_ of _m_"
 announcement on step change.
 
 Search fields follow the ARIA combobox pattern: arrow keys, `Home`, `End`, `Enter` and `Escape`;

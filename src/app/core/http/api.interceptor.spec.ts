@@ -48,11 +48,15 @@ describe('apiInterceptor', () => {
       },
     });
 
-    httpMock.expectOne('/api/test').flush('boom', { status: 503, statusText: 'Service Unavailable' });
+    httpMock
+      .expectOne('/api/test')
+      .flush('boom', { status: 503, statusText: 'Service Unavailable' });
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error?.status).toBe(503);
-    expect(error?.message).toBe('The service is temporarily unavailable. Please try again shortly.');
+    expect(error?.message).toBe(
+      'The service is temporarily unavailable. Please try again shortly.',
+    );
     expect(error?.isNetworkError).toBe(false);
   });
 

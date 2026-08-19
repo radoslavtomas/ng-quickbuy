@@ -41,4 +41,3 @@ export const PROPERTY_YOUR_PROPERTY_FIELDS: readonly FormFieldConfig[] = [
     metadata: { placeholder: '1998' },
   },
 ];
-

@@ -6,7 +6,7 @@ import { createOccupationFields } from './occupation.fields';
 const FIELDS = createOccupationFields({ includeSecondJob: true });
 
 function byName(fields: readonly FormFieldConfig[], name: string): FormFieldConfig {
-  const field = fields.find(candidate => candidate.name === name);
+  const field = fields.find((candidate) => candidate.name === name);
   if (!field) {
     throw new Error(`No field named "${name}".`);
   }
@@ -114,9 +114,9 @@ describe('occupation fields', () => {
   it('asks about a second job once the first is described', () => {
     expect(isVisible('hasParttime', { employmentStatus: 'E' })).toBe(true);
     expect(isVisible('ptEmploymentStatus', { employmentStatus: 'E' })).toBe(false);
-    expect(
-      isVisible('ptEmploymentStatus', { employmentStatus: 'E', hasParttime: 'yes' }),
-    ).toBe(true);
+    expect(isVisible('ptEmploymentStatus', { employmentStatus: 'E', hasParttime: 'yes' })).toBe(
+      true,
+    );
   });
 
   it('derives the second job codes independently of the first', () => {
@@ -149,7 +149,7 @@ describe('occupation fields', () => {
 
   it('offers a limited company only when asked to', () => {
     const labels = (fields: readonly FormFieldConfig[]) =>
-      (byName(fields, 'employmentStatus').options ?? []).map(option => option.label);
+      (byName(fields, 'employmentStatus').options ?? []).map((option) => option.label);
 
     expect(labels(createOccupationFields())).not.toContain('Limited Company');
     expect(labels(createOccupationFields({ includeLimitedCompany: true }))).toContain(

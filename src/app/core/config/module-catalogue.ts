@@ -32,7 +32,7 @@ export const MODULE_CATALOGUE: readonly ModuleDefinition[] = [
 ];
 
 const MODULE_BY_CODE: ReadonlyMap<string, ModuleDefinition> = new Map(
-  MODULE_CATALOGUE.map(module => [module.code, module]),
+  MODULE_CATALOGUE.map((module) => [module.code, module]),
 );
 
 /** Normalises a raw URL segment into a catalogue code, or null when unknown. */

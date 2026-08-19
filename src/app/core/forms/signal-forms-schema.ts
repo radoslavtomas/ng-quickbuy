@@ -34,17 +34,13 @@ type SectionPath = Record<string, unknown>;
  * key in the model, because its value is recomputed from the answers whenever the
  * section is read. Leaving it out is what stops it from going stale.
  */
-export function getControlFields(
-  fields: readonly FormFieldConfig[],
-): readonly FormFieldConfig[] {
-  return fields.filter(field => field.type !== 'derived');
+export function getControlFields(fields: readonly FormFieldConfig[]): readonly FormFieldConfig[] {
+  return fields.filter((field) => field.type !== 'derived');
 }
 
 /** Fields assembled from the answers rather than asked for. */
-export function getDerivedFields(
-  fields: readonly FormFieldConfig[],
-): readonly FormFieldConfig[] {
-  return fields.filter(field => field.type === 'derived' && !!field.derived);
+export function getDerivedFields(fields: readonly FormFieldConfig[]): readonly FormFieldConfig[] {
+  return fields.filter((field) => field.type === 'derived' && !!field.derived);
 }
 
 /**
@@ -85,9 +81,9 @@ export function buildSectionSchema(fields: readonly FormFieldConfig[]) {
 
   // The path object resolves any key, and reading one that is not in the model
   // throws at validation time, so rules may only reference fields of this section.
-  const fieldNames = new Set(controlFields.map(field => field.name));
+  const fieldNames = new Set(controlFields.map((field) => field.name));
 
-  return schema<SectionModel>(path => {
+  return schema<SectionModel>((path) => {
     const sectionPath = path as unknown as SectionPath;
 
     for (const field of controlFields) {
@@ -111,7 +107,7 @@ function applyFieldRules(
         // Checkboxes and toggles must be ticked, which `required` alone does not
         // express for a boolean: `false` is a present value.
         if (field.type === 'checkbox' || field.type === 'toggle') {
-          validate(target, ctx =>
+          validate(target, (ctx) =>
             ctx.value() === true
               ? undefined
               : { kind: 'required', message: message ?? `${field.label} is required.` },
@@ -148,12 +144,12 @@ function applyFieldRules(
 
   if (field.visibleWhen?.length) {
     const conditions = field.visibleWhen;
-    hidden(target, { when: ctx => !conditionsPass(conditions, path, fieldNames, ctx) });
+    hidden(target, { when: (ctx) => !conditionsPass(conditions, path, fieldNames, ctx) });
   }
 
   if (field.enabledWhen?.length) {
     const conditions = field.enabledWhen;
-    disabled(target, { when: ctx => !conditionsPass(conditions, path, fieldNames, ctx) });
+    disabled(target, { when: (ctx) => !conditionsPass(conditions, path, fieldNames, ctx) });
   }
 }
 
@@ -184,7 +180,7 @@ function applyCustomValidator(
     return;
   }
 
-  validate(target, ctx => {
+  validate(target, (ctx) => {
     const control = {
       value: ctx.value(),
       parent: {
@@ -215,7 +211,7 @@ function conditionsPass(
   fieldNames: ReadonlySet<string>,
   ctx: { valueOf: (p: never) => unknown },
 ): boolean {
-  return conditions.every(condition => {
+  return conditions.every((condition) => {
     const value = fieldNames.has(condition.field)
       ? ctx.valueOf(path[condition.field] as never)
       : undefined;

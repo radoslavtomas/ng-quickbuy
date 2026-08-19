@@ -37,8 +37,8 @@ class TestHostComponent {
   describe: (code: string) => Observable<string> = () => of('');
 
   readonly source = signal<AutocompleteSource>({
-    search: keyword => this.search(keyword),
-    describe: code => this.describe(code),
+    search: (keyword) => this.search(keyword),
+    describe: (code) => this.describe(code),
   });
 
   touched = false;
@@ -104,9 +104,7 @@ describe('AutocompleteInputComponent', () => {
     expect(element.getAttribute('role')).toBe('combobox');
     expect(element.getAttribute('aria-autocomplete')).toBe('list');
     expect(element.getAttribute('autocomplete')).toBe('off');
-    expect(element.getAttribute('aria-describedby')).toBe(
-      'occupation-messages occupation-status',
-    );
+    expect(element.getAttribute('aria-describedby')).toBe('occupation-messages occupation-status');
   });
 
   it('derives every element id from the control id, so repeated sections cannot collide', () => {

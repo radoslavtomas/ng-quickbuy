@@ -1,6 +1,13 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
-import { adultOnlyValidator, validDateValidator } from '../../../../../../core/validators/form-validators';
-import { PERSON_GENDER_OPTIONS, PERSON_TITLE_OPTIONS, PERSON_MARITAL_STATUS_OPTIONS } from '../../lookups/personal-details';
+import {
+  adultOnlyValidator,
+  validDateValidator,
+} from '../../../../../../core/validators/form-validators';
+import {
+  PERSON_GENDER_OPTIONS,
+  PERSON_TITLE_OPTIONS,
+  PERSON_MARITAL_STATUS_OPTIONS,
+} from '../../lookups/personal-details';
 
 export const PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
   {
@@ -71,7 +78,11 @@ export const PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
     type: 'tel',
     label: 'Main number',
     name: 'phone',
-    validators: [{ type: 'required' }, { type: 'minLength', value: 10 }, { type: 'maxLength', value: 15 }],
+    validators: [
+      { type: 'required' },
+      { type: 'minLength', value: 10 },
+      { type: 'maxLength', value: 15 },
+    ],
     normalization: ['trim', 'phone'],
     metadata: {
       autocomplete: 'tel',
@@ -83,7 +94,11 @@ export const PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
     type: 'tel',
     label: 'Alternative number',
     name: 'altphone',
-    validators: [{ type: 'required' }, { type: 'minLength', value: 10 }, { type: 'maxLength', value: 15 }],
+    validators: [
+      { type: 'required' },
+      { type: 'minLength', value: 10 },
+      { type: 'maxLength', value: 15 },
+    ],
     normalization: ['trim', 'phone'],
     metadata: {
       autocomplete: 'tel',
@@ -107,4 +122,3 @@ export const PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
     options: PERSON_MARITAL_STATUS_OPTIONS,
   },
 ];
-

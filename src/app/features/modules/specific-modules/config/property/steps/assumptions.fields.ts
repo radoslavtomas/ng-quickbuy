@@ -5,7 +5,9 @@ export const PROPERTY_ASSUMPTIONS_FIELDS: readonly FormFieldConfig[] = [
     type: 'checkbox',
     label: 'I confirm all information provided is accurate',
     name: 'declarationAccepted',
-    validators: [{ type: 'required', message: 'You must confirm details before requesting quotes.' }],
+    validators: [
+      { type: 'required', message: 'You must confirm details before requesting quotes.' },
+    ],
   },
   {
     type: 'checkbox',
@@ -14,4 +16,3 @@ export const PROPERTY_ASSUMPTIONS_FIELDS: readonly FormFieldConfig[] = [
     validators: [{ type: 'required', message: 'Please confirm claims disclosure.' }],
   },
 ];
-

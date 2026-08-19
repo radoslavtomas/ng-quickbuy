@@ -21,7 +21,11 @@ export const PROPERTY_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
     type: 'number',
     label: 'Buildings sum insured',
     name: 'buildingsSumInsured',
-    validators: [{ type: 'required' }, { type: 'min', value: 50000 }, { type: 'max', value: 2000000 }],
+    validators: [
+      { type: 'required' },
+      { type: 'min', value: 50000 },
+      { type: 'max', value: 2000000 },
+    ],
     normalization: ['currency'],
     metadata: { prefix: 'GBP', placeholder: '250000' },
   },
@@ -29,7 +33,11 @@ export const PROPERTY_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
     type: 'number',
     label: 'Contents sum insured',
     name: 'contentsSumInsured',
-    validators: [{ type: 'required' }, { type: 'min', value: 10000 }, { type: 'max', value: 500000 }],
+    validators: [
+      { type: 'required' },
+      { type: 'min', value: 10000 },
+      { type: 'max', value: 500000 },
+    ],
     normalization: ['currency'],
     metadata: { prefix: 'GBP', placeholder: '60000' },
   },
@@ -45,4 +53,3 @@ export const PROPERTY_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
     },
   },
 ];
-

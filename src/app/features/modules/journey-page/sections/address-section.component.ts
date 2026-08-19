@@ -148,7 +148,12 @@ export class AddressSectionComponent {
 
   readonly resolvedRiskAddress = computed<AddressLookupMatch | null>(() => {
     const values = this.storedValues();
-    if (!hasAddressState({ addressLine1: values['riskAddressLine1'], postcode: values['riskPostcode'] })) {
+    if (
+      !hasAddressState({
+        addressLine1: values['riskAddressLine1'],
+        postcode: values['riskPostcode'],
+      })
+    ) {
       return null;
     }
 

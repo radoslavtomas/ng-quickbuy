@@ -61,7 +61,7 @@ export class JourneyPageComponent {
   readonly journey = computed(() => getJourneyForModule(this.moduleCode()));
 
   private readonly requestedStepName = toSignal(
-    this.route.paramMap.pipe(map(params => params.get('stepName')?.toLowerCase() ?? null)),
+    this.route.paramMap.pipe(map((params) => params.get('stepName')?.toLowerCase() ?? null)),
     {
       initialValue: this.route.snapshot.paramMap.get('stepName')?.toLowerCase() ?? null,
     },
@@ -126,7 +126,7 @@ export class JourneyPageComponent {
     }
 
     const answers = this.journeyState.stepAnswers(moduleCode, step.name);
-    return step.sections.filter(section => section.visibleWhen?.(answers) ?? true);
+    return step.sections.filter((section) => section.visibleWhen?.(answers) ?? true);
   });
 
   constructor() {
@@ -209,7 +209,7 @@ export class JourneyPageComponent {
       return;
     }
 
-    const results = this.sectionOutlets().map(outlet => ({
+    const results = this.sectionOutlets().map((outlet) => ({
       sectionId: outlet.section().id,
       result: outlet.collect(),
     }));

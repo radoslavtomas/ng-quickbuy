@@ -16,30 +16,12 @@ export type FormFieldType =
   /** Not a question: a value assembled from the section's other answers. */
   | 'derived';
 
-export type ConditionOperator =
-  | 'equals'
-  | 'notEquals'
-  | 'in'
-  | 'notIn'
-  | 'truthy'
-  | 'falsy';
+export type ConditionOperator = 'equals' | 'notEquals' | 'in' | 'notIn' | 'truthy' | 'falsy';
 
-export type NormalizationRule =
-  | 'trim'
-  | 'phone'
-  | 'date'
-  | 'currency'
-  | 'uppercase'
-  | 'lowercase';
+export type NormalizationRule = 'trim' | 'phone' | 'date' | 'currency' | 'uppercase' | 'lowercase';
 
 export type BuiltInValidatorType =
-  | 'required'
-  | 'email'
-  | 'min'
-  | 'max'
-  | 'minLength'
-  | 'maxLength'
-  | 'pattern';
+  'required' | 'email' | 'min' | 'max' | 'minLength' | 'maxLength' | 'pattern';
 
 export interface FormFieldOption {
   label: string;

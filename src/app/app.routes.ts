@@ -1,11 +1,11 @@
 import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
 import { findModuleByCode } from './core/config/module-catalogue';
 
-const loadHomeComponent = () => import('./features/home/home').then(m => m.HomeComponent);
+const loadHomeComponent = () => import('./features/home/home').then((m) => m.HomeComponent);
 const loadJourneyPageComponent = () =>
-  import('./features/modules/journey-page/journey-page').then(m => m.JourneyPageComponent);
+  import('./features/modules/journey-page/journey-page').then((m) => m.JourneyPageComponent);
 const loadNotFoundComponent = () =>
-  import('./shared/components/not-found/not-found').then(m => m.NotFoundComponent);
+  import('./shared/components/not-found/not-found').then((m) => m.NotFoundComponent);
 
 /**
  * Matches `/:moduleCode/:stepName` for any module in the catalogue.

@@ -26,7 +26,11 @@ export const MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
     type: 'number',
     label: 'Estimated annual mileage',
     name: 'annualMileage',
-    validators: [{ type: 'required' }, { type: 'min', value: 1000 }, { type: 'max', value: 100000 }],
+    validators: [
+      { type: 'required' },
+      { type: 'min', value: 1000 },
+      { type: 'max', value: 100000 },
+    ],
     normalization: ['currency'],
     metadata: {
       suffix: 'miles',
@@ -48,4 +52,3 @@ export const MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
     },
   },
 ];
-

@@ -45,7 +45,7 @@ export class FormValidationMessageService {
   /** The constraint value configured for a rule, for messages that quote it. */
   private limitFor(field: FormFieldConfig, kind: string): number | string | undefined {
     const rule = (field.validators ?? []).find(
-      validator =>
+      (validator) =>
         validator.type === kind || (validator.type === 'custom' && validator.name === kind),
     );
 

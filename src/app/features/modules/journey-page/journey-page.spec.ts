@@ -69,7 +69,9 @@ describe('journey flow', () => {
     const buttons = Array.from(
       (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
     ) as HTMLButtonElement[];
-    return buttons.find(button => button.getAttribute('aria-label')?.startsWith('Continue')) ?? null;
+    return (
+      buttons.find((button) => button.getAttribute('aria-label')?.startsWith('Continue')) ?? null
+    );
   }
 
   /**
@@ -321,7 +323,7 @@ describe('journey flow', () => {
     const host = fixture.nativeElement as HTMLElement;
 
     const addButton = () =>
-      Array.from(host.querySelectorAll('button')).find(button =>
+      Array.from(host.querySelectorAll('button')).find((button) =>
         button.textContent?.includes('Add another'),
       ) as HTMLButtonElement | undefined;
 
@@ -339,7 +341,7 @@ describe('journey flow', () => {
     expect(addButton()).toBeUndefined();
     expect(host.textContent).toContain('up to 3 additional drivers');
 
-    const removeButton = Array.from(host.querySelectorAll('button')).find(button =>
+    const removeButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('Remove'),
     ) as HTMLButtonElement | undefined;
     removeButton?.click();
@@ -400,15 +402,13 @@ describe('journey flow', () => {
       const inputs = Array.from(
         (fixture.nativeElement as HTMLElement).querySelectorAll(`[data-field="${name}"]`),
       ) as HTMLInputElement[];
-      return inputs.find(input => input.value === value) ?? null;
+      return inputs.find((input) => input.value === value) ?? null;
     }
 
     function changeAddressButton(fixture: ComponentFixture<App>): HTMLButtonElement | undefined {
-      return Array.from(
-        (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
-      ).find(button => button.textContent?.includes('Change address')) as
-        | HTMLButtonElement
-        | undefined;
+      return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (button) => button.textContent?.includes('Change address'),
+      ) as HTMLButtonElement | undefined;
     }
 
     it('does not ask about the risk address until the correspondence address is resolved', async () => {
@@ -456,9 +456,9 @@ describe('journey flow', () => {
       radioInput(fixture, 'riskAddressMatches', 'yes')?.click();
       fixture.detectChanges();
       await fixture.whenStable();
-      expect(
-        journeyState.sectionAnswers('HC', 'your-details', 'address')['riskAddressLine1'],
-      ).toBe(RESOLVED_ADDRESS.addressLine1);
+      expect(journeyState.sectionAnswers('HC', 'your-details', 'address')['riskAddressLine1']).toBe(
+        RESOLVED_ADDRESS.addressLine1,
+      );
 
       radioInput(fixture, 'riskAddressMatches', 'no')?.click();
       fixture.detectChanges();

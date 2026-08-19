@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
   AddressLookupMatch,
@@ -82,14 +91,16 @@ import { BrandService } from '../../../../core/services/brand.service';
     }
 
     @if (lookupError(); as error) {
-      <p class="mt-1 text-[0.82rem] text-red-700" role="alert">We couldn't find the address. Please, try again.</p>
+      <p class="mt-1 text-[0.82rem] text-red-700" role="alert">
+        We couldn't find the address. Please, try again.
+      </p>
     }
   `,
 })
 export class AddressSearchComponent {
   private readonly brandService = inject(BrandService);
   readonly brand = this.brandService.config;
-    
+
   readonly initialPostcode = input('');
   readonly initialNumberOrName = input('');
   readonly initialAddress = input<AddressLookupMatch | null>(null);
@@ -132,7 +143,7 @@ export class AddressSearchComponent {
       selected.addressLine3,
       selected.addressLine4,
       selected.postcode,
-    ].filter(line => line.trim().length > 0);
+    ].filter((line) => line.trim().length > 0);
   });
 
   readonly loading = signal(false);
@@ -214,17 +225,24 @@ export class AddressSearchComponent {
     this.criteriaChanged.emit(criteria);
 
     try {
-      const response = await firstValueFrom(this.lookupService.lookupByPostcode({
-        postcode: criteria.postcode,
-        numberOrNameForSearch: criteria.numberOrName,
-      }));
+      const response = await firstValueFrom(
+        this.lookupService.lookupByPostcode({
+          postcode: criteria.postcode,
+          numberOrNameForSearch: criteria.numberOrName,
+        }),
+      );
 
       const mapped = this.lookupService.mapToFormValue(response);
-      this.criteriaChanged.emit({ postcode: mapped.postcode, numberOrName: mapped.houseNameNumber });
+      this.criteriaChanged.emit({
+        postcode: mapped.postcode,
+        numberOrName: mapped.houseNameNumber,
+      });
       this.selectedAddress.set(mapped);
       this.resolved.emit(mapped);
     } catch (error) {
-      this.lookupError.set(error instanceof Error ? error.message : 'Unable to search this address.');
+      this.lookupError.set(
+        error instanceof Error ? error.message : 'Unable to search this address.',
+      );
     } finally {
       this.loading.set(false);
     }

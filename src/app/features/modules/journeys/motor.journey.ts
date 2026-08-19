@@ -59,7 +59,7 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
           kind: 'fields',
           id: 'occupation',
           title: 'Occupation',
-          fields: moduleCode =>
+          fields: (moduleCode) =>
             createOccupationFields({
               includeLimitedCompany: moduleCode === VAN_MODULE_CODE,
               includeSecondJob: true,
@@ -111,7 +111,7 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
           itemLabel: 'Additional driver',
           itemFields: MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS,
           slots: ADDITIONAL_DRIVER_SLOTS,
-          visibleWhen: answers => answers['drivers']?.['hasAdditionalDrivers'] === 'yes',
+          visibleWhen: (answers) => answers['drivers']?.['hasAdditionalDrivers'] === 'yes',
         },
       ],
     },

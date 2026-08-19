@@ -267,9 +267,7 @@ function createMapper({
             // beyond the available slots are dropped rather than silently merged.
             items.slice(0, slots.length).forEach((item, index) => {
               const slot = slots[index];
-              for (const [internalName, value] of Object.entries(
-                item as Record<string, unknown>,
-              )) {
+              for (const [internalName, value] of Object.entries(item as Record<string, unknown>)) {
                 write(backendKeyForSlot(slot, internalName), internalName, value);
               }
             });

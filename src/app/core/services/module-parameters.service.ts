@@ -9,7 +9,12 @@ export class ModuleParametersService {
   private readonly http = inject(HttpClient);
   private readonly endpoint = `${inject(API_BASE_URL)}/api/module/get/parameters`;
 
-  fetchParameters(brandId: string, moduleCode: string, domain: string, referrer = ''): Observable<ModuleParametersResponse> {
+  fetchParameters(
+    brandId: string,
+    moduleCode: string,
+    domain: string,
+    referrer = '',
+  ): Observable<ModuleParametersResponse> {
     const params = new HttpParams()
       .set('brand', brandId)
       .set('module', moduleCode)
@@ -18,4 +23,3 @@ export class ModuleParametersService {
     return this.http.get<ModuleParametersResponse>(this.endpoint, { params });
   }
 }
-

@@ -33,7 +33,7 @@ export function matchesConditions(
   conditions: readonly FieldCondition[] | undefined,
   values: Readonly<Record<string, unknown>>,
 ): boolean {
-  return (conditions ?? []).every(condition =>
+  return (conditions ?? []).every((condition) =>
     evaluateCondition(condition, values[condition.field]),
   );
 }

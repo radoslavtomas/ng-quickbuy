@@ -83,7 +83,7 @@ interface FormInstance {
 export class SignalFormComponent implements OnInit {
   private readonly brandService = inject(BrandService);
   readonly brand = this.brandService.config;
-  
+
   readonly fields = input.required<readonly FormFieldConfig[]>();
   readonly initialValue = input<Record<string, unknown>>({});
 
@@ -203,9 +203,7 @@ export class SignalFormComponent implements OnInit {
       return [];
     }
 
-    return state
-      .errors()
-      .map(error => this.messages.resolve(field, error.kind, error.message));
+    return state.errors().map((error) => this.messages.resolve(field, error.kind, error.message));
   }
 
   /**
@@ -224,7 +222,7 @@ export class SignalFormComponent implements OnInit {
     const current = instance.model()[field.name];
     const normalized = this.normalization.normalizeFieldValue(field, current);
     if (normalized !== current) {
-      instance.model.update(model => ({ ...model, [field.name]: normalized }));
+      instance.model.update((model) => ({ ...model, [field.name]: normalized }));
     }
   }
 
@@ -280,7 +278,7 @@ export class SignalFormComponent implements OnInit {
   }
 
   toggleHelp(field: FormFieldConfig): void {
-    this.expandedHelp.update(current => ({
+    this.expandedHelp.update((current) => ({
       ...current,
       [field.name]: !this.isHelpExpanded(field),
     }));

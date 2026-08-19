@@ -4,7 +4,9 @@ const DEFAULT_MINIMUM_DRIVER_AGE = 18;
 
 function toValidatedDate(year: number, month: number, day: number): Date | null {
   const candidate = new Date(year, month - 1, day);
-  return candidate.getFullYear() === year && candidate.getMonth() === month - 1 && candidate.getDate() === day
+  return candidate.getFullYear() === year &&
+    candidate.getMonth() === month - 1 &&
+    candidate.getDate() === day
     ? candidate
     : null;
 }
@@ -55,7 +57,9 @@ function calculateAge(birthDate: Date, today = new Date()): number {
   return age;
 }
 
-export const validDateValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+export const validDateValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
   const value = control.value;
   if (value === null || value === undefined || value === '') {
     return null;

@@ -16,8 +16,7 @@ export type StepAnswers = Readonly<Record<string, Readonly<Record<string, unknow
  * without offering a car customer a question that does not apply to them.
  */
 export type FieldsProvider =
-  | readonly FormFieldConfig[]
-  | ((moduleCode: string) => readonly FormFieldConfig[]);
+  readonly FormFieldConfig[] | ((moduleCode: string) => readonly FormFieldConfig[]);
 
 interface JourneySectionBase {
   /**
