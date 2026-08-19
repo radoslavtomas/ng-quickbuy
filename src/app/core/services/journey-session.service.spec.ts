@@ -71,4 +71,16 @@ describe('JourneySessionService', () => {
 
     expect(service.ensureSession('PC').sessionId).not.toBe(first);
   });
+
+  it('clears all journeys and removes persisted sessions', () => {
+    const property = service.ensureSession('HC').sessionId;
+    service.ensureSession('PC');
+    service.setReference('HC', 'REF-HC', 'txn-hc');
+
+    service.clearAll();
+
+    expect(service.session('PC')).toBeNull();
+    expect(service.session('HC')).toBeNull();
+    expect(service.ensureSession('HC').sessionId).not.toBe(property);
+  });
 });

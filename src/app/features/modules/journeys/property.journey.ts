@@ -1,5 +1,5 @@
-import type { JourneyDefinition, StepAnswers } from '../../../core/models/journey.model';
-import { hasAddressState } from '../specific-modules/config/shared/common';
+import type { JourneyDefinition } from '../../../core/models/journey.model';
+// import { hasAddressState } from '../specific-modules/config/shared/common';
 import { createOccupationFields } from '../specific-modules/config/shared/occupation.fields';
 import { PROPERTY_YOUR_DETAILS_FIELDS } from '../specific-modules/config/property/steps/your-details.fields';
 import { PROPERTY_YOUR_PROPERTY_FIELDS } from '../specific-modules/config/property/steps/your-property.fields';
@@ -12,9 +12,9 @@ import {
 } from './journey-payload.mapper';
 
 /** The proposer's details are only worth asking for once we know where they live. */
-function addressIsResolved(answers: StepAnswers): boolean {
-  return hasAddressState(answers['address'] ?? {});
-}
+// function addressIsResolved(answers: StepAnswers): boolean {
+//   return hasAddressState(answers['address'] ?? {});
+// }
 
 /**
  * Property questionnaire, shared by house, holiday home and landlord.

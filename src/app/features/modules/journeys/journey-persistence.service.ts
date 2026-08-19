@@ -9,10 +9,22 @@ import {
   QuotePartialStoreService,
 } from '../../../core/services/quote-partial-store.service';
 import { POLICY_START_DATE_FIELD } from './journey-payload.mapper';
-import { getFirstStep, getJourneyForModule, getQuestionSteps } from './journey-registry';
+import { getJourneyForModule, getQuestionSteps } from './journey-registry';
 
 /** Backend key for the policy start date, which the store endpoint requires by name. */
 const INCEPTION_DATE_KEY = 'policy-inceptiondate';
+
+/** The "undefined" step ZERO of a new quote journey. 
+ * 
+ * Only used to properly initialize the journey and get the reference.
+ */
+const NEW_QUOTE_STEP: JourneyStepDefinition = {
+  name: 'new-quote',
+  displayName: '',
+  icon: '',
+  storeStep: 'new-quote',
+  sections: [],
+};
 
 /**
  * Keeps the server-side partial quote in step with the journey.
@@ -103,7 +115,7 @@ export class JourneyPersistenceService {
         return session.reference;
       }
 
-      const response = await this.partialStore.store(this.baseRequest(key, getFirstStep(journey)));
+      const response = await this.partialStore.store(this.baseRequest(key, NEW_QUOTE_STEP));
       this.session.setReference(
         key,
         response.parameters.reference,

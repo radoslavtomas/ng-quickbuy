@@ -2,7 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { App } from '../../../app';
 import { routes } from '../../../app.routes';
+import { ModuleContextService } from '../../../core/services/module-context.service';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
+import { JourneyPersistenceService } from '../journeys/journey-persistence.service';
 
 const VALID_VEHICLE_ANSWERS = {
   registration: 'AB12CDE',
@@ -24,10 +26,30 @@ describe('journey flow', () => {
   let router: Router;
   let journeyState: JourneyStateService;
 
+  const moduleContextStub: Pick<
+    ModuleContextService,
+    'ensureLoaded' | 'parameters' | 'isSwitchedOff' | 'switchedOffMessage' | 'allowsPartialStore'
+  > = {
+    ensureLoaded: async () => null,
+    parameters: () => null,
+    isSwitchedOff: () => false,
+    switchedOffMessage: () => '',
+    allowsPartialStore: () => true,
+  };
+
+  const persistenceStub: Pick<JourneyPersistenceService, 'ensureCreated' | 'recordStep'> = {
+    ensureCreated: async () => null,
+    recordStep: async () => undefined,
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter(routes)],
+      providers: [
+        provideRouter(routes),
+        { provide: ModuleContextService, useValue: moduleContextStub },
+        { provide: JourneyPersistenceService, useValue: persistenceStub },
+      ],
     }).compileComponents();
 
     router = TestBed.inject(Router);

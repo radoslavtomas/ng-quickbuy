@@ -1,5 +1,5 @@
-import type { JourneyDefinition, StepAnswers } from '../../../core/models/journey.model';
-import { hasAddressState } from '../specific-modules/config/shared/common';
+import type { JourneyDefinition } from '../../../core/models/journey.model';
+// import { hasAddressState } from '../specific-modules/config/shared/common';
 import { createOccupationFields } from '../specific-modules/config/shared/occupation.fields';
 import { MOTOR_YOUR_DETAILS_FIELDS } from '../specific-modules/config/motor/steps/your-details.fields';
 import { MOTOR_YOUR_VEHICLE_FIELDS } from '../specific-modules/config/motor/steps/your-vehicle.fields';
@@ -15,9 +15,9 @@ import {
 } from './journey-payload.mapper';
 
 /** The proposer's details are only worth asking for once we know where they live. */
-function addressIsResolved(answers: StepAnswers): boolean {
-  return hasAddressState(answers['address'] ?? {});
-}
+// function addressIsResolved(answers: StepAnswers): boolean {
+//   return hasAddressState(answers['address'] ?? {});
+// }
 
 /**
  * Only a van may be insured by a limited company, and the motor journey is shared

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { ClockService } from '../../../core/services/clock.service';
 import { JourneySessionService } from '../../../core/services/journey-session.service';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
@@ -9,7 +10,7 @@ import {
   QuotePartialStoreService,
 } from '../../../core/services/quote-partial-store.service';
 import { JourneyPersistenceService } from './journey-persistence.service';
-import { getFirstStep, getJourneyForModule } from './journey-registry';
+import { getJourneyForModule } from './journey-registry';
 
 class FakePartialStore {
   readonly calls: PartialStoreRequest[] = [];
@@ -65,6 +66,8 @@ describe('JourneyPersistenceService', () => {
   let journeyState: JourneyStateService;
 
   beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
     store = new FakePartialStore();
     context = new FakeModuleContext();
 
@@ -99,7 +102,7 @@ describe('JourneyPersistenceService', () => {
 
     expect(call['module']).toBe('PC');
     expect(call['domain']).toBe('quotelinedirect.co.uk');
-    expect(call['step']).toBe(getFirstStep(getJourneyForModule('PC')!).storeStep);
+    expect(call['step']).toBe('new-quote');
     expect(call['sessionid']).toBe(session.session('PC')?.sessionId);
     // Not captured until step 4, so the create falls back to today.
     expect(call['policy-inceptiondate']).toBe('04/08/2026');

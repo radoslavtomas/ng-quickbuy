@@ -88,6 +88,28 @@ export class JourneySessionService {
     this.storage()?.removeItem(STORAGE_PREFIX + key);
   }
 
+  /** Clears all journey sessions so the next journey starts with a fresh id/reference. */
+  clearAll(): void {
+    this.sessions.set({});
+
+    const storage = this.storage();
+    if (!storage) {
+      return;
+    }
+
+    const keys: string[] = [];
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (key?.startsWith(STORAGE_PREFIX)) {
+        keys.push(key);
+      }
+    }
+
+    for (const key of keys) {
+      storage.removeItem(key);
+    }
+  }
+
   private createSessionId(): string {
     const uuid = this.document.defaultView?.crypto?.randomUUID;
     if (!uuid) {
