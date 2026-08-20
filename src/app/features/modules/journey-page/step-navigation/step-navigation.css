@@ -1,0 +1,273 @@
+/**
+ * Layout is plain CSS rather than utility classes because the wizard needs a
+ * connector rail behind the markers and a breakpoint switch between two
+ * presentations, neither of which reads well as a long class list.
+ *
+ * The breakpoint matches Tailwind's `md`, which is where the horizontal rail
+ * stops fitting a six-step journey.
+ */
+:host {
+  display: block;
+}
+
+.step-navigation {
+  container-type: inline-size;
+}
+
+/* --- Small screens: summary and disclosure ------------------------------- */
+
+.step-navigation__compact {
+  display: block;
+}
+
+.step-navigation__summary {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.25rem;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.step-navigation__summary-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.step-navigation__summary-title {
+  overflow: hidden;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-navigation__summary-next {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-navigation__dial {
+  width: 3.25rem;
+  height: 3.25rem;
+  flex-shrink: 0;
+  /* 12 o'clock start, so the arc grows the way a progress dial is read. */
+  transform: rotate(-90deg);
+}
+
+.step-navigation__dial-track {
+  fill: none;
+  stroke: #e2e8f0;
+  stroke-width: 4;
+}
+
+.step-navigation__dial-value {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms ease;
+}
+
+.step-navigation__dial-label {
+  fill: #0f172a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  /* Cancel the dial rotation so the text stays upright. */
+  transform: rotate(90deg);
+  transform-origin: 24px 24px;
+}
+
+.step-navigation__chevron {
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: transform 150ms ease;
+}
+
+.step-navigation__chevron--open {
+  transform: rotate(180deg);
+}
+
+.step-navigation__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0 0;
+  list-style: none;
+  border-top: 1px solid #e2e8f0;
+}
+
+/* Beats the `display: flex` above, so the attribute alone controls visibility. */
+.step-navigation__list[hidden] {
+  display: none;
+}
+
+.step-navigation__row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #334155;
+  text-align: left;
+}
+
+.step-navigation__row:hover {
+  background-color: #f1f5f9;
+}
+
+.step-navigation__row-number {
+  min-width: 1rem;
+  color: #94a3b8;
+  font-size: 0.8125rem;
+}
+
+.step-navigation__row-label {
+  overflow: hidden;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.step-navigation__row--locked,
+.step-navigation__step-body--locked {
+  cursor: not-allowed;
+  color: #94a3b8;
+}
+
+.step-navigation__row--locked:hover {
+  background: none;
+}
+
+.step-navigation__lock {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+/* --- Desktop: the wizard rail -------------------------------------------- */
+
+.step-navigation__rail {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-navigation__step {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  justify-content: center;
+}
+
+/**
+ * The rail segment leading into this step. It spans from the centre of the
+ * previous marker to the centre of this one, and sits behind the markers.
+ */
+.step-navigation__connector {
+  position: absolute;
+  top: 1.375rem;
+  right: 50%;
+  z-index: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #e2e8f0;
+}
+
+.step-navigation__step-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.25rem 0.5rem;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.step-navigation__step-body--locked {
+  cursor: not-allowed;
+}
+
+.step-navigation__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #475569;
+  text-align: center;
+}
+
+.step-navigation__label--current {
+  font-weight: 700;
+}
+
+.step-navigation__step-body--locked .step-navigation__label {
+  color: #94a3b8;
+}
+
+/** Underlines the current step, as the wizard pattern does. */
+.step-navigation__underline {
+  width: 3.5rem;
+  height: 3px;
+  border-radius: 9999px;
+  background-color: transparent;
+}
+
+/* --- Shared affordances --------------------------------------------------- */
+
+.step-navigation__summary:focus-visible,
+.step-navigation__row:focus-visible,
+.step-navigation__step-body:focus-visible {
+  border-radius: 0.5rem;
+  outline: 2px solid #0284c7;
+  outline-offset: 2px;
+}
+
+/**
+ * Hover feedback for a step that can actually be opened. `aria-disabled` marks
+ * the locked and current ones, so the selector follows the semantics rather than
+ * repeating the rule in the template.
+ */
+.step-navigation__step-body:not([aria-disabled]):hover .step-navigation__label {
+  color: #0f172a;
+  text-decoration: underline;
+}
+
+@media (min-width: 48rem) {
+  .step-navigation__compact {
+    display: none;
+  }
+
+  .step-navigation__rail {
+    display: flex;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-navigation__chevron,
+  .step-navigation__dial-value {
+    transition: none;
+  }
+}

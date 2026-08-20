@@ -4,9 +4,21 @@ import { JourneyStateService } from './journey-state.service';
 describe('JourneyStateService', () => {
   let service: JourneyStateService;
 
+  /** A fresh service instance, as a page reload would produce. */
+  function reload(): JourneyStateService {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({});
+    return TestBed.inject(JourneyStateService);
+  }
+
   beforeEach(() => {
+    sessionStorage.clear();
     TestBed.configureTestingModule({});
     service = TestBed.inject(JourneyStateService);
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
   });
 
   it('stores answers per module, step and section', () => {
@@ -81,5 +93,81 @@ describe('JourneyStateService', () => {
     expect(service.moduleAnswers('LL')).toEqual({});
     expect(service.stepAnswers('LL', 'your-details')).toEqual({});
     expect(service.sectionAnswers('LL', 'your-details', 'address')).toEqual({});
+  });
+
+  it('lists the steps completed for a module', () => {
+    service.markStepComplete('PC', 'your-details');
+    service.markStepComplete('PC', 'your-vehicle');
+
+    expect(service.completedSteps('PC')).toEqual(['your-details', 'your-vehicle']);
+    expect(service.completedSteps('HC')).toEqual([]);
+  });
+
+  describe('surviving a reload', () => {
+    it('restores answers and progress, so gating does not throw away a journey', () => {
+      service.setSectionAnswers('PC', 'your-vehicle', 'vehicle', { registration: 'AB12CDE' });
+      service.markStepComplete('PC', 'your-details');
+
+      const reloaded = reload();
+
+      expect(reloaded.sectionAnswers('PC', 'your-vehicle', 'vehicle')).toEqual({
+        registration: 'AB12CDE',
+      });
+      expect(reloaded.isStepComplete('PC', 'your-details')).toBe(true);
+    });
+
+    it('keeps each module in its own slot', () => {
+      service.markStepComplete('PC', 'your-details');
+      service.markStepComplete('HC', 'your-details');
+      service.setSectionAnswers('HC', 'your-property', 'property', { bedrooms: 3 });
+
+      const reloaded = reload();
+
+      expect(reloaded.isStepComplete('PC', 'your-details')).toBe(true);
+      expect(reloaded.sectionAnswers('HC', 'your-property', 'property')['bedrooms']).toBe(3);
+    });
+
+    it('forgets a module that was reset', () => {
+      service.markStepComplete('PC', 'your-details');
+      service.markStepComplete('HC', 'your-details');
+
+      service.resetModule('PC');
+      const reloaded = reload();
+
+      expect(reloaded.isStepComplete('PC', 'your-details')).toBe(false);
+      expect(reloaded.isStepComplete('HC', 'your-details')).toBe(true);
+    });
+
+    it('forgets everything after a full reset', () => {
+      service.markStepComplete('PC', 'your-details');
+      service.setSectionAnswers('HC', 'your-property', 'property', { bedrooms: 3 });
+
+      service.resetAll();
+      const reloaded = reload();
+
+      expect(reloaded.isStepComplete('PC', 'your-details')).toBe(false);
+      expect(reloaded.moduleAnswers('HC')).toEqual({});
+    });
+
+    it('ignores stored data that is not the shape we wrote', () => {
+      // Storage is editable by hand, and must not be what decides which steps
+      // a customer may open.
+      sessionStorage.setItem('ngqb.journey.PC', '{"completedSteps":"everything"}');
+      sessionStorage.setItem('ngqb.journey.HC', 'not json at all');
+
+      const reloaded = reload();
+
+      expect(reloaded.completedSteps('PC')).toEqual([]);
+      expect(reloaded.moduleAnswers('HC')).toEqual({});
+    });
+
+    it('leaves other applications\u2019 storage alone', () => {
+      sessionStorage.setItem('somebody-elses-key', 'keep me');
+      service.markStepComplete('PC', 'your-details');
+
+      service.resetAll();
+
+      expect(sessionStorage.getItem('somebody-elses-key')).toBe('keep me');
+    });
   });
 });

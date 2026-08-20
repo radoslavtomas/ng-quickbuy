@@ -46,45 +46,14 @@
               aria-labelledby="journey-title"
               class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5"
             >
-              <div class="flex items-center justify-between gap-4">
-                <h2 id="journey-title" class="text-lg font-semibold text-slate-700">
-                  Customer journey
-                </h2>
-                <span class="text-sm font-medium text-slate-600">
-                  Step {{ stepNumber() }} of {{ stepCount() }}
-                </span>
-              </div>
+              <h2 id="journey-title" class="sr-only">Your progress</h2>
 
-              <ol
-                class="mt-4 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2 lg:grid-cols-3"
-                aria-label="Journey steps"
-              >
-                @for (journeyStep of journey.steps; track journeyStep.name) {
-                  @if (stepLink(journeyStep.name); as link) {
-                    <li>
-                      <a
-                        [routerLink]="link"
-                        class="flex items-center gap-3 rounded-lg border bg-white px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-offset-2"
-                        [class.border-slate-200]="!isActiveStep(journeyStep)"
-                        [class.text-slate-700]="!isActiveStep(journeyStep)"
-                        [class.border-[var(--brand-primary)]]="isActiveStep(journeyStep)"
-                        [class.text-[var(--brand-primary)]]="isActiveStep(journeyStep)"
-                        [attr.aria-current]="isActiveStep(journeyStep) ? 'step' : null"
-                      >
-                        <i [class]="'fa-solid fa-' + journeyStep.icon" aria-hidden="true"></i>
-                        <span>{{ journeyStep.displayName }}</span>
-                        @if (isStepComplete(journeyStep)) {
-                          <i
-                            class="fa-solid fa-check ml-auto text-green-600"
-                            aria-hidden="true"
-                          ></i>
-                          <span class="sr-only">completed</span>
-                        }
-                      </a>
-                    </li>
-                  }
-                }
-              </ol>
+              <app-step-navigation
+                [steps]="journey.steps"
+                [currentStepName]="step()?.name ?? null"
+                [completedStepNames]="completedStepNames()"
+                (stepSelected)="goToStep($event)"
+              />
             </section>
           }
 
@@ -115,16 +84,15 @@
             >
               <div>
                 @if (previousStep(); as prev) {
-                  @if (stepLink(prev.name); as prevLink) {
-                    <a
-                      [routerLink]="prevLink"
-                      class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white focus-visible:outline-offset-2"
-                      [attr.aria-label]="'Go to previous step: ' + prev.displayName"
-                    >
-                      <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-                      {{ prev.displayName }}
-                    </a>
-                  }
+                  <button
+                    type="button"
+                    class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white focus-visible:outline-offset-2"
+                    [attr.aria-label]="'Go to previous step: ' + prev.displayName"
+                    (click)="goToStep(prev)"
+                  >
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                    {{ prev.displayName }}
+                  </button>
                 }
               </div>
 

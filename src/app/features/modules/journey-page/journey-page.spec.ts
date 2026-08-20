@@ -5,6 +5,7 @@ import { routes } from '../../../app.routes';
 import { ModuleContextService } from '../../../core/services/module-context.service';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
 import { JourneyPersistenceService } from '../journeys/journey-persistence.service';
+import { getJourneyForModule, getStepIndex } from '../journeys/journey-registry';
 
 const VALID_VEHICLE_ANSWERS = {
   registration: 'AB12CDE',
@@ -57,12 +58,52 @@ describe('journey flow', () => {
     journeyState.resetAll();
   });
 
-  async function renderAt(url: string): Promise<ComponentFixture<App>> {
-    await router.navigateByUrl(url);
+  /**
+   * Marks every step before `url`'s as complete.
+   *
+   * Steps are gated on the ones before them, so a test that starts halfway
+   * through has to say how the customer got there. Without this every deep-linked
+   * test would simply be redirected to step one — which is the point of the
+   * gating, and is asserted separately below.
+   */
+  function unlockStepsBefore(url: string): void {
+    const [, moduleCode, stepName] = url.split('/');
+    const journey = getJourneyForModule(moduleCode);
+    if (!journey || !stepName) {
+      return;
+    }
+
+    const target = getStepIndex(journey, stepName);
+    for (const step of journey.steps.slice(0, Math.max(target, 0))) {
+      journeyState.markStepComplete(moduleCode, step.name);
+    }
+  }
+
+  async function render(): Promise<ComponentFixture<App>> {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     fixture.detectChanges();
     return fixture;
+  }
+
+  /** Renders a step as a customer who reached it legitimately. */
+  async function renderAt(url: string): Promise<ComponentFixture<App>> {
+    unlockStepsBefore(url);
+    await router.navigateByUrl(url);
+    return render();
+  }
+
+  /** Renders whatever the URL asks for, with no progress assumed. */
+  async function renderAtRaw(url: string): Promise<ComponentFixture<App>> {
+    await router.navigateByUrl(url);
+    return render();
+  }
+
+  /** A step's button on the desktop wizard rail, by its position in the journey. */
+  function stepButton(fixture: ComponentFixture<App>, position: number): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector(
+      `.step-navigation__step-body[aria-label^="Step ${position} "]`,
+    );
   }
 
   function continueButton(fixture: ComponentFixture<App>): HTMLButtonElement | null {
@@ -485,6 +526,164 @@ describe('journey flow', () => {
       expect(stored['riskAddressMatches']).toBeUndefined();
       expect(stored['riskAddressLine1']).toBeUndefined();
       expect(field(fixture, 'riskAddressMatches')).toBeNull();
+    });
+  });
+
+  describe('step navigation', () => {
+    it('sends a customer who has answered nothing back to the first step', async () => {
+      await renderAtRaw('/PC/your-policy');
+
+      expect(router.url).toContain('/PC/your-details');
+    });
+
+    it('sends them to where they left off, not to the beginning', async () => {
+      journeyState.markStepComplete('PC', 'your-details');
+      journeyState.markStepComplete('PC', 'your-vehicle');
+
+      await renderAtRaw('/PC/your-quotes');
+
+      expect(router.url).toContain('/PC/additional-drivers');
+    });
+
+    it('still shows not-found for a step the journey does not have', async () => {
+      const fixture = await renderAtRaw('/PC/not-a-step');
+
+      expect(router.url).toContain('/PC/not-a-step');
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-not-found')).not.toBeNull();
+    });
+
+    it('offers no way to open a step that is still locked', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      // Step 3 is where Continue goes; step 4 is out of reach until then.
+      expect(stepButton(fixture, 4)?.getAttribute('aria-disabled')).toBe('true');
+      expect(stepButton(fixture, 3)?.getAttribute('aria-disabled')).toBeNull();
+      expect(stepButton(fixture, 2)?.getAttribute('aria-current')).toBe('step');
+      expect(stepButton(fixture, 1)?.getAttribute('aria-disabled')).toBeNull();
+    });
+
+    it('does nothing when a locked step is clicked anyway', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      stepButton(fixture, 4)?.click();
+      await fixture.whenStable();
+
+      expect(router.url).toContain('/PC/your-vehicle');
+    });
+
+    it('submits the current step when jumping forward, exactly as Continue does', async () => {
+      journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      stepButton(fixture, 3)?.click();
+      await fixture.whenStable();
+
+      expect(router.url).toContain('/PC/additional-drivers');
+      expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(true);
+    });
+
+    it('refuses to jump forward from a step that is not valid', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      stepButton(fixture, 3)?.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(router.url).toContain('/PC/your-vehicle');
+      expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(false);
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('is required');
+    });
+
+    it('lets the customer go back even when the current step is not valid', async () => {
+      // Nothing has been answered here, so Continue would refuse. Going back to
+      // correct an earlier answer must not be held hostage to that.
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      stepButton(fixture, 1)?.click();
+      await fixture.whenStable();
+
+      expect(router.url).toContain('/PC/your-details');
+      expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(false);
+    });
+
+    it('keeps what was typed when the customer goes back', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+      const registration = field(fixture, 'registration') as HTMLInputElement;
+
+      registration.value = 'XY19ZAB';
+      registration.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+
+      stepButton(fixture, 1)?.click();
+      await fixture.whenStable();
+
+      expect(router.url).toContain('/PC/your-details');
+      expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['registration']).toBe(
+        'XY19ZAB',
+      );
+    });
+
+    it('marks completed steps and counts them on the progress dial', async () => {
+      const fixture = await renderAt('/PC/additional-drivers');
+      const host = fixture.nativeElement as HTMLElement;
+
+      expect(stepButton(fixture, 1)?.getAttribute('aria-label')).toContain('completed');
+      expect(stepButton(fixture, 2)?.getAttribute('aria-label')).toContain('completed');
+      // The small-screen dial counts position, and says so out loud.
+      expect(host.querySelector('.step-navigation__dial-label')?.textContent).toContain('3 of 5');
+      expect(host.querySelector('.step-navigation__summary')?.textContent).toContain(
+        'Next: Your policy',
+      );
+    });
+
+    it('expands the small-screen list on demand', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+      const host = fixture.nativeElement as HTMLElement;
+      const summary = host.querySelector('.step-navigation__summary') as HTMLButtonElement;
+      const list = host.querySelector('#journey-step-list') as HTMLElement;
+
+      expect(summary.getAttribute('aria-expanded')).toBe('false');
+      expect(list.hidden).toBe(true);
+
+      summary.click();
+      fixture.detectChanges();
+
+      expect(summary.getAttribute('aria-expanded')).toBe('true');
+      expect(list.hidden).toBe(false);
+    });
+
+    it('keeps a reload on a later step where the customer was', async () => {
+      journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
+      journeyState.markStepComplete('PC', 'your-details');
+      journeyState.markStepComplete('PC', 'your-vehicle');
+
+      // A reload is a fresh service reading sessionStorage back.
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [App],
+        providers: [
+          provideRouter(routes),
+          { provide: ModuleContextService, useValue: moduleContextStub },
+          { provide: JourneyPersistenceService, useValue: persistenceStub },
+        ],
+      }).compileComponents();
+
+      const reloadedRouter = TestBed.inject(Router);
+      const reloadedState = TestBed.inject(JourneyStateService);
+
+      expect(reloadedState.isStepComplete('PC', 'your-vehicle')).toBe(true);
+      expect(reloadedState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['registration']).toBe(
+        'AB12CDE',
+      );
+
+      await reloadedRouter.navigateByUrl('/PC/additional-drivers');
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(reloadedRouter.url).toContain('/PC/additional-drivers');
+
+      reloadedState.resetAll();
     });
   });
 });

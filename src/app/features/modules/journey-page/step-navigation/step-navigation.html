@@ -1,0 +1,145 @@
+<nav class="step-navigation" aria-label="Journey progress">
+  <!-- Tablet and phone: where you are, what is next, and how far round the dial. -->
+  <div class="step-navigation__compact">
+    <button
+      type="button"
+      class="step-navigation__summary"
+      [attr.aria-expanded]="isExpanded()"
+      aria-controls="journey-step-list"
+      (click)="toggleExpanded()"
+    >
+      @if (currentItem(); as current) {
+        <app-step-marker
+          [status]="current.status"
+          [stepIcon]="current.step.icon"
+          [position]="current.position"
+          [compact]="true"
+          [showNumber]="false"
+        />
+
+        <span class="step-navigation__summary-text">
+          <span class="step-navigation__summary-title">{{ current.step.displayName }}</span>
+          <span class="step-navigation__summary-next">
+            @if (nextStep(); as next) {
+              Next: {{ next.displayName }}
+            } @else {
+              Final step
+            }
+          </span>
+        </span>
+      }
+
+      <svg class="step-navigation__dial" viewBox="0 0 48 48" focusable="false" aria-hidden="true">
+        <circle class="step-navigation__dial-track" cx="24" cy="24" [attr.r]="dialRadius" />
+        <circle
+          class="step-navigation__dial-value"
+          cx="24"
+          cy="24"
+          [attr.r]="dialRadius"
+          [attr.stroke]="brand.primaryColor"
+          [attr.stroke-dasharray]="dialCircumference"
+          [attr.stroke-dashoffset]="dialOffset()"
+        />
+        <text class="step-navigation__dial-label" x="24" y="24">
+          {{ currentPosition() }} of {{ totalSteps() }}
+        </text>
+      </svg>
+
+      <i
+        class="fa-solid fa-chevron-down step-navigation__chevron"
+        [class.step-navigation__chevron--open]="isExpanded()"
+        aria-hidden="true"
+      ></i>
+
+      <span class="sr-only">
+        Step {{ currentPosition() }} of {{ totalSteps() }}, {{ progressPercent() }} percent
+        complete. {{ isExpanded() ? 'Hide all steps' : 'Show all steps' }}.
+      </span>
+    </button>
+
+    <!--
+      Hidden rather than removed, so `aria-controls` always names a real element.
+    -->
+    <ol id="journey-step-list" class="step-navigation__list" [hidden]="!isExpanded()">
+      @for (item of items(); track item.step.name) {
+        <li>
+          <button
+            type="button"
+            class="step-navigation__row"
+            [class.step-navigation__row--locked]="item.status === 'locked'"
+            [attr.aria-current]="item.status === 'current' ? 'step' : null"
+            [attr.aria-disabled]="isSelectable(item) ? null : 'true'"
+            [attr.aria-label]="accessibleLabel(item)"
+            (click)="select(item)"
+          >
+            <app-step-marker
+              [status]="item.status"
+              [stepIcon]="item.step.icon"
+              [position]="item.position"
+              [compact]="true"
+              [showNumber]="false"
+            />
+
+            <span class="step-navigation__row-number" aria-hidden="true">{{ item.position }}</span>
+
+            <span
+              class="step-navigation__row-label"
+              [style.color]="item.status === 'current' ? brand.primaryColor : null"
+            >
+              {{ item.step.displayName }}
+            </span>
+
+            @if (item.status === 'locked') {
+              <i class="fa-solid fa-lock step-navigation__lock" aria-hidden="true"></i>
+            }
+          </button>
+        </li>
+      }
+    </ol>
+  </div>
+
+  <!-- Desktop: the whole journey at a glance. -->
+  <ol class="step-navigation__rail">
+    @for (item of items(); track item.step.name; let first = $first) {
+      <li class="step-navigation__step">
+        @if (!first) {
+          <span
+            class="step-navigation__connector"
+            [style.backgroundColor]="connectorFilled(item) ? brand.primaryColor : null"
+            aria-hidden="true"
+          ></span>
+        }
+
+        <button
+          type="button"
+          class="step-navigation__step-body"
+          [class.step-navigation__step-body--locked]="item.status === 'locked'"
+          [attr.aria-current]="item.status === 'current' ? 'step' : null"
+          [attr.aria-disabled]="isSelectable(item) ? null : 'true'"
+          [attr.aria-label]="accessibleLabel(item)"
+          (click)="select(item)"
+        >
+          <app-step-marker
+            [status]="item.status"
+            [stepIcon]="item.step.icon"
+            [position]="item.position"
+          />
+
+          <span
+            class="step-navigation__label"
+            [class.step-navigation__label--current]="item.status === 'current'"
+            [style.color]="item.status === 'current' ? brand.primaryColor : null"
+          >
+            {{ item.step.displayName }}
+          </span>
+
+          <span
+            class="step-navigation__underline"
+            [style.backgroundColor]="item.status === 'current' ? brand.secondaryColor : null"
+            aria-hidden="true"
+          ></span>
+        </button>
+      </li>
+    }
+  </ol>
+</nav>

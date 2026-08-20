@@ -57,13 +57,13 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-not-found')).toBeNull();
-    expect(compiled.textContent).toContain('Customer journey');
+    expect(compiled.querySelector('app-step-navigation')).not.toBeNull();
     expect(router.url).toContain('/TX/your-details');
   });
 
   it('should render a valid module step route without not-found', async () => {
     const router = TestBed.inject(Router);
-    await router.navigateByUrl('/HC/your-policy');
+    await router.navigateByUrl('/HC/your-details');
 
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
@@ -71,7 +71,19 @@ describe('App', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-not-found')).toBeNull();
-    expect(compiled.textContent).toContain('Step 4 of 6');
+    expect(compiled.textContent).toContain('Step 1 of 6');
+  });
+
+  it('should send a deep link to a step the customer has not earned back to the start', async () => {
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/HC/your-policy');
+
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-not-found')).toBeNull();
+    expect(router.url).toContain('/HC/your-details');
   });
 
   it('should render the not found page for an unsupported module', async () => {

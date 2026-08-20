@@ -16,16 +16,19 @@ import { BrandService } from '../../../core/services/brand.service';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
 import { ModuleContextService } from '../../../core/services/module-context.service';
 import { JourneyPersistenceService } from '../journeys/journey-persistence.service';
+import { firstIncompleteStep, isStepUnlocked } from '../journeys/journey-progress';
 import {
   findStep,
   getFirstStep,
   getJourneyForModule,
   getNextStep,
   getPreviousStep,
+  getStepIndex,
   getStepNumber,
 } from '../journeys/journey-registry';
 import { NotFoundComponent } from '../../../shared/components/not-found/not-found';
 import { SectionOutletComponent } from './section-outlet.component';
+import { StepNavigationComponent } from './step-navigation/step-navigation';
 
 /**
  * The single journey screen.
@@ -36,7 +39,7 @@ import { SectionOutletComponent } from './section-outlet.component';
  */
 @Component({
   selector: 'app-journey-page',
-  imports: [RouterLink, NotFoundComponent, SectionOutletComponent],
+  imports: [RouterLink, NotFoundComponent, SectionOutletComponent, StepNavigationComponent],
   templateUrl: './journey-page.html',
   styleUrl: './journey-page.css',
 })
@@ -117,6 +120,29 @@ export class JourneyPageComponent {
     return journey && step ? getNextStep(journey, step.name) : null;
   });
 
+  /** Steps completed for this module, which is what unlocks the ones after them. */
+  readonly completedStepNames = computed<readonly string[]>(() => {
+    const moduleCode = this.moduleCode();
+    return moduleCode ? this.journeyState.completedSteps(moduleCode) : [];
+  });
+
+  /**
+   * True when the URL names a real step the customer has not earned yet.
+   *
+   * Gating the URL as well as the navigation matters: otherwise the rule is
+   * decoration, and typing an address or using a stale bookmark would still open
+   * a step whose questions depend on answers that were never given.
+   */
+  private readonly requestedStepIsLocked = computed(() => {
+    const journey = this.journey();
+    const step = this.step();
+    if (!journey || !step) {
+      return false;
+    }
+
+    return !isStepUnlocked(journey.steps, step.name, (name) => this.isStepNameComplete(name));
+  });
+
   /** Sections whose `visibleWhen` gate passes for the answers captured so far. */
   readonly visibleSections = computed<readonly JourneySection[]>(() => {
     const step = this.step();
@@ -157,6 +183,19 @@ export class JourneyPageComponent {
       });
     });
 
+    // A step the customer has not unlocked sends them to where they left off,
+    // replacing the URL so Back does not bounce them straight into it again.
+    effect(() => {
+      const moduleCode = this.moduleCode();
+      const journey = this.journey();
+      if (!moduleCode || !journey || !this.requestedStepIsLocked()) {
+        return;
+      }
+
+      const target = firstIncompleteStep(journey.steps, (name) => this.isStepNameComplete(name));
+      void this.router.navigate(['/', moduleCode, target.name], { replaceUrl: true });
+    });
+
     // Move focus to the heading of a newly rendered step, but never on first paint.
     afterRenderEffect(() => {
       const stepName = this.step()?.name ?? null;
@@ -174,15 +213,6 @@ export class JourneyPageComponent {
     });
   }
 
-  stepLink(stepName: string): readonly [string, string, string] | null {
-    const moduleCode = this.moduleCode();
-    return moduleCode ? ['/', moduleCode, stepName] : null;
-  }
-
-  isActiveStep(step: JourneyStepDefinition): boolean {
-    return this.step()?.name === step.name;
-  }
-
   /**
    * Section identity is only unique within a step, so the step name is part of the
    * key. Without it, two steps sharing a section id would reuse the same rendered
@@ -192,23 +222,56 @@ export class JourneyPageComponent {
     return `${this.step()?.name ?? ''}:${section.id}`;
   }
 
-  isStepComplete(step: JourneyStepDefinition): boolean {
-    const moduleCode = this.moduleCode();
-    return moduleCode ? this.journeyState.isStepComplete(moduleCode, step.name) : false;
+  /** Continue: submit this step and move to the next one. */
+  onContinue(): void {
+    const next = this.nextStep();
+    if (next) {
+      this.goToStep(next);
+    }
   }
 
   /**
-   * Validates every visible section, persists what they captured and moves on.
-   * A single invalid section keeps the customer on the step with errors revealed.
+   * Opens another step, submitting the current one on the way if that is called for.
+   *
+   * Moving forward runs exactly what Continue runs — validate every visible
+   * section, persist what they captured, mark the step complete and record it —
+   * so a step can never be skipped past by clicking further along the progress
+   * list. An invalid section keeps the customer here with the errors revealed.
+   *
+   * Moving back does none of that. Sections write their values to journey state as
+   * they are edited, so nothing typed is lost by leaving, and refusing to let
+   * someone return to an earlier answer until the current screen is valid would be
+   * a trap: the reason they are going back is often that the earlier answer was
+   * wrong. Their completion ticks stay as they were, so the frontier does not move.
    */
-  onContinue(): void {
+  goToStep(target: JourneyStepDefinition): void {
     const moduleCode = this.moduleCode();
+    const journey = this.journey();
     const step = this.step();
-    const next = this.nextStep();
-    if (!moduleCode || !step) {
+    if (!moduleCode || !journey || !step || target.name === step.name) {
       return;
     }
 
+    const isForward = getStepIndex(journey, target.name) > getStepIndex(journey, step.name);
+    if (isForward && !this.submitCurrentStep(moduleCode, step)) {
+      return;
+    }
+
+    // Completing this step may have unlocked the target; recheck before moving.
+    if (!isStepUnlocked(journey.steps, target.name, (name) => this.isStepNameComplete(name))) {
+      return;
+    }
+
+    void this.router.navigate(['/', moduleCode, target.name]);
+  }
+
+  /**
+   * Validates and stores the current step. Returns whether it was accepted.
+   *
+   * Answers are written whether or not they pass, so an invalid step still keeps
+   * what the customer typed.
+   */
+  private submitCurrentStep(moduleCode: string, step: JourneyStepDefinition): boolean {
     const results = this.sectionOutlets().map((outlet) => ({
       sectionId: outlet.section().id,
       result: outlet.collect(),
@@ -219,14 +282,17 @@ export class JourneyPageComponent {
     }
 
     if (results.some(({ result }) => !result.valid)) {
-      return;
+      return false;
     }
 
     this.journeyState.markStepComplete(moduleCode, step.name);
     void this.persistence.recordStep(moduleCode, step);
 
-    if (next) {
-      void this.router.navigate(['/', moduleCode, next.name]);
-    }
+    return true;
+  }
+
+  private isStepNameComplete(stepName: string): boolean {
+    const moduleCode = this.moduleCode();
+    return moduleCode ? this.journeyState.isStepComplete(moduleCode, stepName) : false;
   }
 }

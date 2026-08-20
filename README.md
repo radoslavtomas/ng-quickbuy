@@ -50,7 +50,9 @@ changes which products exist, because a brand only sells the modules it lists.
 - `/HC` — House Insurance (property journey)
 
 Visiting `/PC` with no step redirects to the first step. A module the current brand does not sell, or
-a step the journey does not have, renders the not-found view.
+a step the journey does not have, renders the not-found view. Steps are gated on the ones before
+them, so a deep link to a step the customer has not earned redirects to the first one they have not
+completed.
 
 ## Commands
 
@@ -126,6 +128,38 @@ flowchart TD
 `BrandService` resolves the brand once from the hostname and derives the active module code from
 router events. Continue validates every visible section, persists what it captured, marks the step
 complete and navigates on; one invalid section keeps the customer on the step with errors revealed.
+
+## Step navigation and gating
+
+`journey-page/step-navigation/` renders progress and is the only way to move around a journey other
+than the Continue and Previous buttons. It is presentational: it is told the steps and which are
+complete, and reports the one the customer chose. From `md` up it draws a horizontal wizard rail with
+a marker per step — the step's icon, its number as a badge, a tick once complete — and below that it
+collapses to the current step, what is next and a circular dial, which expands to the full list on
+demand. Which one shows is decided by CSS, so there is no resize listener and no flash of the wrong
+one. Marker text colour is measured from the brand colour by `core/utils/contrast-color.ts` rather
+than assumed to be white, because `#6FACDE` and `#07419d` cannot both take the same foreground.
+
+`journeys/journey-progress.ts` owns the rules, so the navigation and the URL cannot disagree:
+
+- **The frontier** is the first step the customer has not completed. `isStepUnlocked` allows that step
+  and everything before it. `JourneyPageComponent` redirects a URL naming anything beyond it to
+  `firstIncompleteStep`, replacing the history entry.
+- **`isStepOfferable`** is wider by exactly one step: the one Continue leads to. Choosing it submits
+  the current step first, so the progress list is not a worse version of the button beside it.
+- Completion is never inferred from how far the URL has got, so a bookmark cannot buy progress.
+
+Choosing a step runs `JourneyPageComponent.goToStep()`:
+
+- **Forward** runs exactly what Continue runs — validate every visible section, persist what it
+  captured, mark the step complete, record the partial — and stays put with errors revealed if any
+  section objects.
+- **Backward** does none of that. Sections write their values to `JourneyStateService` as they are
+  edited, so nothing typed is lost by leaving, and holding someone on an invalid screen when they are
+  trying to go back and fix an earlier answer would be a trap.
+
+Locked steps are shown disabled rather than hidden, with `aria-disabled` and a label saying why, so
+the customer can see what the journey involves before starting it.
 
 ## Journey configuration
 
@@ -250,6 +284,12 @@ Things to know before extending it:
 Nothing is merged into one flat object, so two steps may legitimately use the same field name without
 one overwriting the other — `declarationAccepted` genuinely exists in two steps and used to collide.
 
+That state is mirrored into `sessionStorage`, one key per module (`ngqb.journey.<CODE>`). Step-order
+gating reads completion to decide what may be opened, so without it a reload on step four would send
+a customer who had answered everything back to step one. Stored data is validated on read, because
+storage is editable by hand and must not be what decides which steps a customer may open. A new tab
+starts fresh, and storage being unavailable costs the resume, not the journey.
+
 Answers are also saved server-side as a **partial quote**, so an abandoned journey is recoverable:
 
 - `JourneySessionService` mints a `crypto.randomUUID()` session id on journey entry and persists it,
@@ -324,9 +364,15 @@ Search fields follow the ARIA combobox pattern: arrow keys, `Home`, `End`, `Ente
 region announcing how many matches there are, or why none appeared. Control ids are scoped per
 rendered section so a list of three drivers cannot emit the same id three times.
 
+The step navigation is a list of buttons rather than links, because choosing a step may submit the
+current one. The current step carries `aria-current="step"`; steps that cannot be opened carry
+`aria-disabled` and say why in their label rather than disappearing. The small-screen summary is a
+proper disclosure, and the list it controls stays in the document so `aria-controls` always resolves.
+Marker foregrounds are chosen by measured contrast, so a light brand colour cannot produce white text
+on a pale disc.
+
 Still open: there is no error summary, so an invalid step reveals per-field errors without moving
-focus. Journey step links are not gated on completion, so a later step can be opened before earlier
-ones are answered — the progress list does now mark completed steps.
+focus.
 
 ## Project layout
 
@@ -347,6 +393,7 @@ src/app/
       journey-page/              the journey screen
         section-outlet.component.ts   maps a section to its renderer
         sections/                     address, repeat and quote-results sections
+        step-navigation/              progress wizard, step markers and gating UI
       specific-modules/
         components/              address search
         config/                  field schemas per journey and step
@@ -462,9 +509,13 @@ aliases this app uses (`fa-file-alt`, `fa-user-edit`, `fa-check-square`, `fa-hom
 face ships, so a `fa-brands` or `fa-regular` name will not resolve until its stylesheet is added to
 `angular.json`.
 
-**Answers disappear after a reload.** Client-side journey state is in-memory, so the screen restarts.
-The answers are not lost server-side — a partial quote was stored and the session id and reference
-survive in `sessionStorage` — but nothing reads the partial back yet, so there is no visible resume.
+**Answers disappear after a reload.** Within a tab they should not: journey state is mirrored into
+`sessionStorage`. A new tab, a different browser or a closed session does start over, because that
+storage is per tab and nothing reads the server-side partial back yet.
+
+**A step redirects to an earlier one.** That is step-order gating: a step opens only once every step
+before it is complete. Completing them, or clearing `ngqb.journey.*` from `sessionStorage` to start
+over, is the way through.
 
 **A template error appears that the editor did not show.** `strictTemplates` is on; run
 `npm run build` for the authoritative diagnostics.
@@ -485,15 +536,17 @@ Deliberate, known gaps — check here before assuming something is a bug:
    also unconfirmed and carry a TODO in the mapper.
 3. **No resume entry point.** Partial quotes are saved, but nothing reads one back yet: the recall
    service and its hydration are implemented and unwired, pending confirmation of which identity
-   fields are required and how the customer receives the reference. A browser refresh therefore still
-   restarts the journey visually even though the partial exists server-side.
+   fields are required and how the customer receives the reference. A reload is covered by
+   `sessionStorage`, but returning in a new tab or on another device is not.
 4. **`storeStep` values are provisional.** Each step carries a backend step identifier, currently
    mirroring its route slug, pending the real values — including what the create call should send,
    since it fires before any step is complete.
 5. **Buy-online switches are read but unused.** `allowsBuyOnline()` exists; no screen consumes it yet,
    because there is no buy-online step.
-6. **No step-order gating.** Any step can be opened directly from the progress list, regardless of
-   whether earlier steps are complete.
+6. **Gating trusts `sessionStorage`.** Progress is client-side, so it is only as reliable as the tab
+   it lives in: a new tab restarts the journey, and someone editing storage by hand can unlock a
+   step. Neither matters while the server-side partial is the record of what was actually answered,
+   but a resumed journey will need the frontier to come from the backend.
 7. **Demo quotes.** The final step renders fixture data and a payload dump, not live pricing.
 8. **Recall does not rebuild list items.** Hydration walks `fields` sections only, so a recalled
    quote restores the customer and the joint proposer but not additional drivers; the driver keys
