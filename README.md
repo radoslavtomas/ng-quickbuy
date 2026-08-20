@@ -71,9 +71,6 @@ CI (`.github/workflows/ci.yml`) runs lint, `test:ci` and build on every push and
 `format:check` is deliberately not wired in yet: the tree predates Prettier enforcement and needs one
 formatting commit first.
 
-> **The full suite only passes with `DEFAULT_BRAND_ID` set to `qld`.** See
-> [Known limitations](#known-limitations-and-direction).
-
 ## Core concepts
 
 Five nouns explain most of the codebase:
@@ -496,6 +493,10 @@ generic renderer genuinely cannot draw the UI, as with address lookup.
 3. Add a hostname match in `detectBrand()` in `core/services/brand.service.ts`.
 4. Add the logo under `public/img/logos/<brand>/`.
 
+A spec that needs a specific brand should provide `BRAND_OVERRIDE` (from `brand.service.ts`) rather
+than relying on `DEFAULT_BRAND_ID`, which is a local-development fallback and not meant to be a test
+dependency.
+
 ## Conventions
 
 - `AGENTS.md` is the single source of truth for coding standards. `.claude/CLAUDE.md`,
@@ -541,10 +542,6 @@ over, is the way through.
 **A template error appears that the editor did not show.** `strictTemplates` is on; run
 `npm run build` for the authoritative diagnostics.
 
-**Journey tests fail with not-found renders.** Check `DEFAULT_BRAND_ID` in `dev.config.ts` is back to
-`qld` — a brand switched for local development takes the test suite with it. See
-[Known limitations](#known-limitations-and-direction).
-
 ## Known limitations and direction
 
 Deliberate, known gaps — check here before assuming something is a bug:
@@ -579,9 +576,3 @@ Deliberate, known gaps — check here before assuming something is a bug:
 9. **Occupation search needs four characters.** The backend's minimum, so short job titles such as
    "vet" cannot be found by typing them alone. The field says so rather than appearing broken, but
    it is a real gap to raise with the backend.
-10. **The test suite requires `DEFAULT_BRAND_ID` to be `qld`.** The journey tests render real module
-    URLs such as `/PC/your-vehicle`, and a module only resolves for a brand that sells it. `qld` is
-    the only brand listing every module code, so under `chq` or `ajg` those tests get the not-found
-    view instead of a journey. Change `dev.config.ts` to develop against another brand, but change
-    it back before running `npm run test:ci`. The tests should provide their own brand rather than
-    inheriting the development fallback.
