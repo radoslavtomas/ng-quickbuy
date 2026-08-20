@@ -1,16 +1,21 @@
 /**
- * Picks a readable foreground for a brand colour.
+ * Keeps brand colours readable without changing what they are used for.
  *
  * Brand colours are configuration and vary in lightness — `#6FACDE` is nowhere
- * near `#07419d` — so white text on a filled marker is a guess, not a guarantee.
- * White on `#6FACDE` scores 2.2:1, which fails AA outright. These helpers measure
- * the background and pick the better of the two foregrounds, so adding a brand
- * cannot quietly introduce unreadable text.
+ * near `#07419d` — so white on a filled marker is a guess, not a guarantee: it
+ * scores 2.2:1 on AJG's blue and fails AA outright. Swapping to dark text where
+ * that happens is one fix, but it makes one brand look unlike the others for a
+ * reason no customer can see. Instead these helpers keep the roles fixed — white
+ * on the fill, the brand colour on the page — and darken (or lighten) the brand
+ * colour by the least amount that reaches the required ratio. A brand that
+ * already passes is returned untouched, so this is invisible for `qld` and `chq`.
  */
 
-/** Near-black rather than pure black, to match the slate palette used elsewhere. */
-const DARK_FOREGROUND = '#0f172a';
-const LIGHT_FOREGROUND = '#ffffff';
+/** WCAG AA for normal-size text. Also clears the 3:1 minimum for graphics. */
+export const AA_NORMAL_TEXT = 4.5;
+
+/** Steps of bisection: 1/4096 of the range, far finer than 8-bit channels resolve. */
+const BISECTION_STEPS = 12;
 
 /** `#rgb`, `#rrggbb` or `rgb()`/`rgba()`, which is what brand config may hold. */
 export function parseColor(color: string): readonly [number, number, number] | null {
@@ -71,19 +76,68 @@ export function contrastRatio(foreground: string, background: string): number | 
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/**
- * The foreground to use on top of `background`, whichever of the two reads better.
- *
- * An unparseable colour falls back to white, which is what the app assumed before
- * this existed, so a malformed brand value cannot make text vanish entirely.
- */
-export function contrastColor(background: string): string {
-  const onDarkText = contrastRatio(DARK_FOREGROUND, background);
-  const onLightText = contrastRatio(LIGHT_FOREGROUND, background);
+function toHex(rgb: readonly [number, number, number]): string {
+  return `#${rgb.map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('')}`;
+}
 
-  if (onDarkText === null || onLightText === null) {
-    return LIGHT_FOREGROUND;
+/** Moves every channel `amount` of the way towards `pole` (0 for black, 255 for white). */
+function mixTowards(
+  rgb: readonly [number, number, number],
+  pole: number,
+  amount: number,
+): readonly [number, number, number] {
+  return [
+    rgb[0] + (pole - rgb[0]) * amount,
+    rgb[1] + (pole - rgb[1]) * amount,
+    rgb[2] + (pole - rgb[2]) * amount,
+  ];
+}
+
+/**
+ * `color`, darkened or lightened as little as needed to be legible on `surface`.
+ *
+ * Hue is preserved: only the distance to black or white changes, so the result
+ * still reads as the brand. A colour that already meets `targetRatio`, or one that
+ * cannot be parsed, is handed back unchanged — a malformed brand value should look
+ * wrong in review, not silently become a different colour.
+ */
+export function readableAgainst(
+  color: string,
+  surface = '#ffffff',
+  targetRatio = AA_NORMAL_TEXT,
+): string {
+  const rgb = parseColor(color);
+  const surfaceLuminance = relativeLuminance(surface);
+  if (!rgb || surfaceLuminance === null) {
+    return color;
   }
 
-  return onDarkText > onLightText ? DARK_FOREGROUND : LIGHT_FOREGROUND;
+  const meetsTarget = (candidate: string) =>
+    (contrastRatio(candidate, surface) ?? 0) >= targetRatio;
+  if (meetsTarget(color)) {
+    return color;
+  }
+
+  // Away from the surface: towards black on a light one, towards white on a dark one.
+  const pole = surfaceLuminance > 0.5 ? 0 : 255;
+
+  // The pole itself is the most extreme option, and the fallback if even it falls
+  // short — which only a mid-grey surface can cause, and no darkening would fix.
+  let best = toHex(mixTowards(rgb, pole, 1));
+  let low = 0;
+  let high = 1;
+
+  for (let step = 0; step < BISECTION_STEPS; step++) {
+    const amount = (low + high) / 2;
+    const candidate = toHex(mixTowards(rgb, pole, amount));
+
+    if (meetsTarget(candidate)) {
+      best = candidate;
+      high = amount;
+    } else {
+      low = amount;
+    }
+  }
+
+  return best;
 }

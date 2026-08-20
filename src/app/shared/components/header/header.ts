@@ -15,6 +15,10 @@ export class HeaderComponent {
   private readonly moduleContext = inject(ModuleContextService);
 
   readonly brand = this.brandService.config;
+
+  /** Safe to paint white on, and to read as text on the white top bar. */
+  readonly accent = this.brandService.accent;
+
   readonly currentModuleCode = this.brandService.currentModuleCode;
 
   /**

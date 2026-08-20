@@ -7,6 +7,7 @@ import type { BrandConfig } from '../models/brand.model';
 import { BRAND_CONFIGS } from '../config/brands.config';
 import { DEFAULT_BRAND_ID } from '../config/dev.config';
 import { findModuleByCode, type ModuleDefinition } from '../config/module-catalogue';
+import { readableAgainst } from '../utils/contrast-color';
 
 @Injectable({ providedIn: 'root' })
 export class BrandService {
@@ -14,6 +15,21 @@ export class BrandService {
   private readonly router = inject(Router);
 
   readonly config: BrandConfig = this.detectBrand();
+
+  /**
+   * The brand colours as they may actually be painted on the app's white surfaces,
+   * either as a fill under white text or as text on the page.
+   *
+   * The raw configured colours cannot be used for that directly: `#6FACDE` carries
+   * white at 2.2:1 and `#8cc63e` at 2.0:1, both far below AA. `readableAgainst`
+   * darkens each by the least amount that reaches AA and leaves the ones that
+   * already pass — every `qld` colour, and ChoiceQuote's navy — untouched.
+   *
+   * Resolved here so every component paints the same shade. Use `config` only for
+   * the things a colour cannot fail at, such as a value stored or sent onwards.
+   */
+  readonly accent: string = readableAgainst(this.config.primaryColor);
+  readonly accentAlt: string = readableAgainst(this.config.secondaryColor);
 
   /**
    * The products this brand sells, resolved against the catalogue and in the order

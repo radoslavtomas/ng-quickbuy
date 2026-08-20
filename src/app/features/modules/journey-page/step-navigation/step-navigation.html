@@ -36,7 +36,7 @@
           cx="24"
           cy="24"
           [attr.r]="dialRadius"
-          [attr.stroke]="brand.primaryColor"
+          [attr.stroke]="accent"
           [attr.stroke-dasharray]="dialCircumference"
           [attr.stroke-dashoffset]="dialOffset()"
         />
@@ -84,7 +84,7 @@
 
             <span
               class="step-navigation__row-label"
-              [style.color]="item.status === 'current' ? brand.primaryColor : null"
+              [style.color]="item.status === 'current' ? accent : null"
             >
               {{ item.step.displayName }}
             </span>
@@ -105,7 +105,7 @@
         @if (!first) {
           <span
             class="step-navigation__connector"
-            [style.backgroundColor]="connectorFilled(item) ? brand.primaryColor : null"
+            [style.backgroundColor]="connectorFilled(item) ? accent : null"
             aria-hidden="true"
           ></span>
         }
@@ -128,14 +128,14 @@
           <span
             class="step-navigation__label"
             [class.step-navigation__label--current]="item.status === 'current'"
-            [style.color]="item.status === 'current' ? brand.primaryColor : null"
+            [style.color]="item.status === 'current' ? accent : null"
           >
             {{ item.step.displayName }}
           </span>
 
           <span
             class="step-navigation__underline"
-            [style.backgroundColor]="item.status === 'current' ? brand.secondaryColor : null"
+            [style.backgroundColor]="item.status === 'current' ? accentAlt : null"
             aria-hidden="true"
           ></span>
         </button>

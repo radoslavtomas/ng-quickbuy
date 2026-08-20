@@ -1,8 +1,8 @@
 <section
   aria-labelledby="home-title"
   class="home px-4 py-8 sm:py-10"
-  [style.--brand-primary]="brand.primaryColor"
-  [style.--brand-secondary]="brand.secondaryColor"
+  [style.--brand-primary]="accent"
+  [style.--brand-secondary]="accentAlt"
 >
   <div class="mx-auto flex w-full max-w-4xl flex-col gap-8">
     <header class="rounded-xl border border-slate-200/70 bg-white/90 p-6 shadow-sm sm:p-8">
@@ -31,7 +31,7 @@
           >
             <div
               class="inline-flex h-10 w-10 items-center justify-center rounded-full text-white"
-              [style.background-color]="brand.primaryColor"
+              [style.background-color]="accent"
             >
               <i class="fa-solid {{ module.icon }}" aria-hidden="true"></i>
             </div>

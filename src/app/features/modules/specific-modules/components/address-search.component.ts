@@ -55,7 +55,7 @@ import { BrandService } from '../../../../core/services/brand.service';
           <button
             type="button"
             class="mt-3 inline-flex cursor-pointer items-center justify-center gap-2 rounded-md px-4 py-2 font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:text-slate-200"
-            [style.background-color]="brand.secondaryColor"
+            [style.background-color]="accentAlt"
             [disabled]="loading()"
             (click)="searchForAddress()"
           >
@@ -99,7 +99,9 @@ import { BrandService } from '../../../../core/services/brand.service';
 })
 export class AddressSearchComponent {
   private readonly brandService = inject(BrandService);
-  readonly brand = this.brandService.config;
+
+  /** The Find address button is white on this, so it cannot be a pale brand colour. */
+  readonly accentAlt = this.brandService.accentAlt;
 
   readonly initialPostcode = input('');
   readonly initialNumberOrName = input('');

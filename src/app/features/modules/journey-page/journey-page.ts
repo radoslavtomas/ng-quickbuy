@@ -53,6 +53,10 @@ export class JourneyPageComponent {
 
   readonly brand = this.brandService.config;
 
+  /** Brand colours that are safe to paint on this page's white panel. */
+  readonly accent = this.brandService.accent;
+  readonly accentAlt = this.brandService.accentAlt;
+
   private readonly sectionOutlets = viewChildren(SectionOutletComponent);
   private readonly stepHeading = viewChild<ElementRef<HTMLHeadingElement>>('stepHeading');
   private renderedStepName: string | null = null;

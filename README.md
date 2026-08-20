@@ -71,12 +71,16 @@ CI (`.github/workflows/ci.yml`) runs lint, `test:ci` and build on every push and
 `format:check` is deliberately not wired in yet: the tree predates Prettier enforcement and needs one
 formatting commit first.
 
+> **The full suite only passes with `DEFAULT_BRAND_ID` set to `qld`.** See
+> [Known limitations](#known-limitations-and-direction).
+
 ## Core concepts
 
 Five nouns explain most of the codebase:
 
 - **Brand** — a broker (`qld`, `chq`, `ajg`). Owns colours, logo, phone number, footer legal text and
-  the list of module codes it is allowed to sell.
+  the list of module codes it is allowed to sell. Paint with `BrandService.accent` /
+  `accentAlt` rather than the configured colours: see [Brand colours](#brand-colours).
 - **Module** — a product, identified by a short code used as the first URL segment: `PC` car,
   `GV` van, `BD` breakdown, `TX` taxi, `HC` house, `HH` holiday home, `LL` landlord. Defined once in
   `MODULE_CATALOGUE`.
@@ -137,8 +141,8 @@ complete, and reports the one the customer chose. From `md` up it draws a horizo
 a marker per step — the step's icon, its number as a badge, a tick once complete — and below that it
 collapses to the current step, what is next and a circular dial, which expands to the full list on
 demand. Which one shows is decided by CSS, so there is no resize listener and no flash of the wrong
-one. Marker text colour is measured from the brand colour by `core/utils/contrast-color.ts` rather
-than assumed to be white, because `#6FACDE` and `#07419d` cannot both take the same foreground.
+one. Markers, the Continue button and the dial all draw white on `BrandService.accent`, described in
+[Brand colours](#brand-colours).
 
 `journeys/journey-progress.ts` owns the rules, so the navigation and the URL cannot disagree:
 
@@ -160,6 +164,23 @@ Choosing a step runs `JourneyPageComponent.goToStep()`:
 
 Locked steps are shown disabled rather than hidden, with `aria-disabled` and a label saying why, so
 the customer can see what the journey involves before starting it.
+
+## Brand colours
+
+A brand's configured `primaryColor` and `secondaryColor` are not safe to paint directly. The app puts
+white text and white icons on them — the header bar, step markers, the Continue and Find address
+buttons, a chosen radio option, step card headings, the 404 badge — and white scores 2.2:1 on AJG's
+`#6FACDE` and 2.0:1 on ChoiceQuote's `#8cc63e`, both far below the AA minimum of 4.5:1. The same
+colours are used as text on white, where they fail for the same reason.
+
+`BrandService` therefore exposes `accent` and `accentAlt`: the configured colours passed through
+`readableAgainst` in `core/utils/contrast-color.ts`, which darkens a colour by the least amount that
+reaches AA and returns one that already passes untouched. Hue is preserved, so the result still reads
+as the brand, and `qld`'s colours and ChoiceQuote's navy are unchanged.
+
+**Use `accent` / `accentAlt` for anything drawn.** `config.primaryColor` is for values that are stored
+or sent onward, where a colour cannot fail. Adding a pale brand then costs nothing: it is darkened
+where it is painted rather than quietly shipping unreadable text.
 
 ## Journey configuration
 
@@ -368,8 +389,8 @@ The step navigation is a list of buttons rather than links, because choosing a s
 current one. The current step carries `aria-current="step"`; steps that cannot be opened carry
 `aria-disabled` and say why in their label rather than disappearing. The small-screen summary is a
 proper disclosure, and the list it controls stays in the document so `aria-controls` always resolves.
-Marker foregrounds are chosen by measured contrast, so a light brand colour cannot produce white text
-on a pale disc.
+Brand colours are drawn from `BrandService.accent` / `accentAlt`, so a pale brand colour is darkened
+to reach AA rather than producing white text on a pale fill. See [Brand colours](#brand-colours).
 
 Still open: there is no error summary, so an invalid step reveals per-field errors without moving
 focus.
@@ -520,6 +541,10 @@ over, is the way through.
 **A template error appears that the editor did not show.** `strictTemplates` is on; run
 `npm run build` for the authoritative diagnostics.
 
+**Journey tests fail with not-found renders.** Check `DEFAULT_BRAND_ID` in `dev.config.ts` is back to
+`qld` — a brand switched for local development takes the test suite with it. See
+[Known limitations](#known-limitations-and-direction).
+
 ## Known limitations and direction
 
 Deliberate, known gaps — check here before assuming something is a bug:
@@ -554,3 +579,9 @@ Deliberate, known gaps — check here before assuming something is a bug:
 9. **Occupation search needs four characters.** The backend's minimum, so short job titles such as
    "vet" cannot be found by typing them alone. The field says so rather than appearing broken, but
    it is a real gap to raise with the backend.
+10. **The test suite requires `DEFAULT_BRAND_ID` to be `qld`.** The journey tests render real module
+    URLs such as `/PC/your-vehicle`, and a module only resolves for a brand that sells it. `qld` is
+    the only brand listing every module code, so under `chq` or `ajg` those tests get the not-found
+    view instead of a journey. Change `dev.config.ts` to develop against another brand, but change
+    it back before running `npm run test:ci`. The tests should provide their own brand rather than
+    inheriting the development fallback.

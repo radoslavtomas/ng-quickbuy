@@ -53,7 +53,10 @@ export class StepNavigationComponent {
   readonly stepSelected = output<JourneyStepDefinition>();
 
   private readonly brandService = inject(BrandService);
-  readonly brand = this.brandService.config;
+
+  /** Brand colours that are safe to paint on the white panel behind this. */
+  readonly accent = this.brandService.accent;
+  readonly accentAlt = this.brandService.accentAlt;
 
   /** Whether the small-screen list is open. Collapsed is the default. */
   private readonly expanded = signal(false);

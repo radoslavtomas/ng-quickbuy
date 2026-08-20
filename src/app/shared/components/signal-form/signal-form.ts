@@ -82,7 +82,9 @@ interface FormInstance {
 })
 export class SignalFormComponent implements OnInit {
   private readonly brandService = inject(BrandService);
-  readonly brand = this.brandService.config;
+
+  /** A chosen radio option is white on this, so it has to carry white text. */
+  readonly accentAlt = this.brandService.accentAlt;
 
   readonly fields = input.required<readonly FormFieldConfig[]>();
   readonly initialValue = input<Record<string, unknown>>({});

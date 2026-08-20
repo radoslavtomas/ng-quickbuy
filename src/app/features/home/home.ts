@@ -18,6 +18,10 @@ export class HomeComponent {
   readonly brand = this.brandService.config;
   readonly modules = this.brandService.modules;
 
+  /** Brand colours that are safe on the page's near-white background. */
+  readonly accent = this.brandService.accent;
+  readonly accentAlt = this.brandService.accentAlt;
+
   constructor() {
     this.journeySession.clearAll();
     this.journeyState.resetAll();

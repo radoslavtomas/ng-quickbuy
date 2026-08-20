@@ -1,14 +1,15 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { BrandService } from '../../../../core/services/brand.service';
-import { contrastColor } from '../../../../core/utils/contrast-color';
 import type { StepStatus } from '../../journeys/journey-progress';
+
+/** Every brand gets a white icon on a filled marker; the fill bends to allow it. */
+const MARKER_FOREGROUND = '#ffffff';
 
 /**
  * The circular marker for one step: its icon, its number and its state.
  *
  * Its own component because the wizard rail, the phone summary and the phone list
- * all draw the same thing, and because the brand colours it needs — including the
- * measured foreground that keeps it readable — are then resolved in one place.
+ * all draw the same thing, so the states are described once.
  */
 @Component({
   selector: 'app-step-marker',
@@ -38,7 +39,10 @@ export class StepMarkerComponent {
   readonly showNumber = input(true);
 
   private readonly brandService = inject(BrandService);
-  private readonly brand = this.brandService.config;
+
+  /** The contrast-safe brand colours, so the icon can be white on every brand. */
+  private readonly primary = this.brandService.accent;
+  private readonly secondary = this.brandService.accentAlt;
 
   /** A tick replaces the step's own icon once the step is behind the customer. */
   readonly icon = computed(() =>
@@ -49,32 +53,24 @@ export class StepMarkerComponent {
   readonly background = computed(() => {
     switch (this.status()) {
       case 'complete':
-        return this.brand.secondaryColor;
+        return this.secondary;
       case 'current':
-        return this.brand.primaryColor;
+        return this.primary;
       default:
         return null;
     }
   });
 
-  readonly foreground = computed(() => {
-    switch (this.status()) {
-      case 'complete':
-        return contrastColor(this.brand.secondaryColor);
-      case 'current':
-        return contrastColor(this.brand.primaryColor);
-      default:
-        return null;
-    }
-  });
+  /** White on a filled marker; the unfilled ones keep the slate default from CSS. */
+  readonly foreground = computed(() => (this.background() === null ? null : MARKER_FOREGROUND));
 
   readonly border = computed(() => {
     switch (this.status()) {
       case 'complete':
-        return this.brand.secondaryColor;
+        return this.secondary;
       case 'current':
       case 'unlocked':
-        return this.brand.primaryColor;
+        return this.primary;
       default:
         return null;
     }

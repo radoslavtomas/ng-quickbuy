@@ -1,8 +1,11 @@
 import { BRAND_CONFIGS } from '../config/brands.config';
-import { contrastColor, contrastRatio, parseColor, relativeLuminance } from './contrast-color';
-
-/** WCAG AA for normal-size text. */
-const AA_NORMAL_TEXT = 4.5;
+import {
+  AA_NORMAL_TEXT,
+  contrastRatio,
+  parseColor,
+  readableAgainst,
+  relativeLuminance,
+} from './contrast-color';
 
 describe('contrast colour', () => {
   it('parses the colour notations brand configuration may use', () => {
@@ -22,24 +25,43 @@ describe('contrast colour', () => {
     expect(contrastRatio('#ffffff', '#ffffff')).toBeCloseTo(1, 5);
   });
 
-  it('puts light text on a dark brand colour and dark text on a light one', () => {
-    expect(contrastColor('#07419d')).toBe('#ffffff');
-    // The old assumption: white here scores 2.2:1 and fails AA.
-    expect(contrastColor('#6facde')).toBe('#0f172a');
+  it('leaves a colour alone when it already passes', () => {
+    // ChoiceQuote navy against white is 11:1 with nothing to fix.
+    expect(readableAgainst('#07419d')).toBe('#07419d');
   });
 
-  it('falls back to white rather than nothing when the colour cannot be read', () => {
-    expect(contrastColor('var(--somebody-elses-token)')).toBe('#ffffff');
+  it('darkens a colour that is too pale for a white surface', () => {
+    // The old assumption: white on AJG blue scores 2.2:1 and fails AA.
+    const adjusted = readableAgainst('#6facde');
+
+    expect(adjusted).not.toBe('#6facde');
+    expect(contrastRatio(adjusted, '#ffffff')).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    // Still the same blue: blue stays the dominant channel, red the weakest.
+    const [r, g, b] = parseColor(adjusted) ?? [0, 0, 0];
+    expect(b).toBeGreaterThan(g);
+    expect(g).toBeGreaterThan(r);
   });
 
-  it('keeps every brand colour readable at AA', () => {
+  it('lightens rather than darkens when the surface is dark', () => {
+    const adjusted = readableAgainst('#07419d', '#0f172a');
+
+    expect(relativeLuminance(adjusted)).toBeGreaterThan(relativeLuminance('#07419d') ?? 0);
+    expect(contrastRatio(adjusted, '#0f172a')).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+  });
+
+  it('hands back a colour it cannot read, rather than inventing one', () => {
+    expect(readableAgainst('var(--somebody-elses-token)')).toBe('var(--somebody-elses-token)');
+  });
+
+  it('lets white sit on every brand colour once adjusted', () => {
     for (const brand of Object.values(BRAND_CONFIGS)) {
-      for (const background of [brand.primaryColor, brand.secondaryColor]) {
-        const ratio = contrastRatio(contrastColor(background), background);
+      for (const color of [brand.primaryColor, brand.secondaryColor]) {
+        const fill = readableAgainst(color);
+        const ratio = contrastRatio('#ffffff', fill);
 
         expect(
           ratio,
-          `${brand.id} ${background} scores ${ratio?.toFixed(2)}:1`,
+          `${brand.id} ${color} -> ${fill} scores ${ratio?.toFixed(2)}:1`,
         ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
       }
     }

@@ -8,5 +8,11 @@ import { BrandService } from '../../../core/services/brand.service';
   templateUrl: './not-found.html',
 })
 export class NotFoundComponent {
-  protected readonly brand = inject(BrandService).config;
+  private readonly brandService = inject(BrandService);
+
+  protected readonly brand = this.brandService.config;
+
+  /** The 404 badge and the home button are white on these, so they must carry it. */
+  protected readonly accent = this.brandService.accent;
+  protected readonly accentAlt = this.brandService.accentAlt;
 }
