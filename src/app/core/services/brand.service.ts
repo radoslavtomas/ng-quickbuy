@@ -1,13 +1,26 @@
-import { computed, inject, Injectable, Signal } from '@angular/core';
+import { computed, inject, Injectable, InjectionToken, Signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map, startWith } from 'rxjs';
-import type { BrandConfig } from '../models/brand.model';
+import type { BrandConfig, BrandId } from '../models/brand.model';
 import { BRAND_CONFIGS } from '../config/brands.config';
 import { DEFAULT_BRAND_ID } from '../config/dev.config';
 import { findModuleByCode, type ModuleDefinition } from '../config/module-catalogue';
 import { readableAgainst } from '../utils/contrast-color';
+
+/**
+ * Explicit override for the resolved brand, bypassing hostname detection and the
+ * `DEFAULT_BRAND_ID` fallback entirely.
+ *
+ * Tests provide this so which brand they exercise is a declared dependency rather
+ * than an inherited side effect of `dev.config.ts` — a spec that needs `qld`'s
+ * module list should say so, not rely on the fallback happening to be `qld`.
+ */
+export const BRAND_OVERRIDE = new InjectionToken<BrandId | null>('BRAND_OVERRIDE', {
+  providedIn: 'root',
+  factory: () => null,
+});
 
 @Injectable({ providedIn: 'root' })
 export class BrandService {
@@ -76,6 +89,9 @@ export class BrandService {
   }
 
   private detectBrand(): BrandConfig {
+    const override = inject(BRAND_OVERRIDE);
+    if (override) return BRAND_CONFIGS[override];
+
     const hostname = this.document.defaultView?.location.hostname ?? '';
 
     if (hostname.includes('quotelinedirect')) return BRAND_CONFIGS['qld'];
