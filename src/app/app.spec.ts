@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
+import { BRAND_OVERRIDE } from './core/services/brand.service';
 import { ModuleContextService } from './core/services/module-context.service';
 import { JourneyPersistenceService } from './features/modules/journeys/journey-persistence.service';
 
@@ -29,6 +30,9 @@ describe('App', () => {
         provideRouter(routes),
         { provide: ModuleContextService, useValue: moduleContextStub },
         { provide: JourneyPersistenceService, useValue: persistenceStub },
+        // These specs route to TX and HC, so they need a brand that sells both,
+        // regardless of what DEFAULT_BRAND_ID is set to for local development.
+        { provide: BRAND_OVERRIDE, useValue: 'qld' },
       ],
     }).compileComponents();
   });

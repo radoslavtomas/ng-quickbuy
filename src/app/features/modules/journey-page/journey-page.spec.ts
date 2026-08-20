@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { App } from '../../../app';
 import { routes } from '../../../app.routes';
+import { BRAND_OVERRIDE } from '../../../core/services/brand.service';
 import { ModuleContextService } from '../../../core/services/module-context.service';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
 import { JourneyPersistenceService } from '../journeys/journey-persistence.service';
@@ -50,6 +51,9 @@ describe('journey flow', () => {
         provideRouter(routes),
         { provide: ModuleContextService, useValue: moduleContextStub },
         { provide: JourneyPersistenceService, useValue: persistenceStub },
+        // These specs route to PC, which only qld sells, regardless of what
+        // DEFAULT_BRAND_ID is set to for local development.
+        { provide: BRAND_OVERRIDE, useValue: 'qld' },
       ],
     }).compileComponents();
 
