@@ -8,6 +8,7 @@ import { resolveFields } from '../journeys/journey-registry';
 import { AddressSectionComponent } from './sections/address-section.component';
 import { QuoteResultsSectionComponent } from './sections/quote-results-section.component';
 import { RepeatSectionComponent } from './sections/repeat-section.component';
+import { VehicleSearchSectionComponent } from './sections/vehicle-search-section.component';
 
 /** What the journey shell needs back from a section when the customer continues. */
 export interface SectionResult {
@@ -32,6 +33,7 @@ export interface SectionResult {
     AddressSectionComponent,
     QuoteResultsSectionComponent,
     RepeatSectionComponent,
+    VehicleSearchSectionComponent,
   ],
   template: `
     <ng-template #body>
@@ -67,6 +69,13 @@ export interface SectionResult {
                 [sectionId]="section().id"
               />
             }
+            @case ('vehicle-search') {
+              <app-vehicle-search-section
+                [moduleCode]="moduleCode()"
+                [stepName]="stepName()"
+                [sectionId]="section().id"
+              />
+            }
             @default {
               <p class="text-sm text-red-700">
                 No renderer is registered for section "{{ customComponent() }}".
@@ -96,6 +105,7 @@ export class SectionOutletComponent {
   private readonly addressSection = viewChild(AddressSectionComponent);
   private readonly quoteResults = viewChild(QuoteResultsSectionComponent);
   private readonly repeatSectionComponent = viewChild(RepeatSectionComponent);
+  private readonly vehicleSearchSection = viewChild(VehicleSearchSectionComponent);
 
   /** Narrowed view of the section for the repeat renderer's required input. */
   readonly repeatSection = computed(() => {
@@ -166,7 +176,8 @@ export class SectionOutletComponent {
 
     return (
       this.addressSection()?.collect() ??
-      this.quoteResults()?.collect() ?? { valid: true, values: {} }
+      this.quoteResults()?.collect() ??
+      this.vehicleSearchSection()?.collect() ?? { valid: true, values: {} }
     );
   }
 }

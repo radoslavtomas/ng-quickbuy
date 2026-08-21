@@ -13,6 +13,7 @@ import {
   resolveFields,
 } from '../../journeys/journey-registry';
 import { RISK_ADDRESS_FIELD_NAMES, RISK_ADDRESS_MATCHES_FIELD } from '../config/shared/common';
+import { VEHICLE_SEARCH_SECTION_ID, vehicleFieldKeys } from '../config/motor/vehicle-field-map';
 
 /** Internal names of the address fields the address section owns. */
 const ADDRESS_FIELDS: readonly string[] = [
@@ -77,6 +78,13 @@ export class QuoteRecallHydrationService {
         const address = this.pickAddress(source, mapper, consumedKeys);
         if (Object.keys(address).length > 0) {
           stepValues[ADDRESS_SECTION_ID] = address;
+        }
+      }
+
+      if (step.sections.some((section) => section.id === VEHICLE_SEARCH_SECTION_ID)) {
+        const vehicle = this.pickVehicle(source, moduleCode, consumedKeys);
+        if (Object.keys(vehicle).length > 0) {
+          stepValues[VEHICLE_SEARCH_SECTION_ID] = vehicle;
         }
       }
 
@@ -180,6 +188,36 @@ export class QuoteRecallHydrationService {
     }
 
     return address;
+  }
+
+  /**
+   * Reads the registration and ABI code the vehicle search needs to re-run its own
+   * VRM lookup on load. Recall never carries make or model, so those are left for
+   * the section to fetch itself; this only seeds what it needs to know to try.
+   * Values are kept under their backend wire keys, since that section stores its
+   * own answers under those keys directly rather than under internal names.
+   */
+  private pickVehicle(
+    source: Record<string, unknown>,
+    moduleCode: string,
+    consumedKeys: Set<string>,
+  ): Record<string, unknown> {
+    const keys = vehicleFieldKeys(moduleCode);
+    const vehicle: Record<string, unknown> = {};
+
+    for (const field of ['regnumber', 'abicode'] as const) {
+      const backendKey = keys[field];
+      const value = source[backendKey] ?? source[field];
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+
+      consumedKeys.add(backendKey);
+      consumedKeys.add(field);
+      vehicle[backendKey] = value;
+    }
+
+    return vehicle;
   }
 
   private normalizeValue(field: FormFieldConfig, value: unknown): unknown {

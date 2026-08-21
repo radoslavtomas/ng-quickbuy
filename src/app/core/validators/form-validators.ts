@@ -115,3 +115,48 @@ function createLicenseYearsByAgeValidator(options?: {
 }
 
 export const licenseYearsByAgeValidator = createLicenseYearsByAgeValidator();
+
+/** How far back a breakdown vehicle's year of manufacture may be from the current year. */
+const BD_VEHICLE_MAX_YEARS_IN_PAST = 13;
+
+/**
+ * BD's freeform "year of manufacture" field: a plausible 4-digit year, not in the
+ * future, and no more than 13 years old. All three checks describe one question
+ * — "is this year acceptable?" — so they share a single error kind rather than
+ * being split into `pattern`/`max`/`custom` rules that would each need their own
+ * message.
+ */
+export const bdVehicleYearValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const raw = control.value;
+  if (raw === null || raw === undefined || `${raw}`.trim() === '') {
+    return null;
+  }
+
+  const value = `${raw}`.trim();
+  if (!/^\d{4}$/.test(value)) {
+    return { bdVehicleYear: true };
+  }
+
+  const year = Number(value);
+  const currentYear = new Date().getFullYear();
+  const isValid = year <= currentYear && currentYear - year <= BD_VEHICLE_MAX_YEARS_IN_PAST;
+
+  return isValid ? null : { bdVehicleYear: true };
+};
+
+/** BD's freeform engine size field, expressed in whole cc. */
+export const bdVehicleEngineValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const raw = control.value;
+  if (raw === null || raw === undefined || `${raw}`.trim() === '') {
+    return null;
+  }
+
+  const value = Number(`${raw}`.trim());
+  const isValid = Number.isFinite(value) && value > 0 && value < 9999;
+
+  return isValid ? null : { bdVehicleEngine: true };
+};

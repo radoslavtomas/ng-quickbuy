@@ -26,26 +26,30 @@ describe('QuoteRecallHydrationService', () => {
 
     expect(result.hydratedSteps['your-details']['proposer']['forenames']).toBe('Alex');
     expect(result.hydratedSteps['your-details']['address']['addressLine1']).toBe('17 Talbot Road');
-    expect(result.hydratedSteps['your-vehicle']['vehicle']['registration']).toBe('AB12CDE');
+    expect(result.hydratedSteps['your-vehicle']['vehicleSearch']['vehicle-regnumber']).toBe(
+      'AB12CDE',
+    );
 
     // Coded backend values become the option values the form actually uses.
     expect(result.hydratedSteps['your-policy']['policy']['coverType']).toBe('comprehensive');
     // Numbers arrive as strings over the wire.
     expect(result.hydratedSteps['your-vehicle']['vehicle']['annualMileage']).toBe(12000);
 
-    expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['registration']).toBe(
-      'AB12CDE',
-    );
+    expect(
+      journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicleSearch')['vehicle-regnumber'],
+    ).toBe('AB12CDE');
   });
 
   it('also accepts a value already under its internal name', () => {
     // Useful for fixtures and for fields whose insurer key is not known yet.
     const result = service.mapRecallToJourney('PC', {
-      data: { forenames: 'Jordan', registration: 'XY99ZZZ' },
+      data: { forenames: 'Jordan', regnumber: 'XY99ZZZ' },
     });
 
     expect(result.hydratedSteps['your-details']['proposer']['forenames']).toBe('Jordan');
-    expect(result.hydratedSteps['your-vehicle']['vehicle']['registration']).toBe('XY99ZZZ');
+    expect(result.hydratedSteps['your-vehicle']['vehicleSearch']['vehicle-regnumber']).toBe(
+      'XY99ZZZ',
+    );
     expect(result.unresolvedFields).toEqual({});
   });
 

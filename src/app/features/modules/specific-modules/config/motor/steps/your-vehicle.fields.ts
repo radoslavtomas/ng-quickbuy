@@ -2,16 +2,6 @@ import { FormFieldConfig } from '../../../../../../core/models/form-field.model'
 
 export const MOTOR_YOUR_VEHICLE_FIELDS: readonly FormFieldConfig[] = [
   {
-    type: 'text',
-    label: 'Vehicle registration',
-    name: 'registration',
-    validators: [{ type: 'required' }, { type: 'maxLength', value: 10 }],
-    normalization: ['trim', 'uppercase'],
-    metadata: {
-      placeholder: 'AB12CDE',
-    },
-  },
-  {
     type: 'select',
     label: 'Vehicle use',
     name: 'vehicleUse',

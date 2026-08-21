@@ -3,6 +3,7 @@ import type { JourneyDefinition } from '../../../core/models/journey.model';
 import { createOccupationFields } from '../specific-modules/config/shared/occupation.fields';
 import { MOTOR_YOUR_DETAILS_FIELDS } from '../specific-modules/config/motor/steps/your-details.fields';
 import { MOTOR_YOUR_VEHICLE_FIELDS } from '../specific-modules/config/motor/steps/your-vehicle.fields';
+import { VEHICLE_SEARCH_SECTION_ID } from '../specific-modules/config/motor/vehicle-field-map';
 import {
   MOTOR_ADDITIONAL_DRIVERS_FIELDS,
   MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS,
@@ -75,12 +76,17 @@ export const MOTOR_JOURNEY: JourneyDefinition = {
       storeStep: 'your-vehicle',
       sections: [
         {
+          kind: 'custom',
+          id: VEHICLE_SEARCH_SECTION_ID,
+          title: 'Your vehicle',
+          component: 'vehicle-search',
+        },
+        {
           kind: 'fields',
           id: 'vehicle',
           title: 'Vehicle details',
           fields: MOTOR_YOUR_VEHICLE_FIELDS,
           defaults: {
-            registration: '',
             vehicleUse: '',
             annualMileage: 0,
             overnightLocation: '',

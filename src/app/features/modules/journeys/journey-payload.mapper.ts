@@ -6,6 +6,7 @@ import {
   RISK_ADDRESS_HOUSE_NAME_NUMBER_FIELD,
   RISK_ADDRESS_MATCHES_FIELD,
 } from '../specific-modules/config/shared/common';
+import { VEHICLE_SEARCH_UI_ONLY_FIELDS } from '../specific-modules/config/motor/vehicle-field-map';
 
 /**
  * Internal name of the policy start date.
@@ -90,6 +91,7 @@ const UI_ONLY_FIELDS: ReadonlySet<string> = new Set([
   'houseNameNumber',
   RISK_ADDRESS_MATCHES_FIELD,
   RISK_ADDRESS_HOUSE_NAME_NUMBER_FIELD,
+  ...VEHICLE_SEARCH_UI_ONLY_FIELDS,
 ]);
 
 /** Keys that belong to the policy rather than to a person. */

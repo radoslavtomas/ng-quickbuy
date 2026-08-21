@@ -8,11 +8,23 @@ import { JourneyStateService } from '../../../core/services/journey-state.servic
 import { JourneyPersistenceService } from '../journeys/journey-persistence.service';
 import { getJourneyForModule, getStepIndex } from '../journeys/journey-registry';
 
-const VALID_VEHICLE_ANSWERS = {
-  registration: 'AB12CDE',
+const VALID_VEHICLE_DETAILS_ANSWERS = {
   vehicleUse: 'sdp',
   annualMileage: 12000,
   overnightLocation: 'driveway',
+};
+
+/** A fully resolved vehicle, keyed the way the vehicle search section stores it. */
+const RESOLVED_VEHICLE_SEARCH_ANSWERS = {
+  'vehicle-regnumber': 'AB12CDE',
+  'vehicle-make': 'AUDI',
+  'vehicle-model': 'Q7 S LINE QUATTRO TDI 272',
+  'vehicle-yearofmanufacture': 2017,
+  'vehicle-fuel': 'D',
+  'vehicles-vehicle-1-enginecc': 2967,
+  'vehicle-transmission': 'A',
+  'vehicle-abicode': '04135717',
+  vehicleSearchMode: 'vrm',
 };
 
 const RESOLVED_ADDRESS = {
@@ -130,6 +142,17 @@ describe('journey flow', () => {
     return (fixture.nativeElement as HTMLElement).querySelector(`[data-field="${name}"]`);
   }
 
+  /** Seeds a fully resolved vehicle plus valid vehicle-details answers for `moduleCode`. */
+  function seedValidVehicleStep(state: JourneyStateService, moduleCode = 'PC'): void {
+    state.setSectionAnswers(
+      moduleCode,
+      'your-vehicle',
+      'vehicleSearch',
+      RESOLVED_VEHICLE_SEARCH_ANSWERS,
+    );
+    state.setSectionAnswers(moduleCode, 'your-vehicle', 'vehicle', VALID_VEHICLE_DETAILS_ANSWERS);
+  }
+
   it('renders the step heading and progress from the journey definition', async () => {
     const fixture = await renderAt('/PC/your-vehicle');
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -141,7 +164,7 @@ describe('journey flow', () => {
   });
 
   it('advances to the next step and records completion when the step is valid', async () => {
-    journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
+    seedValidVehicleStep(journeyState);
 
     const fixture = await renderAt('/PC/your-vehicle');
     continueButton(fixture)?.click();
@@ -164,12 +187,24 @@ describe('journey flow', () => {
   });
 
   it('persists answers the customer typed so returning to a step restores them', async () => {
-    journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
+    seedValidVehicleStep(journeyState);
 
     const fixture = await renderAt('/PC/your-vehicle');
-    const registration = field(fixture, 'registration') as HTMLInputElement | null;
 
-    expect(registration?.value).toBe('AB12CDE');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vehicle found');
+  });
+
+  it('persists the registration the customer typed before searching', async () => {
+    const fixture = await renderAt('/PC/your-vehicle');
+    const registration = field(fixture, 'registration') as HTMLInputElement;
+
+    registration.value = 'AB12CDE';
+    registration.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    expect(
+      journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicleSearch')['vehicle-regnumber'],
+    ).toBe('AB12CDE');
   });
 
   // it('hides the proposer questions until an address is resolved', async () => {
@@ -576,7 +611,7 @@ describe('journey flow', () => {
     });
 
     it('submits the current step when jumping forward, exactly as Continue does', async () => {
-      journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
+      seedValidVehicleStep(journeyState);
       const fixture = await renderAt('/PC/your-vehicle');
 
       stepButton(fixture, 3)?.click();
@@ -622,9 +657,9 @@ describe('journey flow', () => {
       await fixture.whenStable();
 
       expect(router.url).toContain('/PC/your-details');
-      expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['registration']).toBe(
-        'XY19ZAB',
-      );
+      expect(
+        journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicleSearch')['vehicle-regnumber'],
+      ).toBe('XY19ZAB');
     });
 
     it('marks completed steps and counts them on the progress dial', async () => {
@@ -657,7 +692,7 @@ describe('journey flow', () => {
     });
 
     it('keeps a reload on a later step where the customer was', async () => {
-      journeyState.setSectionAnswers('PC', 'your-vehicle', 'vehicle', VALID_VEHICLE_ANSWERS);
+      seedValidVehicleStep(journeyState);
       journeyState.markStepComplete('PC', 'your-details');
       journeyState.markStepComplete('PC', 'your-vehicle');
 
@@ -676,9 +711,9 @@ describe('journey flow', () => {
       const reloadedState = TestBed.inject(JourneyStateService);
 
       expect(reloadedState.isStepComplete('PC', 'your-vehicle')).toBe(true);
-      expect(reloadedState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['registration']).toBe(
-        'AB12CDE',
-      );
+      expect(
+        reloadedState.sectionAnswers('PC', 'your-vehicle', 'vehicleSearch')['vehicle-regnumber'],
+      ).toBe('AB12CDE');
 
       await reloadedRouter.navigateByUrl('/PC/additional-drivers');
       const fixture = TestBed.createComponent(App);
