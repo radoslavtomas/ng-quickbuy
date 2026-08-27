@@ -159,6 +159,15 @@ export class VehicleVrmSearchComponent {
     await this.runVrmSearch(asString(result.values['registration']));
   }
 
+  /**
+   * Section contract delegate: reveals the registration field's own "required"
+   * message and red border, the same as pressing Continue does for every other
+   * field, instead of leaving the customer with only the section-level summary.
+   */
+  touch(): void {
+    this.registrationForm()?.collect();
+  }
+
   /** Runs the VRM search directly, used both by the search button and by recall auto-resolution. */
   async runVrmSearch(registration: string): Promise<void> {
     if (this.loading() || !registration) {

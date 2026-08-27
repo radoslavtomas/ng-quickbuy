@@ -13,6 +13,13 @@ export type FormFieldType =
   | 'toggle'
   /** Search-driven field whose answer is an `AutocompleteOption`. */
   | 'autocomplete'
+  /**
+   * A `select` whose options are not known until they are fetched, optionally
+   * keyed on sibling answers. Picking a new value for a dependency clears this
+   * field and reloads its options, so a cascade of these composes automatically
+   * without each field having to know about the others.
+   */
+  | 'dynamic-select'
   /** Not a question: a value assembled from the section's other answers. */
   | 'derived';
 
@@ -41,6 +48,35 @@ export type AutocompleteEndpoint = 'occupation' | 'industry';
 
 export interface AutocompleteConfig {
   endpoint: AutocompleteEndpoint;
+}
+
+/**
+ * Named backend a `dynamic-select` field loads its options from.
+ *
+ * Adding a new cascading select anywhere in the app is a configuration change
+ * plus one entry in `DynamicOptionsSourceService` — the renderer stays unaware
+ * of what is being loaded, exactly like `AutocompleteEndpoint`.
+ */
+export type DynamicSelectEndpoint = 'iris-make' | 'iris-model' | 'iris-year' | 'iris-edition';
+
+/**
+ * How a `dynamic-select` field's options are loaded.
+ *
+ * `dependsOn` names the sibling fields this field's options are a function of.
+ * Changing any of them both reloads this field's options and clears its current
+ * answer, since an answer chosen against the old options is no longer known to
+ * describe anything real — that in turn clears whatever depends on *this* field,
+ * so a multi-level cascade needs no coordination beyond each field naming its own
+ * direct dependencies.
+ *
+ * `context` is fixed configuration baked in when the field list was built (for
+ * example, which catalogue to search), as distinct from `dependsOn`, which is
+ * live and answered by the customer.
+ */
+export interface DynamicSelectConfig {
+  endpoint: DynamicSelectEndpoint;
+  dependsOn?: readonly string[];
+  context?: Readonly<Record<string, unknown>>;
 }
 
 /**
@@ -76,6 +112,7 @@ export interface FieldMetadata {
   radioLayout?: 'row' | 'column';
   valueTransform?: 'booleanYN' | 'numberString';
   autocompleteConfig?: AutocompleteConfig;
+  dynamicSelectConfig?: DynamicSelectConfig;
 }
 
 export interface FieldValidatorConfig {

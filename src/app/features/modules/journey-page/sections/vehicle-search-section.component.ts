@@ -100,6 +100,8 @@ export class VehicleSearchSectionComponent {
   private readonly journeyState = inject(JourneyStateService);
   private readonly lookup = inject(VehicleLookupService);
   private readonly bdManualSearch = viewChild(VehicleBdManualSearchComponent);
+  private readonly vrmSearch = viewChild(VehicleVrmSearchComponent);
+  private readonly irisSearch = viewChild(VehicleIrisSearchComponent);
 
   private readonly triedToContinue = signal(false);
   private readonly recallChecked = signal(false);
@@ -287,6 +289,13 @@ export class VehicleSearchSectionComponent {
         this.store(toVehicleWireAnswers(this.moduleCode(), result.values));
         return { valid: result.valid, values: { ...this.storedWireValues() } };
       }
+    } else if (this.mode() === 'vrm') {
+      // Not resolved yet: reveal the registration field's own "required" message
+      // and red border, the same as every other field on Continue, rather than
+      // leaving the customer with only the section-level summary below it.
+      this.vrmSearch()?.touch();
+    } else {
+      this.irisSearch()?.touch();
     }
 
     return { valid: this.hasValidVehicle(), values: { ...this.storedWireValues() } };

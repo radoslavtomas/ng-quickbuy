@@ -256,5 +256,7 @@ function emptyValueFor(field: FormFieldConfig): unknown {
 
   // An unresolved search field is `null` rather than `''`, which is also what
   // `required` treats as empty, so typed-but-unmatched text is not an answer.
+  // A `dynamic-select` behaves like an ordinary `select` here: its options may
+  // not have loaded yet, but the field itself still answers with a plain string.
   return field.type === 'autocomplete' ? null : '';
 }

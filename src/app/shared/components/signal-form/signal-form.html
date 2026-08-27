@@ -152,6 +152,51 @@
                 }
               </select>
             </div>
+          } @else if (field.type === 'dynamic-select') {
+            <!--
+              Same markup and `[formField]` binding as a plain `select`: the only
+              difference is that its options come from `dynamicOptionsFor()`
+              instead of static configuration, kept current by an effect in the
+              component rather than anything in this template.
+            -->
+            <div class="relative mt-2 w-full min-w-0">
+              <select
+                [id]="controlId(field)"
+                [attr.data-field]="field.name"
+                [formField]="stringField(field)"
+                [attr.aria-describedby]="messageId(field)"
+                [attr.aria-invalid]="isInvalid(field)"
+                [attr.aria-busy]="isDynamicSelectLoading(field)"
+                class="h-11 w-full min-w-0 rounded-md border bg-white px-2.5 text-[0.95rem] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-500"
+                [class.border-slate-400]="!isInvalid(field) && !isValid(field)"
+                [class.border-red-500]="isInvalid(field)"
+                [class.bg-red-50]="isInvalid(field)"
+                [class.border-green-500]="isValid(field)"
+                [class.bg-green-50]="isValid(field)"
+              >
+                <option value="">
+                  {{ isDynamicSelectLoading(field) ? 'Loading…' : (field.metadata?.placeholder || '- Please choose -') }}
+                </option>
+                @for (option of dynamicOptionsFor(field); track option.value) {
+                  <option [value]="option.value" [disabled]="option.disabled ?? false">
+                    {{ option.label }}
+                  </option>
+                }
+              </select>
+
+              @if (isDynamicSelectLoading(field)) {
+                <span
+                  class="absolute right-8 top-1/2 -translate-y-1/2 text-xs text-slate-400"
+                  aria-hidden="true"
+                >
+                  <i class="fa-solid fa-spinner fa-spin"></i>
+                </span>
+              }
+
+              @if (dynamicSelectErrorFor(field); as dynamicError) {
+                <p class="mt-1 text-[0.82rem] text-red-700" role="alert">{{ dynamicError }}</p>
+              }
+            </div>
           } @else if (field.type === 'autocomplete') {
             <!--
               No `disabled` binding: the directive owns disabled state and pushes it
