@@ -175,7 +175,11 @@
                 [class.bg-green-50]="isValid(field)"
               >
                 <option value="">
-                  {{ isDynamicSelectLoading(field) ? 'Loading…' : (field.metadata?.placeholder || '- Please choose -') }}
+                  {{
+                    isDynamicSelectLoading(field)
+                      ? 'Loading…'
+                      : field.metadata?.placeholder || '- Please choose -'
+                  }}
                 </option>
                 @for (option of dynamicOptionsFor(field); track option.value) {
                   <option [value]="option.value" [disabled]="option.disabled ?? false">

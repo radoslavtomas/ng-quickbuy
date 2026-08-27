@@ -241,7 +241,7 @@ description }`), not the text in the box. It names a backend with
   `metadata.dynamicSelectConfig.endpoint`, which `DynamicOptionsSourceService` resolves to a real
   loader — the same "endpoint key in config, one entry in a registry" shape as `autocomplete`.
   `dependsOn` lists the sibling fields its options are a function of; changing one of them clears
-  this field's own answer and reloads its options, which in turn clears whatever depends on *this*
+  this field's own answer and reloads its options, which in turn clears whatever depends on _this_
   field. A multi-level cascade therefore needs no coordinator beyond each field naming its own direct
   dependency — see the vehicle search step's make → model → year → edition
   (`createVehicleIrisFields()`). It renders through the same native `<select>` / `[formField]` path
@@ -264,6 +264,7 @@ description }`), not the text in the box. It names a backend with
     },
   }
   ```
+
 - **`derived`** is not a question at all. It has no control, no node in the field tree and no key in
   the model; its `derived.from(values)` runs whenever the section is read. Use it when one insurer
   key can be answered several ways, so the value is recomputed rather than stored and cannot go
@@ -329,10 +330,10 @@ Things to know before extending it:
 - **A `dynamic-select`'s cascade resets the model directly**, the same technique `normalize()` uses,
   rather than going through a custom `FormValueControl` component — an earlier attempt at that ran
   into `[formField]`'s custom-control bridging not reliably wiring value writes back in this Signal
-  Forms version. One consequence: a freshly created effect's *first* run is scheduled rather than
+  Forms version. One consequence: a freshly created effect's _first_ run is scheduled rather than
   flushed inline, so a test asserting on a section's initial `dynamic-select` options needs one
   `await fixture.whenStable()` after the first `detectChanges()`; a later change reacted to by an
-  *already-running* effect updates synchronously within the same `detectChanges()` call.
+  _already-running_ effect updates synchronously within the same `detectChanges()` call.
 
 ## Journey state
 

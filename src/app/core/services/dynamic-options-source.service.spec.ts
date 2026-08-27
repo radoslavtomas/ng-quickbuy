@@ -1,10 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
-import type { IrisMakesResponse, IrisModelsResponse, IrisSearchResponse } from '../models/vehicle-search.model';
+import type {
+  IrisMakesResponse,
+  IrisModelsResponse,
+  IrisSearchResponse,
+} from '../models/vehicle-search.model';
 import { DynamicOptionsSourceService } from './dynamic-options-source.service';
 import { VehicleIrisService } from './vehicle-iris.service';
 
-type VehicleIrisStub = Pick<VehicleIrisService, 'getMakes' | 'getModels' | 'searchCached' | 'matchesOf'>;
+type VehicleIrisStub = Pick<
+  VehicleIrisService,
+  'getMakes' | 'getModels' | 'searchCached' | 'matchesOf'
+>;
 
 describe('DynamicOptionsSourceService', () => {
   let service: DynamicOptionsSourceService;
@@ -98,9 +105,7 @@ describe('DynamicOptionsSourceService', () => {
       }),
     );
 
-    expect(options).toEqual([
-      { label: 'FORD ESCORT - Hatch - 1400cc - Petrol', value: 'ABI-1' },
-    ]);
+    expect(options).toEqual([{ label: 'FORD ESCORT - Hatch - 1400cc - Petrol', value: 'ABI-1' }]);
   });
 
   it('returns no editions when the chosen year is outside every match', async () => {

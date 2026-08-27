@@ -1,4 +1,13 @@
-import { Component, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import type { NormalizedVehicle } from '../../../../core/models/vehicle-search.model';
 import {

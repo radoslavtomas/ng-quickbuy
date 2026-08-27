@@ -223,20 +223,27 @@ class StubDynamicOptionsSourceService {
             return of([]);
           }
 
-          return of([{ label: `${make} A`, value: 'A' }, { label: `${make} B`, value: 'B' }]);
+          return of([
+            { label: `${make} A`, value: 'A' },
+            { label: `${make} B`, value: 'B' },
+          ]);
         },
       };
     }
 
-    return { loadOptions: () => of([{ label: 'FORD', value: 'FORD' }, { label: 'AUDI', value: 'AUDI' }]) };
+    return {
+      loadOptions: () =>
+        of([
+          { label: 'FORD', value: 'FORD' },
+          { label: 'AUDI', value: 'AUDI' },
+        ]),
+    };
   }
 }
 
 @Component({
   imports: [SignalFormComponent],
-  template: `
-    <app-signal-form [fields]="fields()" [initialValue]="initialValue()" />
-  `,
+  template: ` <app-signal-form [fields]="fields()" [initialValue]="initialValue()" /> `,
 })
 class DynamicSelectHostComponent {
   readonly fields = signal<readonly FormFieldConfig[]>(DYNAMIC_SELECT_FIELDS);
@@ -283,8 +290,8 @@ describe('SignalFormComponent with a dynamic-select field', () => {
   it("loads the dependent field's options from its own dependency", () => {
     chooseOption('make', 'FORD');
 
-    const options = Array.from(select('model')?.querySelectorAll('option') ?? []).map(
-      (option) => option.textContent?.trim(),
+    const options = Array.from(select('model')?.querySelectorAll('option') ?? []).map((option) =>
+      option.textContent?.trim(),
     );
     expect(options).toContain('FORD A');
     expect(options).toContain('FORD B');

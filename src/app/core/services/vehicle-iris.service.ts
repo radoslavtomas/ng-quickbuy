@@ -26,9 +26,7 @@ export function toSortedNameOptions(names: readonly string[]): readonly FormFiel
 
 /** The years a search returned, most recent first — newest models are picked more often. */
 export function toDescendingYearOptions(years: readonly number[]): readonly FormFieldOption[] {
-  return [...years]
-    .sort((a, b) => b - a)
-    .map((year) => ({ label: `${year}`, value: `${year}` }));
+  return [...years].sort((a, b) => b - a).map((year) => ({ label: `${year}`, value: `${year}` }));
 }
 
 /** One selectable edition, labelled from the attributes a customer would recognise. */
@@ -99,7 +97,11 @@ export class VehicleIrisService {
   }
 
   /** `search`, sharing one in-flight or completed response per module/make/model. */
-  searchCached(irisModule: IrisModule, make: string, model: string): Observable<IrisSearchResponse> {
+  searchCached(
+    irisModule: IrisModule,
+    make: string,
+    model: string,
+  ): Observable<IrisSearchResponse> {
     const key = `${irisModule}|${make}|${model}`;
     let cached = this.searchCache.get(key);
 
