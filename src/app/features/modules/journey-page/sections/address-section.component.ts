@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import type { AddressLookupMatch } from '../../../../core/services/address-lookup.service';
 import { JourneyStateService } from '../../../../core/services/journey-state.service';
 import {
@@ -36,6 +36,7 @@ import { SignalFormComponent } from '../../../../shared/components/signal-form/s
     }
 
     <app-address-search
+      #mainAddressSearch
       [initialPostcode]="criteria().postcode"
       [initialNumberOrName]="criteria().numberOrName"
       [initialAddress]="resolvedAddress()"
@@ -65,6 +66,7 @@ import { SignalFormComponent } from '../../../../shared/components/signal-form/s
 
         @if (riskAddressMatches() === 'no') {
           <app-address-search
+            #riskAddressSearch
             [initialPostcode]="riskCriteria().postcode"
             [initialNumberOrName]="riskCriteria().numberOrName"
             [initialAddress]="resolvedRiskAddress()"
@@ -93,6 +95,8 @@ export class AddressSectionComponent {
 
   private readonly journeyState = inject(JourneyStateService);
   private readonly requiredErrorVisible = signal(false);
+  private readonly mainAddressSearch = viewChild<AddressSearchComponent>('mainAddressSearch');
+  private readonly riskAddressSearch = viewChild<AddressSearchComponent>('riskAddressSearch');
 
   readonly riskAddressQuestionFields = RISK_ADDRESS_QUESTION_FIELD;
 
@@ -297,6 +301,14 @@ export class AddressSectionComponent {
     const values = this.storedValues();
     const valid = hasAddressState(values) && this.riskAddressValid();
     this.requiredErrorVisible.set(!valid);
+
+    // Reveal each search's own "required" messages and red borders, the same as
+    // every other field on Continue, rather than leaving the customer with only
+    // the section-level summary below it. Each call no-ops once its own address
+    // is already resolved.
+    this.mainAddressSearch()?.validateCurrentInput();
+    this.riskAddressSearch()?.validateCurrentInput();
+
     return { valid, values: { ...values } };
   }
 

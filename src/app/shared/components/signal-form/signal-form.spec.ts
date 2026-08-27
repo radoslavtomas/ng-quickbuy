@@ -1,6 +1,6 @@
 import { Component, signal, viewChild } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import type { AutocompleteOption } from '../../../core/models/autocomplete-option.model';
 import type { FormFieldConfig } from '../../../core/models/form-field.model';
@@ -8,6 +8,10 @@ import {
   AutocompleteSourceService,
   type AutocompleteSource,
 } from '../../../core/services/autocomplete-source.service';
+import {
+  DynamicOptionsSourceService,
+  type DynamicOptionsSource,
+} from '../../../core/services/dynamic-options-source.service';
 import { createOccupationFields } from '../../../features/modules/specific-modules/config/shared/occupation.fields';
 import { SEARCH_DEBOUNCE_MS } from './autocomplete-input/autocomplete-input';
 import { SignalFormComponent } from './signal-form';
@@ -179,5 +183,146 @@ describe('SignalFormComponent with a search field', () => {
 
     chooseStatus('U');
     expect(host.latest['occupationCode']).toBe('U03');
+  });
+});
+
+const DYNAMIC_SELECT_FIELDS: readonly FormFieldConfig[] = [
+  {
+    type: 'dynamic-select',
+    label: 'Make',
+    name: 'make',
+    validators: [{ type: 'required' }],
+    metadata: { dynamicSelectConfig: { endpoint: 'iris-make', context: {} } },
+  },
+  {
+    type: 'dynamic-select',
+    label: 'Model',
+    name: 'model',
+    validators: [{ type: 'required' }],
+    visibleWhen: [{ field: 'make', operator: 'truthy' }],
+    metadata: { dynamicSelectConfig: { endpoint: 'iris-model', dependsOn: ['make'], context: {} } },
+  },
+];
+
+/** Fakes a make -> model cascade: models are named after whichever make loaded them. */
+class StubDynamicOptionsSourceService {
+  readonly modelRequests: Readonly<Record<string, unknown>>[] = [];
+  forEndpointError = false;
+
+  forEndpoint(endpoint: string): DynamicOptionsSource {
+    if (endpoint === 'iris-model') {
+      return {
+        loadOptions: (request) => {
+          this.modelRequests.push(request.dependsOn);
+          if (this.forEndpointError) {
+            return throwError(() => new Error('boom'));
+          }
+
+          const make = request.dependsOn['make'];
+          if (!make) {
+            return of([]);
+          }
+
+          return of([{ label: `${make} A`, value: 'A' }, { label: `${make} B`, value: 'B' }]);
+        },
+      };
+    }
+
+    return { loadOptions: () => of([{ label: 'FORD', value: 'FORD' }, { label: 'AUDI', value: 'AUDI' }]) };
+  }
+}
+
+@Component({
+  imports: [SignalFormComponent],
+  template: `
+    <app-signal-form [fields]="fields()" [initialValue]="initialValue()" />
+  `,
+})
+class DynamicSelectHostComponent {
+  readonly fields = signal<readonly FormFieldConfig[]>(DYNAMIC_SELECT_FIELDS);
+  readonly initialValue = signal<Record<string, unknown>>({});
+  readonly form = viewChild.required(SignalFormComponent);
+}
+
+describe('SignalFormComponent with a dynamic-select field', () => {
+  let fixture: ComponentFixture<DynamicSelectHostComponent>;
+  let sourceService: StubDynamicOptionsSourceService;
+
+  beforeEach(async () => {
+    sourceService = new StubDynamicOptionsSourceService();
+
+    await TestBed.configureTestingModule({
+      imports: [DynamicSelectHostComponent],
+      providers: [{ provide: DynamicOptionsSourceService, useValue: sourceService }],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(DynamicSelectHostComponent);
+    fixture.detectChanges();
+  });
+
+  function select(name: string): HTMLSelectElement | null {
+    return fixture.nativeElement.querySelector(`[data-field="${name}"]`);
+  }
+
+  function chooseOption(name: string, value: string): void {
+    const control = select(name) as HTMLSelectElement;
+    control.value = value;
+    // Signal Forms reads native controls on `input`; a browser fires it for selects.
+    control.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  }
+
+  it('hides the dependent field until its dependency is answered', () => {
+    expect(select('model')).toBeNull();
+
+    chooseOption('make', 'FORD');
+
+    expect(select('model')).not.toBeNull();
+  });
+
+  it("loads the dependent field's options from its own dependency", () => {
+    chooseOption('make', 'FORD');
+
+    const options = Array.from(select('model')?.querySelectorAll('option') ?? []).map(
+      (option) => option.textContent?.trim(),
+    );
+    expect(options).toContain('FORD A');
+    expect(options).toContain('FORD B');
+  });
+
+  it('clears the dependent answer when the dependency changes after it was answered', () => {
+    chooseOption('make', 'FORD');
+    chooseOption('model', 'A');
+    expect(fixture.componentInstance.form().collect().values['model']).toBe('A');
+
+    chooseOption('make', 'AUDI');
+
+    expect(select('model')?.value).toBe('');
+    expect(fixture.componentInstance.form().collect().values['model']).toBe('');
+  });
+
+  it('restores a persisted answer without clearing it on first load', async () => {
+    const recalled = TestBed.createComponent(DynamicSelectHostComponent);
+    recalled.componentInstance.initialValue.set({ make: 'FORD', model: 'A' });
+    recalled.detectChanges();
+    // A brand-new effect's first run is scheduled rather than flushed inline, so
+    // this component needs one microtask before its dynamic-select options land.
+    await recalled.whenStable();
+    recalled.detectChanges();
+
+    const modelSelect = recalled.nativeElement.querySelector(
+      '[data-field="model"]',
+    ) as HTMLSelectElement;
+    expect(modelSelect.value).toBe('A');
+    expect(recalled.componentInstance.form().collect().values['model']).toBe('A');
+  });
+
+  it('shows an error and empty options when the source fails', () => {
+    sourceService.forEndpointError = true;
+    chooseOption('make', 'FORD');
+
+    const modelSelect = select('model');
+    const modelHost = modelSelect?.closest('.relative');
+    expect(modelHost?.textContent).toContain('Unable to load options');
   });
 });

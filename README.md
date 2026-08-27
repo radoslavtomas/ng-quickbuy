@@ -229,13 +229,41 @@ type, label, help text, options, validators, normalization rules and conditional
 }
 ```
 
-Two field types are not plain inputs:
+Three field types are not plain inputs:
 
 - **`autocomplete`** is a search box whose answer is a whole `AutocompleteOption` (`{ code,
 description }`), not the text in the box. It names a backend with
   `metadata.autocompleteConfig.endpoint`, which `AutocompleteSourceService` resolves to a real
   service. Typed text that matched nothing leaves the value `null`, so `required` rejects it — a
   match is never chosen on the customer's behalf.
+- **`dynamic-select`** is a `<select>` whose options are not known until they are fetched, optionally
+  keyed on the live value of sibling fields. It names a backend with
+  `metadata.dynamicSelectConfig.endpoint`, which `DynamicOptionsSourceService` resolves to a real
+  loader — the same "endpoint key in config, one entry in a registry" shape as `autocomplete`.
+  `dependsOn` lists the sibling fields its options are a function of; changing one of them clears
+  this field's own answer and reloads its options, which in turn clears whatever depends on *this*
+  field. A multi-level cascade therefore needs no coordinator beyond each field naming its own direct
+  dependency — see the vehicle search step's make → model → year → edition
+  (`createVehicleIrisFields()`). It renders through the same native `<select>` / `[formField]` path
+  as an ordinary `select`, so it looks and behaves like every other select; only where its options
+  come from differs, and no bespoke component is needed.
+
+  ```ts
+  {
+    type: 'dynamic-select',
+    label: 'Model',
+    name: 'model',
+    validators: [{ type: 'required' }],
+    visibleWhen: [{ field: 'make', operator: 'truthy' }],
+    metadata: {
+      dynamicSelectConfig: {
+        endpoint: 'iris-model',
+        dependsOn: ['make'],
+        context: { irisModule: 'PC' },
+      },
+    },
+  }
+  ```
 - **`derived`** is not a question at all. It has no control, no node in the field tree and no key in
   the model; its `derived.from(values)` runs whenever the section is read. Use it when one insurer
   key can be answered several ways, so the value is recomputed rather than stored and cannot go
@@ -261,7 +289,10 @@ The runtime is **Angular Signal Forms** (`@angular/forms/signals`):
   configuration-driven model cannot promise. Conditions become `hidden`/`disabled` logic that
   re-evaluates itself, and existing `ValidatorFn`s are bridged rather than rewritten.
 - `shared/components/signal-form/` renders a section from that schema, binding `[formField]` per
-  field type and exposing `collect()` for the journey shell.
+  field type and exposing `collect()` for the journey shell. A `dynamic-select` field is the one
+  exception to "the schema decides everything": `SignalFormComponent` sets up one `effect()` per such
+  field, reading its `dependsOn` values straight out of the shared model and resolving its
+  `metadata.dynamicSelectConfig.endpoint` through `DynamicOptionsSourceService`.
 - `FormNormalizationService` still applies trim/uppercase/phone/date/currency coercion on blur.
 - `FormValidationMessageService` supplies wording for rules with no configured message, keyed by
   Signal Forms error kind.
@@ -295,6 +326,13 @@ Things to know before extending it:
 - **Radio values arrive as strings**, because the native binding reads `element.value`.
 - The directive owns `disabled`, `required` and `pattern`, so those cannot be bound directly on a
   `[formField]` host.
+- **A `dynamic-select`'s cascade resets the model directly**, the same technique `normalize()` uses,
+  rather than going through a custom `FormValueControl` component — an earlier attempt at that ran
+  into `[formField]`'s custom-control bridging not reliably wiring value writes back in this Signal
+  Forms version. One consequence: a freshly created effect's *first* run is scheduled rather than
+  flushed inline, so a test asserting on a section's initial `dynamic-select` options needs one
+  `await fixture.whenStable()` after the first `detectChanges()`; a later change reacted to by an
+  *already-running* effect updates synchronously within the same `detectChanges()` call.
 
 ## Journey state
 
@@ -402,7 +440,8 @@ src/app/
     http/                        interceptor and ApiError
     models/                      shared types incl. journey and payload contracts
     services/                    brand, journey state, journey session, module context, clock,
-                                 normalization, validation messages, HTTP clients
+                                 normalization, validation messages, dynamic options source,
+                                 HTTP clients
     validators/                  reusable ValidatorFn implementations
   features/
     home/                        brand product grid
@@ -468,6 +507,21 @@ Slots are assigned by position, so removing an item re-packs the rest.
 3. Its answer is an `AutocompleteOption`, which is UI state. Add the field name to `UI_ONLY_FIELDS`
    in the mapper and send the code through a `derived` field, so the wording the customer read
    never reaches the insurer.
+
+### Add a cascading or asynchronously-loaded select
+
+1. Add a loader to `DynamicOptionsSourceService` under a new endpoint key, returning
+   `Observable<readonly FormFieldOption[]>` for a given `{ context, dependsOn }` request.
+2. Add a `dynamic-select` field naming that key in `metadata.dynamicSelectConfig.endpoint`. Set
+   `dependsOn` to the sibling fields its options are a function of, and `context` for anything fixed
+   when the field list is built (which catalogue to search, say).
+3. Gate it behind `visibleWhen` on that same dependency, so it only appears once there is something
+   to load options for. `createVehicleIrisFields()` is a four-level example: make → model → year →
+   edition.
+
+No new component is needed: it renders through the same native `<select>` / `[formField]` path as an
+ordinary `select`, and picking a new value for a dependency clears and reloads whatever depends on it
+automatically.
 
 ### Add a section with bespoke UI
 

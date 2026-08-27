@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   Injector,
   type OnInit,
   type WritableSignal,
@@ -9,8 +10,11 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { type Field, FormField, form } from '@angular/forms/signals';
+import { catchError, of } from 'rxjs';
 import {
   applyDerivedValues,
   buildSectionModel,
@@ -19,15 +23,21 @@ import {
   type SectionModel,
 } from '../../../core/forms/signal-forms-schema';
 import type { AutocompleteOption } from '../../../core/models/autocomplete-option.model';
-import type { FormFieldConfig } from '../../../core/models/form-field.model';
+import type { FormFieldConfig, FormFieldOption } from '../../../core/models/form-field.model';
 import {
   AutocompleteSourceService,
   type AutocompleteSource,
 } from '../../../core/services/autocomplete-source.service';
+import { DynamicOptionsSourceService } from '../../../core/services/dynamic-options-source.service';
 import { FormNormalizationService } from '../../../core/services/form-normalization.service';
 import { FormValidationMessageService } from '../../../core/services/form-validation-message.service';
 import { AutocompleteInputComponent } from './autocomplete-input/autocomplete-input';
 import { BrandService } from '../../../core/services/brand.service';
+
+const LOAD_FAILED_MESSAGE = 'Unable to load options, please try again.';
+
+/** Returned by `catchError` in place of a real options list, to distinguish "failed" from "empty". */
+const LOAD_FAILED = Symbol('dynamic-select-load-failed');
 
 /**
  * Distinguishes one rendered section from another.
@@ -92,9 +102,11 @@ export class SignalFormComponent implements OnInit {
   readonly valueChanged = output<Record<string, unknown>>();
 
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly normalization = inject(FormNormalizationService);
   private readonly messages = inject(FormValidationMessageService);
   private readonly autocompleteSources = inject(AutocompleteSourceService);
+  private readonly dynamicOptionsSources = inject(DynamicOptionsSourceService);
 
   private readonly instanceId = `form-${nextFormInstanceId++}`;
 
@@ -105,6 +117,11 @@ export class SignalFormComponent implements OnInit {
   private readonly submitAttempted = signal(false);
 
   private readonly instance = signal<FormInstance | null>(null);
+
+  /** Per-`dynamic-select`-field async state, keyed by field name. */
+  private readonly dynamicOptions = signal<Record<string, readonly FormFieldOption[]>>({});
+  private readonly dynamicLoading = signal<Record<string, boolean>>({});
+  private readonly dynamicErrors = signal<Record<string, string | null>>({});
 
   /**
    * Builds the model and field tree once, from the inputs.
@@ -121,15 +138,117 @@ export class SignalFormComponent implements OnInit {
     const tree = form(model, buildSectionSchema(fields), { injector: this.injector });
 
     this.instance.set({ model, tree });
+
+    for (const field of getControlFields(fields)) {
+      if (field.type === 'dynamic-select') {
+        this.setUpDynamicSelect(field, model);
+      }
+    }
   }
 
-  constructor() {
-    effect(() => {
-      const instance = this.instance();
-      if (instance) {
-        this.valueChanged.emit(this.withDerived(instance.model()));
-      }
-    });
+  /**
+   * Wires a `dynamic-select` field to its options source.
+   *
+   * A cascade needs no coordinator: this reads the live values of the fields it
+   * depends on straight out of the shared model, and writes a reset straight back
+   * into it (the same technique `normalize()` uses) exactly like any other
+   * programmatic change. A field further down the chain runs the identical setup
+   * against its own dependency, so clearing this field's answer is what clears
+   * whatever depends on it in turn.
+   */
+  private setUpDynamicSelect(field: FormFieldConfig, model: WritableSignal<SectionModel>): void {
+    const config = field.metadata?.dynamicSelectConfig;
+    if (!config) {
+      return;
+    }
+
+    const dependsOn = config.dependsOn ?? [];
+    const context = config.context ?? {};
+    const source = this.dynamicOptionsSources.forEndpoint(config.endpoint);
+
+    let lastDependsOnKey: string | null = null;
+    let requestSequence = 0;
+
+    effect(
+      () => {
+        const currentModel = model();
+        const dependsOnValues: Record<string, unknown> = {};
+        for (const name of dependsOn) {
+          dependsOnValues[name] = currentModel[name];
+        }
+        const dependsOnKey = JSON.stringify(dependsOnValues);
+
+        untracked(() => {
+          if (dependsOnKey === lastDependsOnKey) {
+            return;
+          }
+
+          const isFirstRun = lastDependsOnKey === null;
+          lastDependsOnKey = dependsOnKey;
+
+          if (!isFirstRun && model()[field.name] !== '') {
+            model.update((current) => ({ ...current, [field.name]: '' }));
+          }
+
+          const hasUnmetDependency = Object.values(dependsOnValues).some(
+            (value) => value === '' || value === null || value === undefined,
+          );
+
+          if (hasUnmetDependency) {
+            requestSequence += 1;
+            this.setDynamicFieldState(field.name, { options: [], loading: false, error: null });
+            return;
+          }
+
+          const requestId = (requestSequence += 1);
+          this.setDynamicFieldState(field.name, { loading: true, error: null });
+
+          source
+            .loadOptions({ context, dependsOn: dependsOnValues })
+            .pipe(
+              catchError(() => of(LOAD_FAILED)),
+              takeUntilDestroyed(this.destroyRef),
+            )
+            .subscribe((result) => {
+              // A newer request has since been made; this response no longer applies.
+              if (requestId !== requestSequence) {
+                return;
+              }
+
+              if (result === LOAD_FAILED) {
+                this.setDynamicFieldState(field.name, {
+                  options: [],
+                  loading: false,
+                  error: LOAD_FAILED_MESSAGE,
+                });
+                return;
+              }
+
+              this.setDynamicFieldState(field.name, { options: result, loading: false });
+            });
+        });
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private setDynamicFieldState(
+    fieldName: string,
+    patch: Partial<{
+      options: readonly FormFieldOption[];
+      loading: boolean;
+      error: string | null;
+    }>,
+  ): void {
+    if (patch.options !== undefined) {
+      this.dynamicOptions.update((current) => ({ ...current, [fieldName]: patch.options! }));
+    }
+    if (patch.loading !== undefined) {
+      this.dynamicLoading.update((current) => ({ ...current, [fieldName]: patch.loading! }));
+    }
+    if (patch.error !== undefined) {
+      this.dynamicErrors.update((current) => ({ ...current, [fieldName]: patch.error! }));
+    }
   }
 
   /**
@@ -141,6 +260,15 @@ export class SignalFormComponent implements OnInit {
    */
   private withDerived(values: Readonly<SectionModel>): Record<string, unknown> {
     return applyDerivedValues(this.fields(), values);
+  }
+
+  constructor() {
+    effect(() => {
+      const instance = this.instance();
+      if (instance) {
+        this.valueChanged.emit(this.withDerived(instance.model()));
+      }
+    });
   }
 
   /**
@@ -328,5 +456,18 @@ export class SignalFormComponent implements OnInit {
     return this.autocompleteSources.forEndpoint(
       field.metadata?.autocompleteConfig?.endpoint ?? 'occupation',
     );
+  }
+
+  /** The options currently loaded for a `dynamic-select` field. */
+  dynamicOptionsFor(field: FormFieldConfig): readonly FormFieldOption[] {
+    return this.dynamicOptions()[field.name] ?? [];
+  }
+
+  isDynamicSelectLoading(field: FormFieldConfig): boolean {
+    return this.dynamicLoading()[field.name] ?? false;
+  }
+
+  dynamicSelectErrorFor(field: FormFieldConfig): string | null {
+    return this.dynamicErrors()[field.name] ?? null;
   }
 }
