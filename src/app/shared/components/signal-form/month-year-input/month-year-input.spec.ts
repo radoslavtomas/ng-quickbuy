@@ -82,11 +82,11 @@ describe('MonthYearInputComponent', () => {
     expect(document.activeElement).toBe(yearInput());
   });
 
-  it('blurs the year box once it reaches four digits', () => {
+  it('keeps the year box focused once it reaches four digits', () => {
     yearInput().focus();
     type(yearInput(), '2026');
 
-    expect(document.activeElement).not.toBe(yearInput());
+    expect(document.activeElement).toBe(yearInput());
   });
 
   it('strips non-digit characters and clamps to the field length', () => {
@@ -100,6 +100,12 @@ describe('MonthYearInputComponent', () => {
     fixture.detectChanges();
 
     expect(monthInput().value).toBe('09');
+  });
+
+  it('keeps the model padded while a single-digit month is being edited', () => {
+    type(monthInput(), '9');
+
+    expect(host.value()).toBe('09');
   });
 
   it('hydrates from a YYYYMM default value', () => {

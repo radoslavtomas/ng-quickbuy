@@ -1,9 +1,33 @@
 import type { AbstractControl } from '@angular/forms';
-import { bdVehicleEngineValidator, bdVehicleYearValidator } from './form-validators';
+import {
+  bdVehicleEngineValidator,
+  bdVehicleYearValidator,
+  validMonthYearValidator,
+} from './form-validators';
 
 function control(value: unknown): AbstractControl {
   return { value } as AbstractControl;
 }
+
+describe('validMonthYearValidator', () => {
+  it('passes an empty value, leaving required to police presence', () => {
+    expect(validMonthYearValidator(control(''))).toBeNull();
+    expect(validMonthYearValidator(control(null))).toBeNull();
+  });
+
+  it('accepts valid months and the year range boundaries', () => {
+    expect(validMonthYearValidator(control('190001'))).toBeNull();
+    expect(validMonthYearValidator(control('202612'))).toBeNull();
+    expect(validMonthYearValidator(control('210012'))).toBeNull();
+  });
+
+  it('rejects invalid months and years outside the plausible range', () => {
+    expect(validMonthYearValidator(control('189912'))).toEqual({ validMonthYear: true });
+    expect(validMonthYearValidator(control('210101'))).toEqual({ validMonthYear: true });
+    expect(validMonthYearValidator(control('202600'))).toEqual({ validMonthYear: true });
+    expect(validMonthYearValidator(control('202613'))).toEqual({ validMonthYear: true });
+  });
+});
 
 describe('bdVehicleYearValidator', () => {
   const currentYear = new Date().getFullYear();

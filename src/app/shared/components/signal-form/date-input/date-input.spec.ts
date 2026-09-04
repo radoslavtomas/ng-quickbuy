@@ -80,7 +80,7 @@ describe('DateInputComponent', () => {
     type(monthInput(), '9');
     type(yearInput(), '2026');
 
-    expect(host.value()).toBe('5/9/2026');
+    expect(host.value()).toBe('05/09/2026');
   });
 
   it('advances focus once the day, then month, box is full', () => {
@@ -91,11 +91,11 @@ describe('DateInputComponent', () => {
     expect(document.activeElement).toBe(yearInput());
   });
 
-  it('blurs the year box once it reaches four digits', () => {
+  it('keeps the year box focused once it reaches four digits', () => {
     yearInput().focus();
     type(yearInput(), '2026');
 
-    expect(document.activeElement).not.toBe(yearInput());
+    expect(document.activeElement).toBe(yearInput());
   });
 
   it('strips non-digit characters and clamps to the field length', () => {
@@ -117,6 +117,14 @@ describe('DateInputComponent', () => {
 
     expect(dayInput().value).toBe('05');
     expect(monthInput().value).toBe('09');
+  });
+
+  it('keeps the model padded while a single-digit day or month is being edited', () => {
+    type(dayInput(), '5');
+    expect(host.value()).toBe('05//');
+
+    type(monthInput(), '9');
+    expect(host.value()).toBe('05/09/');
   });
 
   it('hydrates from a DD/MM/YYYY default value', () => {

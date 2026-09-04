@@ -122,7 +122,13 @@ export class DateInputComponent implements FormValueControl<string> {
   }
 
   private compose(day: string, month: string, year: string): string {
-    return day === '' && month === '' && year === '' ? '' : `${day}/${month}/${year}`;
+    if (day === '' && month === '' && year === '') {
+      return '';
+    }
+
+    const normalizedDay = day.length === 1 ? day.padStart(2, '0') : day;
+    const normalizedMonth = month.length === 1 ? month.padStart(2, '0') : month;
+    return `${normalizedDay}/${normalizedMonth}/${year}`;
   }
 
   private emitValue(): void {
@@ -157,10 +163,6 @@ export class DateInputComponent implements FormValueControl<string> {
     const digits = this.digitsOnly((event.target as HTMLInputElement).value, 4);
     this.year.set(digits);
     this.emitValue();
-
-    if (digits.length === 4) {
-      this.yearInput()?.nativeElement.blur();
-    }
   }
 
   onDayBlur(): void {

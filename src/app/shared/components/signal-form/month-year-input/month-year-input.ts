@@ -91,7 +91,12 @@ export class MonthYearInputComponent implements FormValueControl<string> {
   }
 
   private compose(month: string, year: string): string {
-    return month === '' && year === '' ? '' : `${year}${month}`;
+    if (month === '' && year === '') {
+      return '';
+    }
+
+    const normalizedMonth = month.length === 1 ? month.padStart(2, '0') : month;
+    return `${year}${normalizedMonth}`;
   }
 
   private emitValue(): void {
@@ -116,10 +121,6 @@ export class MonthYearInputComponent implements FormValueControl<string> {
     const digits = this.digitsOnly((event.target as HTMLInputElement).value, 4);
     this.year.set(digits);
     this.emitValue();
-
-    if (digits.length === 4) {
-      this.yearInput()?.nativeElement.blur();
-    }
   }
 
   onMonthBlur(): void {

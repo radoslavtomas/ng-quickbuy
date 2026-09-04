@@ -1,6 +1,8 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 const DEFAULT_MINIMUM_DRIVER_AGE = 18;
+const MONTH_YEAR_MINIMUM_YEAR = 1900;
+const MONTH_YEAR_MAXIMUM_YEAR = 2100;
 
 function toValidatedDate(year: number, month: number, day: number): Date | null {
   const candidate = new Date(year, month - 1, day);
@@ -70,7 +72,7 @@ export const validDateValidator: ValidatorFn = (
 
 /**
  * Structural check for the `month-year` control's `YYYYMM` value: a plausible
- * 4-digit year followed by a month between 01 and 12. Like `validDateValidator`,
+ * year between 1900 and 2100 followed by a month between 01 and 12. Like `validDateValidator`,
  * this only checks shape, not whether the month/year combination makes sense for
  * whatever the field represents (that's for a field-specific custom validator).
  */
@@ -82,7 +84,17 @@ export const validMonthYearValidator: ValidatorFn = (
     return null;
   }
 
-  return typeof value === 'string' && /^\d{4}(0[1-9]|1[0-2])$/.test(value)
+  if (typeof value !== 'string') {
+    return { validMonthYear: true };
+  }
+
+  const match = value.match(/^(\d{4})(0[1-9]|1[0-2])$/);
+  if (!match) {
+    return { validMonthYear: true };
+  }
+
+  const year = Number(match[1]);
+  return year >= MONTH_YEAR_MINIMUM_YEAR && year <= MONTH_YEAR_MAXIMUM_YEAR
     ? null
     : { validMonthYear: true };
 };
