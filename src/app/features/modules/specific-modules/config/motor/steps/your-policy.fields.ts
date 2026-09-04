@@ -18,7 +18,6 @@ export const MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
         validatorFn: validDateValidator,
       },
     ],
-    normalization: ['trim', 'date'],
   },
   {
     type: 'radio',

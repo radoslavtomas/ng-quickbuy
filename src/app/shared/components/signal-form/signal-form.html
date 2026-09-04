@@ -216,6 +216,30 @@
                 [showValid]="isValid(field)"
               />
             </div>
+          } @else if (field.type === 'date') {
+            <div class="mt-2" [attr.data-field]="field.name">
+              <app-date-input
+                [formField]="stringField(field)"
+                [controlId]="controlId(field)"
+                [fieldName]="field.name"
+                [label]="field.label"
+                [describedBy]="messageId(field)"
+                [showInvalid]="isInvalid(field)"
+                [showValid]="isValid(field)"
+              />
+            </div>
+          } @else if (field.type === 'month-year') {
+            <div class="mt-2" [attr.data-field]="field.name">
+              <app-month-year-input
+                [formField]="stringField(field)"
+                [controlId]="controlId(field)"
+                [fieldName]="field.name"
+                [label]="field.label"
+                [describedBy]="messageId(field)"
+                [showInvalid]="isInvalid(field)"
+                [showValid]="isValid(field)"
+              />
+            </div>
           } @else if (field.type === 'textarea') {
             <div class="mt-2 flex items-start gap-1.5">
               @if (field.icon) {
@@ -277,13 +301,10 @@
               <input
                 [id]="controlId(field)"
                 [attr.data-field]="field.name"
-                [type]="field.type === 'date' ? 'text' : field.type"
+                [type]="field.type"
                 [formField]="inputField(field)"
-                [attr.placeholder]="
-                  field.metadata?.placeholder || (field.type === 'date' ? 'DD/MM/YYYY' : null)
-                "
+                [attr.placeholder]="field.metadata?.placeholder || null"
                 [attr.autocomplete]="field.metadata?.autocomplete || null"
-                [attr.inputmode]="field.type === 'date' ? 'numeric' : null"
                 (blur)="normalize(field)"
                 [attr.aria-describedby]="messageId(field)"
                 [attr.aria-invalid]="isInvalid(field)"

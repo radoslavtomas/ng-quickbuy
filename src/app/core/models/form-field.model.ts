@@ -6,6 +6,8 @@ export type FormFieldType =
   | 'tel'
   | 'number'
   | 'date'
+  /** Month/year only, exposed as a single YYYYMM string (e.g. card expiry). */
+  | 'month-year'
   | 'textarea'
   | 'select'
   | 'checkbox'

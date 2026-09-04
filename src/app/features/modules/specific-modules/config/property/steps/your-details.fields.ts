@@ -58,7 +58,6 @@ export const PROPERTY_YOUR_DETAILS_FIELDS: readonly FormFieldConfig[] = [
         validatorFn: adultOnlyValidator,
       },
     ],
-    normalization: ['trim', 'date'],
     metadata: {
       autocomplete: 'bday',
     },

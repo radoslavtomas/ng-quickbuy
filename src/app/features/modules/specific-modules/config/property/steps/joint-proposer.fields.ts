@@ -83,7 +83,6 @@ export const PROPERTY_JOINT_PROPOSER_FIELDS: readonly FormFieldConfig[] = [
         validatorFn: adultOnlyValidator,
       },
     ],
-    normalization: ['trim', 'date'],
     visibleWhen: WHEN_DECLARED,
   },
   ...createOccupationFields({ gate: WHEN_DECLARED }),

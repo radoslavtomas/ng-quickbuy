@@ -13,6 +13,7 @@ import {
   type DynamicOptionsSource,
 } from '../../../core/services/dynamic-options-source.service';
 import { createOccupationFields } from '../../../features/modules/specific-modules/config/shared/occupation.fields';
+import { validDateValidator } from '../../../core/validators/form-validators';
 import { SEARCH_DEBOUNCE_MS } from './autocomplete-input/autocomplete-input';
 import { SignalFormComponent } from './signal-form';
 
@@ -331,5 +332,96 @@ describe('SignalFormComponent with a dynamic-select field', () => {
     const modelSelect = select('model');
     const modelHost = modelSelect?.closest('.relative');
     expect(modelHost?.textContent).toContain('Unable to load options');
+  });
+});
+
+const DATE_FIELDS: readonly FormFieldConfig[] = [
+  {
+    type: 'date',
+    label: 'Date of birth',
+    name: 'dateOfBirth',
+    validators: [
+      { type: 'required' },
+      {
+        type: 'custom',
+        name: 'validDate',
+        message: 'Enter a valid date in DD/MM/YYYY format.',
+        validatorFn: validDateValidator,
+      },
+    ],
+  },
+];
+
+@Component({
+  imports: [SignalFormComponent],
+  template: `<app-signal-form [fields]="fields()" [initialValue]="initialValue()"></app-signal-form>`,
+})
+class DateFieldHostComponent {
+  readonly fields = signal<readonly FormFieldConfig[]>(DATE_FIELDS);
+  readonly initialValue = signal<Record<string, unknown>>({});
+  readonly form = viewChild.required(SignalFormComponent);
+}
+
+describe('SignalFormComponent with a date field', () => {
+  let fixture: ComponentFixture<DateFieldHostComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [DateFieldHostComponent],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(DateFieldHostComponent);
+    fixture.detectChanges();
+  });
+
+  function boxes(): HTMLInputElement[] {
+    const wrapper = fixture.nativeElement.querySelector('[data-field="dateOfBirth"]');
+    return Array.from(wrapper?.querySelectorAll('input') ?? []);
+  }
+
+  function type(element: HTMLInputElement, value: string): void {
+    element.value = value;
+    element.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+  }
+
+  it('renders the split date control under the field data-field wrapper', () => {
+    expect(fixture.nativeElement.querySelector('app-date-input')).not.toBeNull();
+    expect(boxes()).toHaveLength(3);
+  });
+
+  it('drives collect() from the three boxes and validates the composed date', () => {
+    const [day, month, year] = boxes();
+    type(day, '01');
+    type(month, '09');
+    type(year, '1990');
+
+    const result = fixture.componentInstance.form().collect();
+
+    expect(result.valid).toBe(true);
+    expect(result.values['dateOfBirth']).toBe('01/09/1990');
+  });
+
+  it('blocks an unanswered date with the same required message any other field would get', () => {
+    const result = fixture.componentInstance.form().collect();
+    fixture.detectChanges();
+
+    expect(result.valid).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('Date of birth is required.');
+  });
+
+  it('surfaces the bridged custom validator message for a calendar-invalid date', () => {
+    const [day, month, year] = boxes();
+    type(day, '31');
+    type(month, '02');
+    type(year, '2026');
+
+    const result = fixture.componentInstance.form().collect();
+    fixture.detectChanges();
+
+    expect(result.valid).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain(
+      'Enter a valid date in DD/MM/YYYY format.',
+    );
   });
 });
