@@ -119,12 +119,12 @@ describe('DateInputComponent', () => {
     expect(monthInput().value).toBe('09');
   });
 
-  it('keeps the model padded while a single-digit day or month is being edited', () => {
+  it('keeps partial dates out of the model while a single-digit day or month is being edited', () => {
     type(dayInput(), '5');
-    expect(host.value()).toBe('05//');
+    expect(host.value()).toBe('');
 
     type(monthInput(), '9');
-    expect(host.value()).toBe('05/09/');
+    expect(host.value()).toBe('');
   });
 
   it('hydrates from a DD/MM/YYYY default value', () => {

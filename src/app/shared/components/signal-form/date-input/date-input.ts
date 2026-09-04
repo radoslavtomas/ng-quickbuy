@@ -122,7 +122,7 @@ export class DateInputComponent implements FormValueControl<string> {
   }
 
   private compose(day: string, month: string, year: string): string {
-    if (day === '' && month === '' && year === '') {
+    if (day === '' || month === '' || year === '') {
       return '';
     }
 
