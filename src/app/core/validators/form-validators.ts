@@ -68,6 +68,25 @@ export const validDateValidator: ValidatorFn = (
   return parseDateInput(value) ? null : { validDate: true };
 };
 
+/**
+ * Structural check for the `month-year` control's `YYYYMM` value: a plausible
+ * 4-digit year followed by a month between 01 and 12. Like `validDateValidator`,
+ * this only checks shape, not whether the month/year combination makes sense for
+ * whatever the field represents (that's for a field-specific custom validator).
+ */
+export const validMonthYearValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const value = control.value;
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  return typeof value === 'string' && /^\d{4}(0[1-9]|1[0-2])$/.test(value)
+    ? null
+    : { validMonthYear: true };
+};
+
 function createAdultOnlyValidator(minimumDriverAge = DEFAULT_MINIMUM_DRIVER_AGE): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const birthDate = parseDateInput(control.value);

@@ -32,6 +32,8 @@ import { DynamicOptionsSourceService } from '../../../core/services/dynamic-opti
 import { FormNormalizationService } from '../../../core/services/form-normalization.service';
 import { FormValidationMessageService } from '../../../core/services/form-validation-message.service';
 import { AutocompleteInputComponent } from './autocomplete-input/autocomplete-input';
+import { DateInputComponent } from './date-input/date-input';
+import { MonthYearInputComponent } from './month-year-input/month-year-input';
 import { BrandService } from '../../../core/services/brand.service';
 
 const LOAD_FAILED_MESSAGE = 'Unable to load options, please try again.';
@@ -86,7 +88,7 @@ interface FormInstance {
 
 @Component({
   selector: 'app-signal-form',
-  imports: [FormField, AutocompleteInputComponent],
+  imports: [FormField, AutocompleteInputComponent, DateInputComponent, MonthYearInputComponent],
   templateUrl: './signal-form.html',
   styleUrl: './signal-form.css',
 })

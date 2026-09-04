@@ -88,7 +88,6 @@ export const MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS: readonly FormFieldConfig[] = [
         validatorFn: adultOnlyValidator,
       },
     ],
-    normalization: ['trim', 'date'],
     metadata: { autocomplete: 'off' },
   },
   ...createOccupationFields({ includeSecondJob: true }),
