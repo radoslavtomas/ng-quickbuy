@@ -16,6 +16,7 @@ import { BrandService } from '../../../core/services/brand.service';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
 import { ModuleContextService } from '../../../core/services/module-context.service';
 import { JourneyPersistenceService } from '../journeys/journey-persistence.service';
+import { JourneyAnswersService } from '../journeys/journey-answers.service';
 import { firstIncompleteStep, isStepUnlocked } from '../journeys/journey-progress';
 import {
   findStep,
@@ -48,6 +49,7 @@ export class JourneyPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly brandService = inject(BrandService);
   private readonly journeyState = inject(JourneyStateService);
+  private readonly answers = inject(JourneyAnswersService);
   private readonly moduleContext = inject(ModuleContextService);
   private readonly persistence = inject(JourneyPersistenceService);
 
@@ -246,7 +248,7 @@ export class JourneyPageComponent {
    * they are edited, so nothing typed is lost by leaving, and refusing to let
    * someone return to an earlier answer until the current screen is valid would be
    * a trap: the reason they are going back is often that the earlier answer was
-   * wrong. Their completion ticks stay as they were, so the frontier does not move.
+   * wrong. Actual answer edits revoke completion from the edited step onward.
    */
   goToStep(target: JourneyStepDefinition): void {
     const moduleCode = this.moduleCode();
@@ -276,14 +278,30 @@ export class JourneyPageComponent {
    * what the customer typed.
    */
   private submitCurrentStep(moduleCode: string, step: JourneyStepDefinition): boolean {
-    const results = this.sectionOutlets().map((outlet) => ({
-      sectionId: outlet.section().id,
-      result: outlet.collect(),
-    }));
+    const outlets = this.sectionOutlets();
+    this.answers.setStepAnswers(
+      moduleCode,
+      step.name,
+      Object.fromEntries(outlets.map((outlet) => [outlet.section().id, outlet.snapshot()])),
+    );
 
-    for (const { sectionId, result } of results) {
-      this.journeyState.setSectionAnswers(moduleCode, step.name, sectionId, result.values);
+    // A just-flushed answer may expose a section that has not rendered yet. Do
+    // not complete the step until that newly applicable section can be validated.
+    const visibleIds = new Set(this.visibleSections().map((section) => section.id));
+    if ([...visibleIds].some((id) => !outlets.some((outlet) => outlet.section().id === id))) {
+      return false;
     }
+    const results = outlets
+      .filter((outlet) => visibleIds.has(outlet.section().id))
+      .map((outlet) => ({
+        sectionId: outlet.section().id,
+        result: outlet.collect(),
+      }));
+    this.answers.setStepAnswers(
+      moduleCode,
+      step.name,
+      Object.fromEntries(results.map(({ sectionId, result }) => [sectionId, result.values])),
+    );
 
     if (results.some(({ result }) => !result.valid)) {
       return false;

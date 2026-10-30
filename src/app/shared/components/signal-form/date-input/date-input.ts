@@ -86,9 +86,10 @@ export class DateInputComponent implements FormValueControl<string> {
    *
    * Only the shape is checked here — `31/02/2026` still hydrates to its three
    * parts so the field's own custom validator (`validDateValidator` and similar)
-   * can flag it as a real but invalid date. A value in neither known shape leaves
-   * the boxes exactly as they were, empty or otherwise, and is reported with the
-   * field's name so a bad default is noticed rather than silently swallowed.
+   * can flag it as a real but invalid date. ISO input is also written back in the
+   * canonical format, so the displayed date and submitted answer agree. A value
+   * in neither known shape clears the boxes but stays in the model for validation,
+   * and is reported with the field's name rather than silently swallowed.
    */
   private hydrate(raw: string): void {
     if (raw === '') {
@@ -113,11 +114,15 @@ export class DateInputComponent implements FormValueControl<string> {
       this.day.set(day);
       this.month.set(month);
       this.year.set(year);
+      this.value.set(`${day}/${month}/${year}`);
       return;
     }
 
+    this.day.set('');
+    this.month.set('');
+    this.year.set('');
     console.warn(
-      `[app-date-input] Ignoring default value for field "${this.fieldName()}": "${raw}" is not in DD/MM/YYYY or YYYY-MM-DD format.`,
+      `[app-date-input] Cannot display value for field "${this.fieldName()}": "${raw}" is not in DD/MM/YYYY or YYYY-MM-DD format.`,
     );
   }
 

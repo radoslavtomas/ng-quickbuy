@@ -3,6 +3,7 @@ import type { JourneyRepeatSection } from '../../../../core/models/journey.model
 import { JourneyStateService } from '../../../../core/services/journey-state.service';
 import { SignalFormComponent } from '../../../../shared/components/signal-form/signal-form';
 import { resolveFields } from '../../journeys/journey-registry';
+import { JourneyAnswersService } from '../../journeys/journey-answers.service';
 
 /** Values captured for one item of the list. */
 type ItemValues = Record<string, unknown>;
@@ -44,6 +45,7 @@ type ItemValues = Record<string, unknown>;
         <app-signal-form
           [fields]="itemFields()"
           [initialValue]="item"
+          [readAnswer]="readAnswer()"
           (valueChanged)="onItemChanged($index, $event)"
         />
       </fieldset>
@@ -70,6 +72,8 @@ export class RepeatSectionComponent {
   readonly stepName = input.required<string>();
 
   private readonly journeyState = inject(JourneyStateService);
+  private readonly answers = inject(JourneyAnswersService);
+  readonly readAnswer = computed(() => this.answers.reader(this.moduleCode()));
   private readonly itemForms = viewChildren(SignalFormComponent);
 
   /** The per-item questions, which some products vary by module. */
@@ -119,6 +123,11 @@ export class RepeatSectionComponent {
 
   /** Section contract: every item must be valid for the list to be. */
   collect(): { valid: boolean; values: Record<string, unknown> } {
+    if (this.itemForms().length !== this.items().length) {
+      // A just-added/removed row has not rendered yet. Do not drop that edit or
+      // accept the section based only on the old set of controls.
+      return { valid: false, values: this.snapshot() };
+    }
     const results = this.itemForms().map((form) => form.collect());
     const values = results.map((result) => result.values);
 
@@ -131,9 +140,16 @@ export class RepeatSectionComponent {
     };
   }
 
+  snapshot(): Record<string, unknown> {
+    if (this.itemForms().length !== this.items().length) {
+      return { items: this.items() };
+    }
+    return { items: this.itemForms().map((form) => form.snapshot()) };
+  }
+
   private setItems(items: readonly ItemValues[]): void {
     this.workingItems.set(items);
-    this.journeyState.setSectionAnswers(this.moduleCode(), this.stepName(), this.section().id, {
+    this.answers.setSectionAnswers(this.moduleCode(), this.stepName(), this.section().id, {
       items,
     });
   }

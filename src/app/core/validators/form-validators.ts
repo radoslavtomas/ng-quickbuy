@@ -1,4 +1,5 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import type { FieldValidationError } from '../models/form-field.model';
 
 const DEFAULT_MINIMUM_DRIVER_AGE = 18;
 const MONTH_YEAR_MINIMUM_YEAR = 1900;
@@ -146,6 +147,30 @@ function createLicenseYearsByAgeValidator(options?: {
 }
 
 export const licenseYearsByAgeValidator = createLicenseYearsByAgeValidator();
+/** Pure cross-page check; the renderer supplies the clock and scoped DOB answer. */
+export function validateLicenseYearsByAge(
+  value: unknown,
+  dependencies: Readonly<Record<string, unknown>>,
+  today: Date,
+): FieldValidationError | undefined {
+  const birthDate = parseDateInput(dependencies['dateOfBirth']);
+  if (!birthDate) {
+    return {
+      kind: 'dependencyRequired',
+      message: 'Enter a valid date of birth in Your details before continuing.',
+    };
+  }
+
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+
+  const yearsHeld = Number(value);
+  const maxYears = Math.max(0, calculateAge(birthDate, today) - DEFAULT_MINIMUM_DRIVER_AGE);
+  return Number.isFinite(yearsHeld) && yearsHeld > maxYears
+    ? { kind: 'licenseYearsByAge' }
+    : undefined;
+}
 
 /** How far back a breakdown vehicle's year of manufacture may be from the current year. */
 const BD_VEHICLE_MAX_YEARS_IN_PAST = 13;

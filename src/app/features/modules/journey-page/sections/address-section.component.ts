@@ -12,6 +12,7 @@ import {
 } from '../../specific-modules/config/shared/common';
 import { AddressSearchComponent } from '../../specific-modules/components/address-search.component';
 import { SignalFormComponent } from '../../../../shared/components/signal-form/signal-form';
+import { JourneyAnswersService } from '../../journeys/journey-answers.service';
 
 /**
  * Section wrapper around the address lookup, adapting it to the section contract
@@ -94,6 +95,7 @@ export class AddressSectionComponent {
   readonly riskAddress = input(false);
 
   private readonly journeyState = inject(JourneyStateService);
+  private readonly answers = inject(JourneyAnswersService);
   private readonly requiredErrorVisible = signal(false);
   private readonly mainAddressSearch = viewChild<AddressSearchComponent>('mainAddressSearch');
   private readonly riskAddressSearch = viewChild<AddressSearchComponent>('riskAddressSearch');
@@ -238,6 +240,9 @@ export class AddressSectionComponent {
     if (matches !== 'yes' && matches !== 'no') {
       return;
     }
+    if (matches === this.riskAddressMatches()) {
+      return;
+    }
 
     const current = this.withoutRiskAddress(this.storedValues());
 
@@ -321,7 +326,7 @@ export class AddressSectionComponent {
   }
 
   private store(values: Record<string, unknown>): void {
-    this.journeyState.setSectionAnswers(
+    this.answers.setSectionAnswers(
       this.moduleCode(),
       this.stepName(),
       this.sectionId(),

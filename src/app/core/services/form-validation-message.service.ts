@@ -49,7 +49,9 @@ export class FormValidationMessageService {
         validator.type === kind || (validator.type === 'custom' && validator.name === kind),
     );
 
-    return typeof rule?.value === 'number' || typeof rule?.value === 'string'
+    return rule &&
+      rule.type !== 'cross-field' &&
+      (typeof rule.value === 'number' || typeof rule.value === 'string')
       ? rule.value
       : undefined;
   }

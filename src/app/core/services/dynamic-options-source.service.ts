@@ -27,6 +27,24 @@ export interface DynamicOptionsSource {
 function asNonEmptyString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
+/** One checked boundary for catalogue configuration and live cascade answers. */
+function readIrisRequest(request: DynamicOptionsRequest): {
+  irisModule: IrisModule;
+  make: string;
+  model: string;
+  yearText: string;
+} {
+  const irisModule = request.context['irisModule'];
+  if (irisModule !== 'PC' && irisModule !== 'GV') {
+    throw new Error('Invalid IRIS module: expected PC or GV.');
+  }
+  return {
+    irisModule,
+    make: asNonEmptyString(request.dependsOn['make']),
+    model: asNonEmptyString(request.dependsOn['model']),
+    yearText: asNonEmptyString(request.dependsOn['year']),
+  };
+}
 
 /**
  * Maps the `endpoint` key of a `dynamic-select` field to a real options source.
@@ -34,8 +52,7 @@ function asNonEmptyString(value: unknown): string {
  * This is the only place that knows which service answers which key, exactly
  * like `AutocompleteSourceService` for search fields: a cascading select is a
  * configuration change (field metadata) plus one entry here, and the renderer
- * (`SignalFormComponent` / `DynamicSelectInputComponent`) never needs to know
- * what is actually being loaded.
+ * (`SignalFormComponent`) never needs to know what is actually being loaded.
  */
 @Injectable({ providedIn: 'root' })
 export class DynamicOptionsSourceService {
@@ -44,7 +61,7 @@ export class DynamicOptionsSourceService {
   private readonly sources: Readonly<Record<DynamicSelectEndpoint, DynamicOptionsSource>> = {
     'iris-make': {
       loadOptions: (request) => {
-        const irisModule = request.context['irisModule'] as IrisModule;
+        const { irisModule } = readIrisRequest(request);
         return this.vehicleIris
           .getMakes(irisModule)
           .pipe(map((response) => toSortedNameOptions(response.Make ?? [])));
@@ -52,8 +69,7 @@ export class DynamicOptionsSourceService {
     },
     'iris-model': {
       loadOptions: (request) => {
-        const irisModule = request.context['irisModule'] as IrisModule;
-        const make = asNonEmptyString(request.dependsOn['make']);
+        const { irisModule, make } = readIrisRequest(request);
         if (!make) {
           return of([]);
         }
@@ -65,9 +81,7 @@ export class DynamicOptionsSourceService {
     },
     'iris-year': {
       loadOptions: (request) => {
-        const irisModule = request.context['irisModule'] as IrisModule;
-        const make = asNonEmptyString(request.dependsOn['make']);
-        const model = asNonEmptyString(request.dependsOn['model']);
+        const { irisModule, make, model } = readIrisRequest(request);
         if (!make || !model) {
           return of([]);
         }
@@ -79,10 +93,7 @@ export class DynamicOptionsSourceService {
     },
     'iris-edition': {
       loadOptions: (request) => {
-        const irisModule = request.context['irisModule'] as IrisModule;
-        const make = asNonEmptyString(request.dependsOn['make']);
-        const model = asNonEmptyString(request.dependsOn['model']);
-        const yearText = asNonEmptyString(request.dependsOn['year']);
+        const { irisModule, make, model, yearText } = readIrisRequest(request);
         const year = Number(yearText);
         if (!make || !model || !yearText || !Number.isFinite(year)) {
           return of([]);
@@ -99,6 +110,9 @@ export class DynamicOptionsSourceService {
   };
 
   forEndpoint(endpoint: DynamicSelectEndpoint): DynamicOptionsSource {
+    if (!Object.hasOwn(this.sources, endpoint)) {
+      throw new Error(`Unknown dynamic-options endpoint "${endpoint}".`);
+    }
     return this.sources[endpoint];
   }
 }

@@ -134,6 +134,8 @@ describe('DateInputComponent', () => {
     expect(dayInput().value).toBe('05');
     expect(monthInput().value).toBe('09');
     expect(yearInput().value).toBe('2026');
+    expect(host.value()).toBe('05/09/2026');
+    expect(host.touched).toBe(false);
   });
 
   it('hydrates from a YYYY-MM-DD default value', () => {
@@ -143,6 +145,18 @@ describe('DateInputComponent', () => {
     expect(dayInput().value).toBe('05');
     expect(monthInput().value).toBe('09');
     expect(yearInput().value).toBe('2026');
+    expect(host.value()).toBe('05/09/2026');
+    expect(host.touched).toBe(false);
+  });
+
+  it('canonicalizes an ISO update even when the boxes already display the same date', () => {
+    host.value.set('05/09/2026');
+    fixture.detectChanges();
+    host.value.set('2026-09-05');
+    fixture.detectChanges();
+
+    expect(host.value()).toBe('05/09/2026');
+    expect(inputs().map((box) => box.value)).toEqual(['05', '09', '2026']);
   });
 
   it('still hydrates a calendar-invalid but structurally valid date, leaving validation to the schema', () => {
@@ -154,8 +168,10 @@ describe('DateInputComponent', () => {
     expect(yearInput().value).toBe('2026');
   });
 
-  it('warns and leaves the fields untouched when the default value is unparsable', () => {
+  it('warns and clears a previous date when an external value is unparsable, retaining it for validation', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    host.value.set('05/09/2026');
+    fixture.detectChanges();
 
     host.value.set('not-a-date');
     fixture.detectChanges();
@@ -163,7 +179,13 @@ describe('DateInputComponent', () => {
     expect(dayInput().value).toBe('');
     expect(monthInput().value).toBe('');
     expect(yearInput().value).toBe('');
+    expect(host.value()).toBe('not-a-date');
+    expect(host.touched).toBe(false);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('dateOfBirth'));
+    host.value.set('2027-01-02');
+    fixture.detectChanges();
+    expect(inputs().map((box) => box.value)).toEqual(['02', '01', '2027']);
+    expect(host.value()).toBe('02/01/2027');
 
     warn.mockRestore();
   });

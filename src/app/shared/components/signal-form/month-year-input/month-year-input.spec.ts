@@ -116,15 +116,23 @@ describe('MonthYearInputComponent', () => {
     expect(yearInput().value).toBe('2026');
   });
 
-  it('warns and leaves the fields untouched when the default value is unparsable', () => {
+  it('warns and clears previous values after an unparsable external update, retaining it for validation', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    host.value.set('202609');
+    fixture.detectChanges();
 
     host.value.set('2026-09');
     fixture.detectChanges();
 
     expect(monthInput().value).toBe('');
     expect(yearInput().value).toBe('');
+    expect(host.value()).toBe('2026-09');
+    expect(host.touched).toBe(false);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('cardExpiry'));
+    host.value.set('202701');
+    fixture.detectChanges();
+    expect(inputs().map((box) => box.value)).toEqual(['01', '2027']);
+    expect(host.value()).toBe('202701');
 
     warn.mockRestore();
   });

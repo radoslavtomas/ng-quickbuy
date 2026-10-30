@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 import type { StepAnswers } from '../models/journey.model';
+import { answersEqual } from '../forms/answer-values';
 
 type SectionValues = Readonly<Record<string, unknown>>;
 type ModuleAnswers = Readonly<Record<string, StepAnswers>>;
@@ -62,25 +63,60 @@ export class JourneyStateService {
     sectionId: string,
     values: SectionValues,
   ): void {
+    this.setAnswers(moduleCode, { [stepName]: { [sectionId]: values } });
+  }
+
+  /** Atomically capture sections and revoke completion from the first edited step. */
+  setAnswers(
+    moduleCode: string,
+    updates: ModuleAnswers,
+    orderedSteps: readonly string[] = [],
+  ): void {
     const module = this.key(moduleCode);
+    let changed = false;
 
     this.state.update((current) => {
-      const moduleState = current.answers[module] ?? {};
-      const stepState = moduleState[stepName] ?? {};
+      let moduleState = current.answers[module] ?? {};
+      let firstChanged = orderedSteps.length;
+      for (const [stepName, sections] of Object.entries(updates)) {
+        const stepState = moduleState[stepName] ?? {};
+        const edits = Object.entries(sections).filter(
+          ([id, values]) => !answersEqual(stepState[id], values),
+        );
+        if (edits.length === 0) {
+          continue;
+        }
+        changed = true;
+        const index = orderedSteps.indexOf(stepName);
+        if (index >= 0) {
+          firstChanged = Math.min(firstChanged, index);
+        }
+        moduleState = {
+          ...moduleState,
+          [stepName]: {
+            ...stepState,
+            ...Object.fromEntries(edits.map(([id, values]) => [id, { ...values }])),
+          },
+        };
+      }
+      if (!changed) {
+        return current;
+      }
+      const invalidated = new Set(orderedSteps.slice(firstChanged));
+      const completed = current.completedSteps[module] ?? [];
 
       return {
         ...current,
-        answers: {
-          ...current.answers,
-          [module]: {
-            ...moduleState,
-            [stepName]: { ...stepState, [sectionId]: { ...values } },
-          },
+        answers: { ...current.answers, [module]: moduleState },
+        completedSteps: {
+          ...current.completedSteps,
+          [module]: completed.filter((name) => !invalidated.has(name)),
         },
       };
     });
-
-    this.persist(module);
+    if (changed) {
+      this.persist(module);
+    }
   }
 
   isStepComplete(moduleCode: string, stepName: string): boolean {

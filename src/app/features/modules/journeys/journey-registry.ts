@@ -9,11 +9,13 @@ import type {
 } from '../../../core/models/journey.model';
 import { MOTOR_JOURNEY } from './motor.journey';
 import { PROPERTY_JOURNEY } from './property.journey';
+import { validateJourneyDependencies } from './journey-validation';
 
 const JOURNEYS: Readonly<Record<JourneyId, JourneyDefinition>> = {
   motor: MOTOR_JOURNEY,
   property: PROPERTY_JOURNEY,
 };
+const validatedModules = new Set<string>();
 
 export function getJourney(journeyId: JourneyId): JourneyDefinition {
   return JOURNEYS[journeyId];
@@ -28,7 +30,15 @@ export function getJourneyForModule(
   moduleCode: string | null | undefined,
 ): JourneyDefinition | null {
   const module = findModuleByCode(moduleCode);
-  return module ? JOURNEYS[module.journeyId] : null;
+  if (!module) {
+    return null;
+  }
+  const journey = JOURNEYS[module.journeyId];
+  if (!validatedModules.has(module.code)) {
+    validateJourneyDependencies(journey, module.code);
+    validatedModules.add(module.code);
+  }
+  return journey;
 }
 
 export function findStep(

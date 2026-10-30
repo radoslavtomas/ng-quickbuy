@@ -85,8 +85,12 @@ export class MonthYearInputComponent implements FormValueControl<string> {
       return;
     }
 
+    // Do not display an old answer for an unsupported new value. Keep the raw
+    // model value so validators can reject it, including on optional fields.
+    this.month.set('');
+    this.year.set('');
     console.warn(
-      `[app-month-year-input] Ignoring default value for field "${this.fieldName()}": "${raw}" is not in YYYYMM format.`,
+      `[app-month-year-input] Cannot display value for field "${this.fieldName()}": "${raw}" is not in YYYYMM format.`,
     );
   }
 

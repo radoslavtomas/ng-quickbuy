@@ -3,11 +3,37 @@ import {
   bdVehicleEngineValidator,
   bdVehicleYearValidator,
   validMonthYearValidator,
+  validateLicenseYearsByAge,
 } from './form-validators';
 
 function control(value: unknown): AbstractControl {
   return { value } as AbstractControl;
 }
+
+describe('validateLicenseYearsByAge', () => {
+  const today = new Date(2026, 9, 30);
+  it('accepts the maximum and rejects another year, including on a birthday', () => {
+    expect(validateLicenseYearsByAge(8, { dateOfBirth: '30/10/2000' }, today)).toBeUndefined();
+    expect(validateLicenseYearsByAge(9, { dateOfBirth: '30/10/2000' }, today)?.kind).toBe('licenseYearsByAge');
+    expect(validateLicenseYearsByAge(8, { dateOfBirth: '31/10/2000' }, today)?.kind).toBe('licenseYearsByAge');
+    expect(validateLicenseYearsByAge(7, { dateOfBirth: '2000-10-31' }, today)).toBeUndefined();
+    expect(validateLicenseYearsByAge(7, { dateOfBirth: '31102000' }, today)).toBeUndefined();
+  });
+
+  it('requires a usable DOB rather than silently bypassing the check', () => {
+    for (const dateOfBirth of [undefined, '', '31/02/2000', 'not a date']) {
+      const error = validateLicenseYearsByAge(8, { dateOfBirth }, today);
+      expect(error?.kind).toBe('dependencyRequired');
+      expect(error?.message).toContain('Your details');
+    }
+  });
+
+  it('leaves missing target answers to required and allows zero years', () => {
+    for (const value of [null, undefined, '', 0]) {
+      expect(validateLicenseYearsByAge(value, { dateOfBirth: '30/10/2008' }, today)).toBeUndefined();
+    }
+  });
+});
 
 describe('validMonthYearValidator', () => {
   it('passes an empty value, leaving required to police presence', () => {

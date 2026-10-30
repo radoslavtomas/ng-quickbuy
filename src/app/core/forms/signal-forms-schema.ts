@@ -12,7 +12,12 @@ import {
   schema,
   validate,
 } from '@angular/forms/signals';
-import type { FieldCondition, FormFieldConfig } from '../models/form-field.model';
+import type {
+  AnswerReader,
+  CrossFieldValidatorConfig,
+  FieldCondition,
+  FormFieldConfig,
+} from '../models/form-field.model';
 import { evaluateCondition } from './field-conditions';
 
 /**
@@ -26,6 +31,10 @@ export type SectionModel = Record<string, unknown>;
 
 /** Minimal view of the schema path tree, keyed dynamically by field name. */
 type SectionPath = Record<string, unknown>;
+export interface SectionValidationContext {
+  readonly readAnswer?: AnswerReader;
+  readonly now?: () => Date;
+}
 
 /**
  * Fields the customer actually answers.
@@ -36,6 +45,42 @@ type SectionPath = Record<string, unknown>;
  */
 export function getControlFields(fields: readonly FormFieldConfig[]): readonly FormFieldConfig[] {
   return fields.filter((field) => field.type !== 'derived');
+}
+function applyCrossFieldValidator(
+  field: FormFieldConfig,
+  rule: CrossFieldValidatorConfig,
+  target: never,
+  path: SectionPath,
+  fieldNames: ReadonlySet<string>,
+  context: SectionValidationContext,
+): void {
+  for (const reference of Object.values(rule.dependencies)) {
+    if (typeof reference === 'string' ? !fieldNames.has(reference) : !context.readAnswer) {
+      throw new Error(`Invalid dependency for "${field.name}" (${rule.name}).`);
+    }
+  }
+
+  validate(target, (ctx) => {
+    const dependencies: Record<string, unknown> = {};
+    for (const [name, reference] of Object.entries(rule.dependencies)) {
+      dependencies[name] =
+        typeof reference === 'string'
+          ? ctx.valueOf(path[reference] as never)
+          : context.readAnswer?.(reference);
+    }
+
+    if (Object.values(dependencies).some((value) => value == null || value === '')) {
+      return {
+        kind: 'dependencyRequired',
+        message:
+          rule.dependencyMessage ??
+          `Complete the related questions before validating ${field.label.toLowerCase()}.`,
+      };
+    }
+
+    const error = rule.validate(ctx.value(), dependencies, context.now?.() ?? new Date());
+    return error ? { ...error, message: error.message ?? rule.message } : undefined;
+  });
 }
 
 /** Fields assembled from the answers rather than asked for. */
@@ -76,18 +121,22 @@ export function applyDerivedValues(
  * types such as `number | null`, which a dynamic model cannot promise. Nothing
  * outside this module should need to cast.
  */
-export function buildSectionSchema(fields: readonly FormFieldConfig[]) {
+
+export function buildSectionSchema(
+  fields: readonly FormFieldConfig[],
+  context: SectionValidationContext = {},
+) {
   const controlFields = getControlFields(fields);
 
-  // The path object resolves any key, and reading one that is not in the model
-  // throws at validation time, so rules may only reference fields of this section.
+  // Only local dependencies use schema paths. External answers are read through
+  // the supplied signal-backed resolver, never through an invented tree path.
   const fieldNames = new Set(controlFields.map((field) => field.name));
 
   return schema<SectionModel>((path) => {
     const sectionPath = path as unknown as SectionPath;
 
     for (const field of controlFields) {
-      applyFieldRules(field, sectionPath, fieldNames);
+      applyFieldRules(field, sectionPath, fieldNames, context);
     }
   });
 }
@@ -96,6 +145,7 @@ function applyFieldRules(
   field: FormFieldConfig,
   path: SectionPath,
   fieldNames: ReadonlySet<string>,
+  context: SectionValidationContext,
 ): void {
   const target = path[field.name] as never;
 
@@ -139,6 +189,9 @@ function applyFieldRules(
       case 'custom':
         applyCustomValidator(field, validator.validatorFn, message, target, path, fieldNames);
         break;
+      case 'cross-field':
+        applyCrossFieldValidator(field, validator, target, path, fieldNames, context);
+        break;
     }
   }
 
@@ -160,13 +213,8 @@ function applyFieldRules(
  * so rather than rewrite them this presents a control-shaped view backed by the
  * field's value and its siblings.
  *
- * KNOWN GAP: a validator reaching for a sibling in a *different* section gets `null`,
- * because each section is its own form. `licenseYearsByAgeValidator` is in exactly
- * that position — it wants `dateOfBirth`, which the proposer section owns — so it
- * always passes. That predates this adapter (the reactive renderer had the same
- * blind spot, just silently) and is fixed by the typed model, where the rule can be
- * expressed across the whole journey. Until then the licence-years-versus-age check
- * is inert, which is an underwriting gap worth tracking.
+ * Legacy validators remain local. Rules reading other sections must declare
+ * explicit dependencies with a `cross-field` validator instead.
  */
 function applyCustomValidator(
   field: FormFieldConfig,

@@ -299,17 +299,20 @@ The runtime is **Angular Signal Forms** (`@angular/forms/signals`):
   Signal Forms error kind.
 
 Cross-field and domain validators live in `src/app/core/validators/form-validators.ts`
-(`validDateValidator`, `adultOnlyValidator`, `licenseYearsByAgeValidator`).
+(`validDateValidator`, `adultOnlyValidator`, `validateLicenseYearsByAge`).
 
 A section gate is separate from field-level conditions: `JourneySection.visibleWhen` receives the
 whole step's answers, which is how the proposer questions stay hidden until an address is resolved.
 
 Things to know before extending it:
 
-- **Rules may only reference fields of their own section.** Reading a path outside the model throws in
-  Signal Forms, so the adapter resolves siblings against the section's field names and returns `null`
-  otherwise. `licenseYearsByAgeValidator` is in that position — it wants the date of birth, owned by
-  the proposer section — so it is currently inert. That is an underwriting gap, not a style issue.
+- **Cross-field validation uses explicit dependencies.** A `cross-field` validator declares named
+  dependencies as local field names or `{ step, section, field }` references in the active module.
+  Local reads use the field tree; qualified reads use reactive journey answers. Unknown paths,
+  derived/custom/repeat sources and references to later pages are rejected when the module's journey
+  is resolved. Missing dependencies block validation rather than silently passing. The licence-years
+  check reads `your-details / proposer / dateOfBirth` this way. Legacy `custom` validators,
+  visibility/enablement conditions, dynamic-select dependencies and derivations remain section-local.
 - **Hidden and disabled fields drop out of validity**, so a question the customer never saw cannot
   block a step. Their answers stay in the model, so going back restores them, and anything the
   insurer sees is derived from the current answers rather than read from a field that may be stale.
@@ -340,6 +343,12 @@ Things to know before extending it:
 `JourneyStateService` stores answers per **module → step → section**, plus which steps are complete.
 Nothing is merged into one flat object, so two steps may legitimately use the same field name without
 one overwriting the other — `declarationAccepted` genuinely exists in two steps and used to collide.
+
+Journey code writes through `JourneyAnswersService`, which supplies step order to an atomic state
+update. A changed answer revokes completion for that step and every later step, but retains all their
+answers. Structurally equal writes do nothing, including after reload. Returning to an earlier page
+is never blocked by validation. Before Continue validates any section, the shell synchronously captures
+all rendered forms so a cross-section rule cannot read an answer from before the latest input event.
 
 That state is mirrored into `sessionStorage`, one key per module (`ngqb.journey.<CODE>`). Step-order
 gating reads completion to decide what may be opened, so without it a reload on step four would send
@@ -476,8 +485,27 @@ src/environments/                per-target configuration
    the field is sent under its internal name, which is fine only while that name matches the contract.
 4. If it needs a starting value, add it to that section's `defaults` in the journey definition.
 5. For a bespoke rule, add a `ValidatorFn` to `core/validators/form-validators.ts` and reference it as
-   `{ type: 'custom', name: '...', validatorFn: ..., message: '...' }`. Note it can only read siblings
-   in the same section.
+   `{ type: 'custom', name: '...', validatorFn: ..., message: '...' }` for section-local rules.
+   For a rule needing another section or an earlier page, use `cross-field`:
+
+   ```ts
+   {
+     type: 'cross-field',
+     name: 'licenseYearsByAge',
+     dependencies: {
+       dateOfBirth: { step: 'your-details', section: 'proposer', field: 'dateOfBirth' },
+     },
+     dependencyMessage: 'Enter a valid date of birth in Your details before continuing.',
+     message: 'Licence years held cannot exceed the years since you turned 18.',
+     validate: validateLicenseYearsByAge,
+   }
+   ```
+
+   The pure validator receives `(value, dependencies, today)` and returns `{ kind, message? }` on
+   failure or `undefined` on success. All declared dependencies must be answered; `false` and `0`
+   count as answers. Validate dependency format in the rule too, as the licence check does for DOB.
+   A plain string dependency reads a field of the current section (or current repeat item). Repeat
+   items can consume ordinary external fields, but rules spanning list items are not supported yet.
 
 No component changes are needed.
 
@@ -532,7 +560,7 @@ generic renderer genuinely cannot draw the UI, as with address lookup.
 
 1. Write the component under `journey-page/sections/`, exposing
    `collect(): { valid: boolean; values: Record<string, unknown> }` and writing its values to
-   `JourneyStateService`.
+   `JourneyAnswersService` (the journey-aware write boundary over `JourneyStateService`).
 2. Add a `@case` for its key in `section-outlet.component.ts`.
 3. Reference it from a step as `{ kind: 'custom', id: '...', component: '<key>' }`.
 

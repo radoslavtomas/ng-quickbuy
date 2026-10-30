@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { FormFieldConfig } from '../../../../core/models/form-field.model';
-import { JourneyStateService } from '../../../../core/services/journey-state.service';
+import { JourneyAnswersService } from '../../journeys/journey-answers.service';
 import type {
   QuoteRecallResponse,
   RecallHydrationResult,
@@ -30,7 +30,7 @@ const ADDRESS_SECTION_ID = 'address';
 
 @Injectable({ providedIn: 'root' })
 export class QuoteRecallHydrationService {
-  private readonly journeyState = inject(JourneyStateService);
+  private readonly answers = inject(JourneyAnswersService);
 
   /**
    * Maps a recall response onto the journey's sections and stores it.
@@ -42,10 +42,8 @@ export class QuoteRecallHydrationService {
   hydrateAndStore(moduleCode: string, response: QuoteRecallResponse): RecallHydrationResult {
     const result = this.mapRecallToJourney(moduleCode, response);
 
-    for (const [stepName, sections] of Object.entries(result.hydratedSteps)) {
-      for (const [sectionId, values] of Object.entries(sections)) {
-        this.journeyState.setSectionAnswers(moduleCode, stepName, sectionId, values);
-      }
+    if (Object.keys(result.hydratedSteps).length > 0) {
+      this.answers.setAnswers(moduleCode, result.hydratedSteps);
     }
 
     return result;

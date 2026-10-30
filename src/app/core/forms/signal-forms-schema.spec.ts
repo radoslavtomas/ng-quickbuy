@@ -1,9 +1,9 @@
 import { Injector, runInInjectionContext, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { form } from '@angular/forms/signals';
-import type { FormFieldConfig } from '../models/form-field.model';
+import type { CrossFieldValidatorConfig, FormFieldConfig } from '../models/form-field.model';
 import { validDateValidator } from '../validators/form-validators';
-import { buildSectionModel, buildSectionSchema, type SectionModel } from './signal-forms-schema';
+import { buildSectionModel, buildSectionSchema, type SectionModel, type SectionValidationContext } from './signal-forms-schema';
 
 interface Harness {
   readonly model: WritableSignal<SectionModel>;
@@ -18,12 +18,13 @@ interface Harness {
 function harness(
   fields: readonly FormFieldConfig[],
   values: Record<string, unknown> = {},
+  context: SectionValidationContext = {},
 ): Harness {
   const injector = TestBed.inject(Injector);
 
   return runInInjectionContext(injector, () => {
     const model = signal<SectionModel>(buildSectionModel(fields, values));
-    const tree = form(model, buildSectionSchema(fields), { injector }) as unknown as Record<
+    const tree = form(model, buildSectionSchema(fields, context), { injector }) as unknown as Record<
       string,
       () => {
         errors: () => readonly { kind: string; message?: string }[];
@@ -204,6 +205,75 @@ describe('buildSectionSchema', () => {
     expect(harness(fields, { owner: false, cover: 'comprehensive' }).hidden('detail')).toBe(true);
     expect(harness(fields, { owner: true, cover: 'tpo' }).hidden('detail')).toBe(true);
     expect(harness(fields, { owner: true, cover: 'tpft' }).hidden('detail')).toBe(false);
+  });
+});
+
+describe('cross-field validation', () => {
+  const rule: CrossFieldValidatorConfig = {
+    type: 'cross-field',
+    name: 'withinLimit',
+    dependencies: { limit: { step: 'earlier', section: 'source', field: 'limit' } },
+    message: 'Above the limit.',
+    dependencyMessage: 'Answer the limit question first.',
+    validate: (value, dependencies) =>
+      Number(value) > Number(dependencies['limit']) ? { kind: 'withinLimit' } : undefined,
+  };
+  const fields: readonly FormFieldConfig[] = [
+    { type: 'number', name: 'amount', label: 'Amount', validators: [rule] },
+  ];
+
+  it('tracks an external signal without recreating the form or changing its answer', () => {
+    const limit = signal<unknown>(10);
+    const section = harness(fields, { amount: 8 }, { readAnswer: () => limit() });
+    expect(section.errorKinds('amount')).toEqual([]);
+    limit.set(5);
+    expect(section.messages('amount')).toEqual(['Above the limit.']);
+    expect(section.model()['amount']).toBe(8);
+    limit.set(20);
+    expect(section.errorKinds('amount')).toEqual([]);
+    section.set('amount', 21);
+    expect(section.errorKinds('amount')).toEqual(['withinLimit']);
+  });
+
+  it('supports local dependencies without a resolver', () => {
+    const localFields: readonly FormFieldConfig[] = [
+      { type: 'number', name: 'limit', label: 'Limit' },
+      { ...fields[0], validators: [{ ...rule, dependencies: { limit: 'limit' } }] },
+    ];
+    const section = harness(localFields, { amount: 8, limit: 10 });
+    section.set('limit', 5);
+    expect(section.errorKinds('amount')).toEqual(['withinLimit']);
+  });
+
+  it('fails closed on an unanswered dependency, but accepts zero and false as answers', () => {
+    const limit = signal<unknown>(undefined);
+    const section = harness(fields, { amount: 0 }, { readAnswer: () => limit() });
+    for (const value of [undefined, null, '']) {
+      limit.set(value);
+      expect(section.messages('amount')).toEqual(['Answer the limit question first.']);
+    }
+    for (const value of [0, false]) {
+      limit.set(value);
+      expect(section.errorKinds('amount')).toEqual([]);
+    }
+  });
+
+  it('rejects missing resolvers and misspelled local dependencies at construction', () => {
+    expect(() => harness(fields)).toThrow(/Invalid dependency/);
+    expect(() => harness([{ ...fields[0], validators: [{ ...rule, dependencies: { limit: 'typo' } }] }]))
+      .toThrow(/Invalid dependency/);
+  });
+
+  it('does not validate hidden or disabled targets against missing dependencies', () => {
+    for (const mode of ['visibleWhen', 'enabledWhen'] as const) {
+      const section = harness([
+        { type: 'checkbox', name: 'active', label: 'Active' },
+        { ...fields[0], [mode]: [{ field: 'active', operator: 'truthy' }] },
+      ], { active: false }, { readAnswer: () => undefined });
+      expect(section.errorKinds('amount')).toEqual([]);
+      section.set('active', true);
+      expect(section.errorKinds('amount')).toEqual(['dependencyRequired']);
+    }
   });
 });
 

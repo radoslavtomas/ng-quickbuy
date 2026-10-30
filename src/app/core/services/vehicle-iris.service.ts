@@ -21,7 +21,9 @@ const IRIS_FUEL_LABELS: Readonly<Record<string, string>> = {
 
 /** A make or model name as a plain, alphabetically sorted option list. */
 export function toSortedNameOptions(names: readonly string[]): readonly FormFieldOption[] {
-  return [...names].sort().map((name) => ({ label: name, value: name }));
+  return [...names]
+    .sort((a, b) => a.localeCompare(b, 'en-GB', { sensitivity: 'base' }))
+    .map((name) => ({ label: name, value: name }));
 }
 
 /** The years a search returned, most recent first — newest models are picked more often. */
@@ -38,12 +40,35 @@ export function toEditionOption(match: IrisMatch): FormFieldOption {
   return { label, value: attributes.ABI_code };
 }
 
-/** Matches whose production years span the given year. */
+/**
+ * Matches whose production years span the given year, inclusively.
+ * A blank `To` means production has no upper bound. Other malformed ranges are
+ * errors, not "no editions": interpreting an unknown sentinel as a year (or as
+ * infinity) would silently hide an edition or offer it for the wrong year.
+ */
 export function matchesForYear(matches: readonly IrisMatch[], year: number): readonly IrisMatch[] {
+  if (!Number.isInteger(year) || year <= 0) {
+    throw new Error('Invalid IRIS production year.');
+  }
   return matches.filter((match) => {
     const attributes = match['@attributes'];
-    return year >= Number(attributes.From) && year <= Number(attributes.To);
+    const from = parseProductionYear(attributes.From);
+    const to =
+      typeof attributes.To === 'string' && attributes.To.trim() === ''
+        ? Infinity
+        : parseProductionYear(attributes.To);
+    if (from === null || to === null || from > to) {
+      throw new Error(`Invalid IRIS production range for edition "${attributes.ABI_code}".`);
+    }
+    return year >= from && year <= to;
   });
+}
+function parseProductionYear(raw: unknown): number | null {
+  if (typeof raw !== 'string' || !/^\d{4}$/.test(raw.trim())) {
+    return null;
+  }
+  const year = Number(raw);
+  return year > 0 ? year : null;
 }
 
 /**
@@ -63,10 +88,12 @@ export class VehicleIrisService {
    *
    * The year and edition options a customer sees are both derived from the same
    * search response, so without this every visit to the edition select would
-   * repeat a request the year select had only just made. Entries are kept for the
-   * lifetime of this root-provided singleton, which is one browsing session —
-   * bounded by how many make/model combinations a customer tries, never large
-   * enough to be worth evicting.
+   * repeat a request the year select had only just made. Successful responses
+   * remain cached for this browsing session; there is deliberately no TTL.
+   * RxJS 7's shareReplay resets on error, so a failed entry is retryable on the
+   * next subscription, including a subscription to the same observable. Do not
+   * catch errors into an empty response before sharing: that would cache failure
+   * as a successful "no options" result.
    */
   private readonly searchCache = new Map<string, Observable<IrisSearchResponse>>();
 

@@ -1,6 +1,6 @@
 import { FormFieldConfig } from '../../../../../../core/models/form-field.model';
 import {
-  licenseYearsByAgeValidator,
+  validateLicenseYearsByAge,
   validDateValidator,
 } from '../../../../../../core/validators/form-validators';
 
@@ -53,10 +53,14 @@ export const MOTOR_YOUR_POLICY_FIELDS: readonly FormFieldConfig[] = [
       { type: 'min', value: 0 },
       { type: 'max', value: 80 },
       {
-        type: 'custom',
+        type: 'cross-field',
         name: 'licenseYearsByAge',
         message: 'Licence years held cannot exceed the years since you turned 18.',
-        validatorFn: licenseYearsByAgeValidator,
+        dependencyMessage: 'Enter a valid date of birth in Your details before continuing.',
+        dependencies: {
+          dateOfBirth: { step: 'your-details', section: 'proposer', field: 'dateOfBirth' },
+        },
+        validate: validateLicenseYearsByAge,
       },
     ],
     normalization: ['currency'],

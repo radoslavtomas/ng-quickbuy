@@ -23,7 +23,12 @@ import {
   type SectionModel,
 } from '../../../core/forms/signal-forms-schema';
 import type { AutocompleteOption } from '../../../core/models/autocomplete-option.model';
-import type { FormFieldConfig, FormFieldOption } from '../../../core/models/form-field.model';
+import type {
+  AnswerReader,
+  FormFieldConfig,
+  FormFieldOption,
+} from '../../../core/models/form-field.model';
+import { ClockService } from '../../../core/services/clock.service';
 import {
   AutocompleteSourceService,
   type AutocompleteSource,
@@ -100,6 +105,7 @@ export class SignalFormComponent implements OnInit {
 
   readonly fields = input.required<readonly FormFieldConfig[]>();
   readonly initialValue = input<Record<string, unknown>>({});
+  readonly readAnswer = input<AnswerReader>();
 
   readonly valueChanged = output<Record<string, unknown>>();
 
@@ -107,6 +113,7 @@ export class SignalFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly normalization = inject(FormNormalizationService);
   private readonly messages = inject(FormValidationMessageService);
+  private readonly clock = inject(ClockService);
   private readonly autocompleteSources = inject(AutocompleteSourceService);
   private readonly dynamicOptionsSources = inject(DynamicOptionsSourceService);
 
@@ -137,7 +144,14 @@ export class SignalFormComponent implements OnInit {
   ngOnInit(): void {
     const fields = this.fields();
     const model = signal<SectionModel>(buildSectionModel(fields, this.initialValue()));
-    const tree = form(model, buildSectionSchema(fields), { injector: this.injector });
+    const tree = form(
+      model,
+      buildSectionSchema(fields, {
+        readAnswer: this.readAnswer(),
+        now: () => this.clock.now(),
+      }),
+      { injector: this.injector },
+    );
 
     this.instance.set({ model, tree });
 
@@ -268,7 +282,8 @@ export class SignalFormComponent implements OnInit {
     effect(() => {
       const instance = this.instance();
       if (instance) {
-        this.valueChanged.emit(this.withDerived(instance.model()));
+        const values = this.withDerived(instance.model());
+        untracked(() => this.valueChanged.emit(values));
       }
     });
   }
@@ -451,6 +466,12 @@ export class SignalFormComponent implements OnInit {
     root.markAsTouched();
 
     return { valid: root.valid(), values: this.withDerived(instance.model()) };
+  }
+
+  /** Read synchronously without revealing errors or waiting for valueChanged's effect. */
+  snapshot(): Record<string, unknown> {
+    const instance = this.instance();
+    return instance ? this.withDerived(instance.model()) : {};
   }
 
   /** The backend a search field queries, resolved from its `endpoint` key. */

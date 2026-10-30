@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, of } from 'rxjs';
+import { vi } from 'vitest';
+import type { DynamicSelectEndpoint } from '../models/form-field.model';
 import type {
   IrisMakesResponse,
   IrisModelsResponse,
@@ -48,6 +50,67 @@ describe('DynamicOptionsSourceService', () => {
     });
 
     service = TestBed.inject(DynamicOptionsSourceService);
+  });
+
+  it('rejects unknown and inherited endpoint names explicitly', () => {
+    for (const key of ['iris-typo', 'toString', 'constructor', '__proto__']) {
+      // Simulate a runtime config that bypassed TypeScript's endpoint union.
+      expect(() => service.forEndpoint(key as DynamicSelectEndpoint)).toThrow(
+        /Unknown dynamic-options endpoint/,
+      );
+    }
+  });
+
+  it('rejects missing or unsupported IRIS modules at every endpoint before making requests', () => {
+    const makes = vi.spyOn(vehicleIris, 'getMakes');
+    const models = vi.spyOn(vehicleIris, 'getModels');
+    const search = vi.spyOn(vehicleIris, 'searchCached');
+    const endpoints: readonly DynamicSelectEndpoint[] = [
+      'iris-make', 'iris-model', 'iris-year', 'iris-edition',
+    ];
+    for (const endpoint of endpoints) {
+      for (const irisModule of [undefined, null, '', 'TX', 'ZZ', 'pc', {}, 1]) {
+        expect(() => service.forEndpoint(endpoint).loadOptions({
+          dependsOn: { make: 'FORD', model: 'ESCORT', year: '2016' },
+          context: { irisModule },
+        })).toThrow(/IRIS module/);
+      }
+    }
+    expect(makes).not.toHaveBeenCalled();
+    expect(models).not.toHaveBeenCalled();
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it('shares checked module and trimmed dependency parsing across the cascade', async () => {
+    const makes = vi.spyOn(vehicleIris, 'getMakes');
+    const models = vi.spyOn(vehicleIris, 'getModels');
+    const search = vi.spyOn(vehicleIris, 'searchCached');
+    const context = { irisModule: 'GV' };
+    const dependsOn = { make: ' FORD ', model: ' ESCORT ', year: ' 2016 ' };
+    await firstValueFrom(service.forEndpoint('iris-make').loadOptions({ context, dependsOn }));
+    await firstValueFrom(service.forEndpoint('iris-model').loadOptions({ context, dependsOn }));
+    await firstValueFrom(service.forEndpoint('iris-year').loadOptions({ context, dependsOn }));
+    await firstValueFrom(service.forEndpoint('iris-edition').loadOptions({ context, dependsOn }));
+    expect(makes).toHaveBeenCalledWith('GV');
+    expect(models).toHaveBeenCalledWith('GV', 'FORD');
+    expect(search).toHaveBeenCalledWith('GV', 'FORD', 'ESCORT');
+    expect(search).toHaveBeenCalledTimes(2);
+  });
+
+  it('propagates malformed production ranges as load errors rather than empty editions', async () => {
+    const response = await firstValueFrom(vehicleIris.searchCached('PC', 'FORD', 'ESCORT'));
+    const match = response.PCMatch?.[0];
+    if (!match) {
+      throw new Error('Expected fixture match');
+    }
+    vehicleIris.searchCached = () => of({
+      ...response,
+      PCMatch: [{ '@attributes': { ...match['@attributes'], To: 'unknown' } }],
+    });
+    await expect(firstValueFrom(service.forEndpoint('iris-edition').loadOptions({
+      context: { irisModule: 'PC' },
+      dependsOn: { make: 'FORD', model: 'ESCORT', year: '2016' },
+    }))).rejects.toThrow(/IRIS production range/);
   });
 
   it('loads sorted make options for the configured catalogue', async () => {

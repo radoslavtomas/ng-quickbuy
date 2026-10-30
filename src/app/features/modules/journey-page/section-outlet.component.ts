@@ -5,6 +5,7 @@ import { JourneyStateService } from '../../../core/services/journey-state.servic
 import { SignalFormComponent } from '../../../shared/components/signal-form/signal-form';
 import { StepCardComponent } from '../../../shared/components/step-card/step-card';
 import { resolveFields } from '../journeys/journey-registry';
+import { JourneyAnswersService } from '../journeys/journey-answers.service';
 import { AddressSectionComponent } from './sections/address-section.component';
 import { QuoteResultsSectionComponent } from './sections/quote-results-section.component';
 import { RepeatSectionComponent } from './sections/repeat-section.component';
@@ -42,6 +43,7 @@ export interface SectionResult {
           <app-signal-form
             [fields]="fields()"
             [initialValue]="initialValue()"
+            [readAnswer]="readAnswer()"
             (valueChanged)="onValueChanged($event)"
           />
         }
@@ -101,6 +103,8 @@ export class SectionOutletComponent {
   readonly stepName = input.required<string>();
 
   private readonly journeyState = inject(JourneyStateService);
+  private readonly answers = inject(JourneyAnswersService);
+  readonly readAnswer = computed(() => this.answers.reader(this.moduleCode()));
   private readonly signalForm = viewChild(SignalFormComponent);
   private readonly addressSection = viewChild(AddressSectionComponent);
   private readonly quoteResults = viewChild(QuoteResultsSectionComponent);
@@ -154,12 +158,27 @@ export class SectionOutletComponent {
   });
 
   onValueChanged(values: Record<string, unknown>): void {
-    this.journeyState.setSectionAnswers(
+    this.answers.setSectionAnswers(
       this.moduleCode(),
       this.stepName(),
       this.section().id,
       values,
     );
+  }
+
+  /** Capture before validating any other section that may depend on these values. */
+  snapshot(): Record<string, unknown> {
+    if (this.section().kind === 'fields') {
+      return this.signalForm()?.snapshot() ?? {};
+    }
+    if (this.section().kind === 'repeat') {
+      return this.repeatSectionComponent()?.snapshot() ?? {};
+    }
+    // Custom sections publish their state separately and collect their latest
+    // values during validation. They cannot be external dependency sources.
+    return {
+      ...this.journeyState.sectionAnswers(this.moduleCode(), this.stepName(), this.section().id),
+    };
   }
 
   /** Validates this section and returns the values the shell should persist. */

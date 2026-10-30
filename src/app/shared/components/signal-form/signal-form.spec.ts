@@ -401,6 +401,33 @@ describe('SignalFormComponent with a date field', () => {
     expect(result.valid).toBe(true);
     expect(result.values['dateOfBirth']).toBe('01/09/1990');
   });
+  it('collects an ISO-hydrated date in the canonical DD/MM/YYYY format without a blur', async () => {
+    const recalled = TestBed.createComponent(DateFieldHostComponent);
+    recalled.componentInstance.initialValue.set({ dateOfBirth: '2026-09-05' });
+    recalled.detectChanges();
+    await recalled.whenStable();
+
+    const shown = Array.from(
+      recalled.nativeElement.querySelectorAll('app-date-input input'),
+    ) as HTMLInputElement[];
+    expect(shown.map((box) => box.value)).toEqual(['05', '09', '2026']);
+    expect(recalled.componentInstance.form().collect()).toEqual({
+      valid: true,
+      values: { dateOfBirth: '05/09/2026' },
+    });
+  });
+
+  it('canonicalizes a calendar-invalid ISO answer without making it valid', async () => {
+    const recalled = TestBed.createComponent(DateFieldHostComponent);
+    recalled.componentInstance.initialValue.set({ dateOfBirth: '2026-02-31' });
+    recalled.detectChanges();
+    await recalled.whenStable();
+
+    expect(recalled.componentInstance.form().collect()).toEqual({
+      valid: false,
+      values: { dateOfBirth: '31/02/2026' },
+    });
+  });
 
   it('blocks an unanswered date with the same required message any other field would get', () => {
     const result = fixture.componentInstance.form().collect();

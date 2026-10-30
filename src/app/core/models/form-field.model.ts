@@ -117,13 +117,40 @@ export interface FieldMetadata {
   dynamicSelectConfig?: DynamicSelectConfig;
 }
 
-export interface FieldValidatorConfig {
+/** Strings refer to the current section (or repeat item); objects are module-scoped. */
+export type FieldReference =
+  | string
+  | { readonly step: string; readonly section: string; readonly field: string };
+
+export type AnswerReader = (reference: Exclude<FieldReference, string>) => unknown;
+
+export interface FieldValidationError {
+  readonly kind: string;
+  readonly message?: string;
+}
+
+interface LocalValidatorConfig {
   type: BuiltInValidatorType | 'custom';
   value?: number | string | RegExp;
   message?: string;
   name?: string;
   validatorFn?: ValidatorFn;
 }
+export interface CrossFieldValidatorConfig {
+  readonly type: 'cross-field';
+  readonly name: string;
+  readonly dependencies: Readonly<Record<string, FieldReference>>;
+  /** All declared dependencies must be answered before the rule can pass. */
+  readonly dependencyMessage?: string;
+  readonly message?: string;
+  readonly validate: (
+    value: unknown,
+    dependencies: Readonly<Record<string, unknown>>,
+    today: Date,
+  ) => FieldValidationError | undefined;
+}
+
+export type FieldValidatorConfig = LocalValidatorConfig | CrossFieldValidatorConfig;
 
 export interface FormFieldConfig {
   type: FormFieldType;

@@ -30,6 +30,7 @@ import { VehicleBdManualSearchComponent } from '../../specific-modules/component
 import type { IrisSelectionChange } from '../../specific-modules/components/vehicle-iris-search.component';
 import { VehicleIrisSearchComponent } from '../../specific-modules/components/vehicle-iris-search.component';
 import { VehicleVrmSearchComponent } from '../../specific-modules/components/vehicle-vrm-search.component';
+import { JourneyAnswersService } from '../../journeys/journey-answers.service';
 
 /**
  * Vehicle search custom section: orchestrates the VRM/manual mode switch, the
@@ -98,6 +99,7 @@ export class VehicleSearchSectionComponent {
   readonly sectionId = input.required<string>();
 
   private readonly journeyState = inject(JourneyStateService);
+  private readonly answers = inject(JourneyAnswersService);
   private readonly lookup = inject(VehicleLookupService);
   private readonly bdManualSearch = viewChild(VehicleBdManualSearchComponent);
   private readonly vrmSearch = viewChild(VehicleVrmSearchComponent);
@@ -336,7 +338,7 @@ export class VehicleSearchSectionComponent {
   }
 
   private store(patch: Record<string, unknown>): void {
-    this.journeyState.setSectionAnswers(this.moduleCode(), this.stepName(), this.sectionId(), {
+    this.answers.setSectionAnswers(this.moduleCode(), this.stepName(), this.sectionId(), {
       ...this.storedWireValues(),
       ...patch,
     });
@@ -359,7 +361,7 @@ export class VehicleSearchSectionComponent {
       }
     }
 
-    this.journeyState.setSectionAnswers(this.moduleCode(), this.stepName(), this.sectionId(), {
+    this.answers.setSectionAnswers(this.moduleCode(), this.stepName(), this.sectionId(), {
       ...kept,
       ...patch,
     });

@@ -115,9 +115,65 @@ describe('VehicleIrisService', () => {
     expect(requests).toHaveLength(2);
     requests.forEach((request) => request.flush({ years: [] }));
   });
+
+  it('retries a shared failed search on the next lookup instead of replaying its error', () => {
+    const errors: unknown[] = [];
+    const failed = service.searchCached('PC', 'FORD', 'FIESTA');
+    failed.subscribe({ error: (error: unknown) => errors.push(error) });
+    service.searchCached('PC', 'FORD', 'FIESTA').subscribe({
+      error: (error: unknown) => errors.push(error),
+    });
+    httpMock.expectOne((req) => req.url.endsWith('/search')).flush(
+      'Temporary failure', { status: 503, statusText: 'Service Unavailable' },
+    );
+    expect(errors).toHaveLength(2);
+
+    let recovered: IrisSearchResponse | undefined;
+    service.searchCached('PC', 'FORD', 'FIESTA').subscribe((result) => (recovered = result));
+    httpMock.expectOne((req) => req.url.endsWith('/search')).flush({ years: [2026] });
+    expect(recovered).toEqual({ years: [2026] });
+
+    let replayed: IrisSearchResponse | undefined;
+    failed.subscribe((result) => (replayed = result));
+    expect(replayed).toEqual({ years: [2026] });
+    httpMock.expectNone((req) => req.url.endsWith('/search'));
+  });
+
+  it('can resubscribe to the same observable after a network failure', () => {
+    const cached = service.searchCached('GV', 'FORD', 'TRANSIT');
+    let error: unknown;
+    cached.subscribe({ error: (failure: unknown) => (error = failure) });
+    httpMock.expectOne((req) => req.url.endsWith('/search')).error(new ProgressEvent('error'));
+    expect(error).toBeDefined();
+
+    let recovered: IrisSearchResponse | undefined;
+    cached.subscribe((result) => (recovered = result));
+    httpMock.expectOne((req) => req.url.endsWith('/search')).flush({ years: [2025] });
+    expect(recovered).toEqual({ years: [2025] });
+  });
+
+  it('replays a completed response to a late subscriber without another request', () => {
+    const first = service.searchCached('PC', 'FORD', 'FIESTA').subscribe();
+    const request = httpMock.expectOne((req) => req.url.endsWith('/search'));
+    first.unsubscribe();
+    expect(request.cancelled).toBe(false);
+    request.flush({ years: [2026] });
+
+    let replayed: IrisSearchResponse | undefined;
+    service.searchCached('PC', 'FORD', 'FIESTA').subscribe((result) => (replayed = result));
+    expect(replayed).toEqual({ years: [2026] });
+    httpMock.expectNone((req) => req.url.endsWith('/search'));
+  });
 });
 
 describe('toSortedNameOptions', () => {
+  it('sorts accented and mixed-case names alphabetically without changing the source list', () => {
+    const names = ['volvo', 'Škoda', 'bmw', 'Audi'];
+    expect(toSortedNameOptions(names).map((option) => option.label)).toEqual([
+      'Audi', 'bmw', 'Škoda', 'volvo',
+    ]);
+    expect(names).toEqual(['volvo', 'Škoda', 'bmw', 'Audi']);
+  });
   it('sorts names alphabetically into label/value option pairs', () => {
     expect(toSortedNameOptions(['FORD', 'AUDI', 'BMW'])).toEqual([
       { label: 'AUDI', value: 'AUDI' },
@@ -155,6 +211,40 @@ describe('toEditionOption', () => {
 });
 
 describe('matchesForYear', () => {
+  it('includes both production range boundaries', () => {
+    const match: IrisMatch = { '@attributes': buildAttributes() };
+    expect(matchesForYear([match], 1990)).toEqual([match]);
+    expect(matchesForYear([match], 1992)).toEqual([match]);
+  });
+
+  it('treats blank upper bounds as open-ended without discarding current editions', () => {
+    for (const To of ['', '   ']) {
+      const match: IrisMatch = { '@attributes': { ...buildAttributes(), From: '2020', To } };
+      expect(matchesForYear([match], 2026)).toEqual([match]);
+      expect(matchesForYear([match], 2019)).toEqual([]);
+    }
+  });
+
+  it('reports malformed or reversed ranges instead of silently dropping editions', () => {
+    for (const range of [
+      { From: '', To: '2026' },
+      { From: 'unknown', To: '2026' },
+      { From: '2020', To: 'unknown' },
+      { From: '2020', To: '0' },
+      { From: '2020', To: 'Infinity' },
+      { From: '2020', To: '2019' },
+    ]) {
+      const match: IrisMatch = { '@attributes': { ...buildAttributes(), ...range } };
+      expect(() => matchesForYear([match], 2026)).toThrow(/IRIS production range/);
+    }
+  });
+
+  it('rejects invalid selected years instead of reporting no matches', () => {
+    const match: IrisMatch = { '@attributes': buildAttributes() };
+    for (const year of [NaN, Infinity, 0, 1991.5]) {
+      expect(() => matchesForYear([match], year)).toThrow(/IRIS production year/);
+    }
+  });
   it('keeps only matches whose production years span the given year', () => {
     const inRange: IrisMatch = { '@attributes': buildAttributes() };
     const outOfRange: IrisMatch = {

@@ -1,11 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { vi } from 'vitest';
 import { App } from '../../../app';
 import { routes } from '../../../app.routes';
 import { BRAND_OVERRIDE } from '../../../core/services/brand.service';
 import { ModuleContextService } from '../../../core/services/module-context.service';
 import { JourneyStateService } from '../../../core/services/journey-state.service';
 import { JourneyPersistenceService } from '../journeys/journey-persistence.service';
+import { JourneyAnswersService } from '../journeys/journey-answers.service';
+import { SectionOutletComponent } from './section-outlet.component';
 import { getJourneyForModule, getStepIndex } from '../journeys/journey-registry';
 
 const VALID_VEHICLE_DETAILS_ANSWERS = {
@@ -339,6 +343,7 @@ describe('journey flow', () => {
   });
 
   it('advances past the Signal Forms section once it is valid', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'proposer', { dateOfBirth: '01/09/1990' });
     journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
       startDate: '01/09/2026',
       coverType: 'comprehensive',
@@ -353,6 +358,64 @@ describe('journey flow', () => {
 
     expect(router.url).toContain('/PC/your-quotes');
     expect(journeyState.isStepComplete('PC', 'your-policy')).toBe(true);
+  });
+
+  it('blocks impossible licence years using the proposer DOB on the earlier page', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'proposer', { dateOfBirth: '01/09/2000' });
+    journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
+      startDate: '01/09/2026', coverType: 'comprehensive', voluntaryExcess: 250,
+      licenseYearsHeld: 30, declarationAccepted: true,
+    });
+    const fixture = await renderAt('/PC/your-policy');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/your-policy');
+    expect(fixture.nativeElement.textContent).toContain('Licence years held cannot exceed');
+    expect(journeyState.sectionAnswers('PC', 'your-policy', 'policy')['licenseYearsHeld']).toBe(30);
+  });
+
+  it('requires the earlier DOB rather than trusting completion alone', async () => {
+    journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
+      startDate: '01/09/2026', coverType: 'comprehensive', voluntaryExcess: 250,
+      licenseYearsHeld: 8, declarationAccepted: true,
+    });
+    const fixture = await renderAt('/PC/your-policy');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/your-policy');
+    expect(fixture.nativeElement.textContent).toContain('Enter a valid date of birth in Your details');
+  });
+
+  it('snapshots every section before the first section is validated', async () => {
+    seedValidVehicleStep(journeyState);
+    const fixture = await renderAt('/PC/your-vehicle');
+    const outlets = fixture.debugElement.queryAll(By.directive(SectionOutletComponent))
+      .map((node) => node.componentInstance as SectionOutletComponent);
+    const vehicle = outlets.find((outlet) => outlet.section().id === 'vehicle');
+    if (!vehicle) {
+      throw new Error('Expected vehicle section');
+    }
+    vi.spyOn(vehicle, 'snapshot').mockReturnValue({ ...VALID_VEHICLE_DETAILS_ANSWERS, annualMileage: 15000 });
+    const firstCollect = outlets[0].collect.bind(outlets[0]);
+    vi.spyOn(outlets[0], 'collect').mockImplementation(() => {
+      expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['annualMileage']).toBe(15000);
+      return firstCollect();
+    });
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/additional-drivers');
+  });
+
+  it('uses the latest input on immediate submission without an intervening effect flush', async () => {
+    seedValidVehicleStep(journeyState);
+    const fixture = await renderAt('/PC/your-vehicle');
+    const mileage = field(fixture, 'annualMileage') as HTMLInputElement;
+    mileage.value = '15000';
+    mileage.dispatchEvent(new Event('input'));
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/additional-drivers');
+    expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['annualMileage']).toBe(15000);
   });
 
   it('rejects an invalid date through the bridged validator', async () => {
@@ -391,6 +454,19 @@ describe('journey flow', () => {
 
     expect(host.querySelector('app-repeat-section')).not.toBeNull();
     expect(host.textContent).toContain('Additional driver 1');
+  });
+
+  it('does not skip a repeat section exposed by an immediately submitted answer', async () => {
+    const fixture = await renderAt('/PC/additional-drivers');
+    const yes = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLInputElement>('[data-field="hasAdditionalDrivers"]'),
+    ).find((input) => input.value === 'yes');
+    yes?.click();
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/additional-drivers');
+    expect(journeyState.isStepComplete('PC', 'additional-drivers')).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-repeat-section')).not.toBeNull();
   });
 
   it('adds and removes drivers up to the slots available', async () => {
@@ -673,6 +749,35 @@ describe('journey flow', () => {
       expect(host.querySelector('.step-navigation__summary')?.textContent).toContain(
         'Next: Your policy',
       );
+    });
+
+    it('retains downstream answers but requires resubmission after editing an earlier completed step', async () => {
+      seedValidVehicleStep(journeyState);
+      journeyState.setSectionAnswers('PC', 'your-policy', 'policy', { licenseYearsHeld: 8 });
+      for (const step of getJourneyForModule('PC')?.steps ?? []) {
+        journeyState.markStepComplete('PC', step.name);
+      }
+      const fixture = await renderAt('/PC/your-vehicle');
+      const mileage = field(fixture, 'annualMileage') as HTMLInputElement;
+      mileage.value = '15000';
+      mileage.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      expect(journeyState.completedSteps('PC')).toEqual(['your-details']);
+      expect(journeyState.sectionAnswers('PC', 'your-policy', 'policy')['licenseYearsHeld']).toBe(8);
+      expect(stepButton(fixture, 4)?.getAttribute('aria-disabled')).toBe('true');
+
+      stepButton(fixture, 1)?.click();
+      await fixture.whenStable();
+      expect(router.url).toContain('/PC/your-details');
+    });
+
+    it('redirects an outcome URL after a previous-page answer is changed', async () => {
+      const fixture = await renderAt('/PC/your-quotes');
+      TestBed.inject(JourneyAnswersService).setSectionAnswers(
+        'PC', 'your-details', 'proposer', { dateOfBirth: '01/09/2000' },
+      );
+      await fixture.whenStable();
+      expect(router.url).toContain('/PC/your-details');
     });
 
     it('expands the small-screen list on demand', async () => {
