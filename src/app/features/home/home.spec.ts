@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { HomeComponent } from './home';
-import { JourneySessionService } from '../../core/services/journey-session.service';
-import { JourneyStateService } from '../../core/services/journey-state.service';
+import { JourneySessionService } from '../quote-journey/persistence/journey-session.service';
+import { JourneyStateService } from '../quote-journey/state/journey-state.service';
 
 describe('HomeComponent', () => {
   beforeEach(async () => {

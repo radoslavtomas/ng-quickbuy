@@ -1,0 +1,833 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { By } from '@angular/platform-browser';
+import { vi } from 'vitest';
+import { App } from '../../../app';
+import { routes } from '../../../app.routes';
+import { BRAND_OVERRIDE } from '../../../core/services/brand.service';
+import { ModuleContextService } from '../../../core/services/module-context.service';
+import { JourneyStateService } from '../state/journey-state.service';
+import { JourneyPersistenceService } from '../persistence/journey-persistence.service';
+import { JourneyAnswersService } from '../state/journey-answers.service';
+import { SectionOutletComponent } from './section-outlet.component';
+import { getJourneyForModule, getStepIndex } from '../journey-registry';
+
+const VALID_VEHICLE_DETAILS_ANSWERS = {
+  vehicleUse: 'sdp',
+  annualMileage: 12000,
+  overnightLocation: 'driveway',
+};
+
+/** A fully resolved vehicle, keyed the way the vehicle search section stores it. */
+const RESOLVED_VEHICLE_SEARCH_ANSWERS = {
+  'vehicle-regnumber': 'AB12CDE',
+  'vehicle-make': 'AUDI',
+  'vehicle-model': 'Q7 S LINE QUATTRO TDI 272',
+  'vehicle-yearofmanufacture': 2017,
+  'vehicle-fuel': 'D',
+  'vehicles-vehicle-1-enginecc': 2967,
+  'vehicle-transmission': 'A',
+  'vehicle-abicode': '04135717',
+  vehicleSearchMode: 'vrm',
+};
+
+const RESOLVED_ADDRESS = {
+  postcode: 'M16 0PQ',
+  addressLine1: '17 Talbot Road',
+  houseNameNumber: '17',
+  addressLine2: '',
+  addressLine3: '',
+  addressLine4: 'Manchester',
+};
+
+describe('journey flow', () => {
+  let router: Router;
+  let journeyState: JourneyStateService;
+
+  const moduleContextStub: Pick<
+    ModuleContextService,
+    'ensureLoaded' | 'parameters' | 'isSwitchedOff' | 'switchedOffMessage' | 'allowsPartialStore'
+  > = {
+    ensureLoaded: async () => null,
+    parameters: () => null,
+    isSwitchedOff: () => false,
+    switchedOffMessage: () => '',
+    allowsPartialStore: () => true,
+  };
+
+  const persistenceStub: Pick<JourneyPersistenceService, 'ensureCreated' | 'recordStep'> = {
+    ensureCreated: async () => null,
+    recordStep: async () => undefined,
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [
+        provideRouter(routes),
+        { provide: ModuleContextService, useValue: moduleContextStub },
+        { provide: JourneyPersistenceService, useValue: persistenceStub },
+        // These specs route to PC, which only qld sells, regardless of what
+        // DEFAULT_BRAND_ID is set to for local development.
+        { provide: BRAND_OVERRIDE, useValue: 'qld' },
+      ],
+    }).compileComponents();
+
+    router = TestBed.inject(Router);
+    journeyState = TestBed.inject(JourneyStateService);
+    journeyState.resetAll();
+  });
+
+  /**
+   * Marks every step before `url`'s as complete.
+   *
+   * Steps are gated on the ones before them, so a test that starts halfway
+   * through has to say how the customer got there. Without this every deep-linked
+   * test would simply be redirected to step one — which is the point of the
+   * gating, and is asserted separately below.
+   */
+  function unlockStepsBefore(url: string): void {
+    const [, moduleCode, stepName] = url.split('/');
+    const journey = getJourneyForModule(moduleCode);
+    if (!journey || !stepName) {
+      return;
+    }
+
+    const target = getStepIndex(journey, stepName);
+    for (const step of journey.steps.slice(0, Math.max(target, 0))) {
+      journeyState.markStepComplete(moduleCode, step.name);
+    }
+  }
+
+  async function render(): Promise<ComponentFixture<App>> {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  /** Renders a step as a customer who reached it legitimately. */
+  async function renderAt(url: string): Promise<ComponentFixture<App>> {
+    unlockStepsBefore(url);
+    await router.navigateByUrl(url);
+    return render();
+  }
+
+  /** Renders whatever the URL asks for, with no progress assumed. */
+  async function renderAtRaw(url: string): Promise<ComponentFixture<App>> {
+    await router.navigateByUrl(url);
+    return render();
+  }
+
+  /** A step's button on the desktop wizard rail, by its position in the journey. */
+  function stepButton(fixture: ComponentFixture<App>, position: number): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector(
+      `.step-navigation__step-body[aria-label^="Step ${position} "]`,
+    );
+  }
+
+  function continueButton(fixture: ComponentFixture<App>): HTMLButtonElement | null {
+    const buttons = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ) as HTMLButtonElement[];
+    return (
+      buttons.find((button) => button.getAttribute('aria-label')?.startsWith('Continue')) ?? null
+    );
+  }
+
+  /**
+   * Finds a control by its configured field name.
+   *
+   * Element ids are scoped to the rendered section so a repeat section cannot emit
+   * duplicates, which makes them unstable to assert on; `data-field` is the stable
+   * hook.
+   */
+  function field(fixture: ComponentFixture<App>, name: string): HTMLElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector(`[data-field="${name}"]`);
+  }
+
+  /** Seeds a fully resolved vehicle plus valid vehicle-details answers for `moduleCode`. */
+  function seedValidVehicleStep(state: JourneyStateService, moduleCode = 'PC'): void {
+    state.setSectionAnswers(
+      moduleCode,
+      'your-vehicle',
+      'vehicleSearch',
+      RESOLVED_VEHICLE_SEARCH_ANSWERS,
+    );
+    state.setSectionAnswers(moduleCode, 'your-vehicle', 'vehicle', VALID_VEHICLE_DETAILS_ANSWERS);
+  }
+
+  it('renders the step heading and progress from the journey definition', async () => {
+    const fixture = await renderAt('/PC/your-vehicle');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Your vehicle');
+    expect(text).toContain('Step 2 of 5');
+    // Section titles come from configuration, not from a per-step component.
+    expect(text).toContain('Vehicle details');
+  });
+
+  it('advances to the next step and records completion when the step is valid', async () => {
+    seedValidVehicleStep(journeyState);
+
+    const fixture = await renderAt('/PC/your-vehicle');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+
+    expect(router.url).toContain('/PC/additional-drivers');
+    expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(true);
+  });
+
+  it('keeps the customer on the step when a required answer is missing', async () => {
+    const fixture = await renderAt('/PC/your-vehicle');
+
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toContain('/PC/your-vehicle');
+    expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('is required');
+  });
+
+  it('persists answers the customer typed so returning to a step restores them', async () => {
+    seedValidVehicleStep(journeyState);
+
+    const fixture = await renderAt('/PC/your-vehicle');
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vehicle found');
+  });
+
+  it('persists the registration the customer typed before searching', async () => {
+    const fixture = await renderAt('/PC/your-vehicle');
+    const registration = field(fixture, 'registration') as HTMLInputElement;
+
+    registration.value = 'AB12CDE';
+    registration.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+
+    expect(
+      journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicleSearch')['vehicle-regnumber'],
+    ).toBe('AB12CDE');
+  });
+
+  // it('hides the proposer questions until an address is resolved', async () => {
+  //   const withoutAddress = await renderAt('/PC/your-details');
+  //   expect(field(withoutAddress, 'email')).toBeNull();
+
+  //   journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+  //   withoutAddress.detectChanges();
+  //   await withoutAddress.whenStable();
+
+  //   expect(field(withoutAddress, 'email')).not.toBeNull();
+  // });
+
+  it('blocks the first step until the address section is satisfied', async () => {
+    const fixture = await renderAt('/PC/your-details');
+
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toContain('/PC/your-details');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Please resolve your address',
+    );
+  });
+
+  it('renders the outcome step with quotes instead of questions', async () => {
+    const fixture = await renderAt('/PC/your-quotes');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Demo quotes');
+    expect(text).toContain('Final step reached');
+    expect(continueButton(fixture)).toBeNull();
+  });
+
+  it('renders every fields section with the Signal Forms renderer', async () => {
+    for (const step of ['your-vehicle', 'additional-drivers', 'your-policy']) {
+      const fixture = await renderAt(`/PC/${step}`);
+      const host = fixture.nativeElement as HTMLElement;
+
+      expect(host.querySelector('app-signal-form')).not.toBeNull();
+      // The reactive renderer is gone; nothing should reintroduce it.
+      expect(host.querySelector('app-dynamic-form')).toBeNull();
+    }
+  });
+
+  it('renders the address section forms with the Signal Forms renderer too', async () => {
+    const fixture = await renderAt('/PC/your-details');
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('app-address-section app-signal-form')).not.toBeNull();
+    expect(host.textContent).toContain('Find address');
+  });
+
+  it('asks for an occupation from ordinary field configuration, not a bespoke section', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+
+    const fixture = await renderAt('/PC/your-details');
+
+    expect(field(fixture, 'employmentStatus')).not.toBeNull();
+    // Nothing further is asked until we know the status.
+    expect(field(fixture, 'occupation')).toBeNull();
+    expect(field(fixture, 'occupationFte')).toBeNull();
+  });
+
+  it('asks how to describe the occupation according to the employment status', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+    journeyState.setSectionAnswers('PC', 'your-details', 'occupation', {
+      employmentStatus: 'E',
+    });
+
+    const employed = await renderAt('/PC/your-details');
+    expect(employed.nativeElement.querySelectorAll('app-autocomplete-input').length).toBe(2);
+    expect(field(employed, 'occupationFte')).toBeNull();
+
+    journeyState.setSectionAnswers('PC', 'your-details', 'occupation', {
+      employmentStatus: 'FTE',
+    });
+
+    const studying = await renderAt('/PC/your-details');
+    expect(field(studying, 'occupationFte')).not.toBeNull();
+    expect(studying.nativeElement.querySelectorAll('app-autocomplete-input').length).toBe(0);
+  });
+
+  it('asks a retired customer nothing further, because the status says it all', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+    journeyState.setSectionAnswers('PC', 'your-details', 'occupation', {
+      employmentStatus: 'R',
+    });
+
+    const fixture = await renderAt('/PC/your-details');
+
+    expect(field(fixture, 'occupation')).toBeNull();
+    expect(field(fixture, 'occupationFte')).toBeNull();
+    // The second-job question still applies to them.
+    expect(field(fixture, 'hasParttime')).not.toBeNull();
+  });
+
+  it('offers a limited company to a van customer only', async () => {
+    journeyState.setSectionAnswers('GV', 'your-details', 'address', RESOLVED_ADDRESS);
+    const van = await renderAt('/GV/your-details');
+    expect(field(van, 'employmentStatus')?.textContent).toContain('Limited Company');
+
+    journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+    const car = await renderAt('/PC/your-details');
+    expect(field(car, 'employmentStatus')?.textContent).not.toContain('Limited Company');
+  });
+
+  it('renders every field type of the Signal Forms section', async () => {
+    const fixture = await renderAt('/PC/your-policy');
+    const host = fixture.nativeElement as HTMLElement;
+
+    // date rendered as text, radio group, numbers with prefix/suffix, and a checkbox.
+    expect(field(fixture, 'startDate')).not.toBeNull();
+    expect(host.querySelectorAll('input[type=radio]').length).toBe(3);
+    expect(field(fixture, 'voluntaryExcess')).not.toBeNull();
+    expect(field(fixture, 'licenseYearsHeld')).not.toBeNull();
+    expect(field(fixture, 'declarationAccepted')).not.toBeNull();
+    // The radio group is named by a real legend, as the reactive renderer is.
+    expect(host.querySelector('fieldset legend')?.textContent).toContain('Level of cover');
+  });
+
+  it('blocks the Signal Forms section when required answers are missing', async () => {
+    const fixture = await renderAt('/PC/your-policy');
+
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toContain('/PC/your-policy');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('is required');
+  });
+
+  it('advances past the Signal Forms section once it is valid', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'proposer', { dateOfBirth: '01/09/1990' });
+    journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
+      startDate: '01/09/2026',
+      coverType: 'comprehensive',
+      voluntaryExcess: 250,
+      licenseYearsHeld: 8,
+      declarationAccepted: true,
+    });
+
+    const fixture = await renderAt('/PC/your-policy');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+
+    expect(router.url).toContain('/PC/your-quotes');
+    expect(journeyState.isStepComplete('PC', 'your-policy')).toBe(true);
+  });
+
+  it('blocks impossible licence years using the proposer DOB on the earlier page', async () => {
+    journeyState.setSectionAnswers('PC', 'your-details', 'proposer', { dateOfBirth: '01/09/2000' });
+    journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
+      startDate: '01/09/2026', coverType: 'comprehensive', voluntaryExcess: 250,
+      licenseYearsHeld: 30, declarationAccepted: true,
+    });
+    const fixture = await renderAt('/PC/your-policy');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/your-policy');
+    expect(fixture.nativeElement.textContent).toContain('Licence years held cannot exceed');
+    expect(journeyState.sectionAnswers('PC', 'your-policy', 'policy')['licenseYearsHeld']).toBe(30);
+  });
+
+  it('requires the earlier DOB rather than trusting completion alone', async () => {
+    journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
+      startDate: '01/09/2026', coverType: 'comprehensive', voluntaryExcess: 250,
+      licenseYearsHeld: 8, declarationAccepted: true,
+    });
+    const fixture = await renderAt('/PC/your-policy');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/your-policy');
+    expect(fixture.nativeElement.textContent).toContain('Enter a valid date of birth in Your details');
+  });
+
+  it('snapshots every section before the first section is validated', async () => {
+    seedValidVehicleStep(journeyState);
+    const fixture = await renderAt('/PC/your-vehicle');
+    const outlets = fixture.debugElement.queryAll(By.directive(SectionOutletComponent))
+      .map((node) => node.componentInstance as SectionOutletComponent);
+    const vehicle = outlets.find((outlet) => outlet.section().id === 'vehicle');
+    if (!vehicle) {
+      throw new Error('Expected vehicle section');
+    }
+    vi.spyOn(vehicle, 'snapshot').mockReturnValue({ ...VALID_VEHICLE_DETAILS_ANSWERS, annualMileage: 15000 });
+    const firstCollect = outlets[0].collect.bind(outlets[0]);
+    vi.spyOn(outlets[0], 'collect').mockImplementation(() => {
+      expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['annualMileage']).toBe(15000);
+      return firstCollect();
+    });
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/additional-drivers');
+  });
+
+  it('uses the latest input on immediate submission without an intervening effect flush', async () => {
+    seedValidVehicleStep(journeyState);
+    const fixture = await renderAt('/PC/your-vehicle');
+    const mileage = field(fixture, 'annualMileage') as HTMLInputElement;
+    mileage.value = '15000';
+    mileage.dispatchEvent(new Event('input'));
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/additional-drivers');
+    expect(journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicle')['annualMileage']).toBe(15000);
+  });
+
+  it('rejects an invalid date through the bridged validator', async () => {
+    journeyState.setSectionAnswers('PC', 'your-policy', 'policy', {
+      startDate: '31/02/2026',
+      coverType: 'comprehensive',
+      voluntaryExcess: 250,
+      licenseYearsHeld: 8,
+      declarationAccepted: true,
+    });
+
+    const fixture = await renderAt('/PC/your-policy');
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(router.url).toContain('/PC/your-policy');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Enter a valid date in DD/MM/YYYY format.',
+    );
+  });
+
+  it('hides the driver list until additional drivers are declared', async () => {
+    const fixture = await renderAt('/PC/additional-drivers');
+    const host = fixture.nativeElement as HTMLElement;
+
+    // Defaults to no, so the list is not shown.
+    expect(host.querySelector('app-repeat-section')).toBeNull();
+
+    journeyState.setSectionAnswers('PC', 'additional-drivers', 'drivers', {
+      hasAdditionalDrivers: 'yes',
+      noClaimsBonusYears: '3',
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(host.querySelector('app-repeat-section')).not.toBeNull();
+    expect(host.textContent).toContain('Additional driver 1');
+  });
+
+  it('does not skip a repeat section exposed by an immediately submitted answer', async () => {
+    const fixture = await renderAt('/PC/additional-drivers');
+    const yes = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLInputElement>('[data-field="hasAdditionalDrivers"]'),
+    ).find((input) => input.value === 'yes');
+    yes?.click();
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+    expect(router.url).toContain('/PC/additional-drivers');
+    expect(journeyState.isStepComplete('PC', 'additional-drivers')).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-repeat-section')).not.toBeNull();
+  });
+
+  it('adds and removes drivers up to the slots available', async () => {
+    journeyState.setSectionAnswers('PC', 'additional-drivers', 'drivers', {
+      hasAdditionalDrivers: 'yes',
+      noClaimsBonusYears: '3',
+    });
+
+    const fixture = await renderAt('/PC/additional-drivers');
+    const host = fixture.nativeElement as HTMLElement;
+
+    const addButton = () =>
+      Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Add another'),
+      ) as HTMLButtonElement | undefined;
+
+    expect(host.textContent).toContain('Additional driver 1');
+
+    addButton()?.click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Additional driver 2');
+
+    addButton()?.click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Additional driver 3');
+
+    // Three slots beyond the proposer, so no fourth.
+    expect(addButton()).toBeUndefined();
+    expect(host.textContent).toContain('up to 3 additional drivers');
+
+    const removeButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Remove'),
+    ) as HTMLButtonElement | undefined;
+    removeButton?.click();
+    fixture.detectChanges();
+
+    expect(host.textContent).not.toContain('Additional driver 3');
+    expect(addButton()).toBeDefined();
+  });
+
+  it('drives the property journey from the same shell', async () => {
+    const fixture = await renderAt('/HC/your-property');
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Your property');
+    expect(text).toContain('Step 2 of 6');
+    expect(text).toContain('Property details');
+  });
+
+  it('asks nothing about a joint proposer until one is declared', async () => {
+    const fixture = await renderAt('/HC/joint-proposer');
+
+    expect(field(fixture, 'hasJointProposer')).not.toBeNull();
+    expect(field(fixture, 'forenames')).toBeNull();
+    expect(field(fixture, 'employmentStatus')).toBeNull();
+  });
+
+  it('does not let unanswered joint proposer questions block the step', async () => {
+    // Defaults to no, so every question about them is hidden and cannot object.
+    const fixture = await renderAt('/HC/joint-proposer');
+
+    continueButton(fixture)?.click();
+    await fixture.whenStable();
+
+    expect(router.url).toContain('/HC/your-policy');
+    expect(journeyState.isStepComplete('HC', 'joint-proposer')).toBe(true);
+  });
+
+  it('asks a declared joint proposer for their occupation as well as their name', async () => {
+    journeyState.setSectionAnswers('HC', 'joint-proposer', 'jointProposer', {
+      hasJointProposer: 'yes',
+      employmentStatus: 'E',
+    });
+
+    const fixture = await renderAt('/HC/joint-proposer');
+
+    expect(field(fixture, 'forenames')).not.toBeNull();
+    expect(field(fixture, 'surname')).not.toBeNull();
+    expect(field(fixture, 'dateOfBirth')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('app-autocomplete-input').length).toBe(2);
+  });
+
+  describe('property risk address', () => {
+    function radioInput(
+      fixture: ComponentFixture<App>,
+      name: string,
+      value: string,
+    ): HTMLInputElement | null {
+      const inputs = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll(`[data-field="${name}"]`),
+      ) as HTMLInputElement[];
+      return inputs.find((input) => input.value === value) ?? null;
+    }
+
+    function changeAddressButton(fixture: ComponentFixture<App>): HTMLButtonElement | undefined {
+      return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (button) => button.textContent?.includes('Change address'),
+      ) as HTMLButtonElement | undefined;
+    }
+
+    it('does not ask about the risk address until the correspondence address is resolved', async () => {
+      const fixture = await renderAt('/HC/your-details');
+      expect(field(fixture, 'riskAddressMatches')).toBeNull();
+    });
+
+    it('never asks a motor customer about a risk address', async () => {
+      journeyState.setSectionAnswers('PC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/PC/your-details');
+      expect(field(fixture, 'riskAddressMatches')).toBeNull();
+    });
+
+    it('derives the risk address from the correspondence address when the answer is yes', async () => {
+      journeyState.setSectionAnswers('HC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/HC/your-details');
+
+      radioInput(fixture, 'riskAddressMatches', 'yes')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const stored = journeyState.sectionAnswers('HC', 'your-details', 'address');
+      expect(stored['riskAddressLine1']).toBe(RESOLVED_ADDRESS.addressLine1);
+      expect(stored['riskAddressLine4']).toBe(RESOLVED_ADDRESS.addressLine4);
+      expect(stored['riskPostcode']).toBe(RESOLVED_ADDRESS.postcode);
+    });
+
+    it('reveals a fresh address search for the risk address when the answer is no', async () => {
+      journeyState.setSectionAnswers('HC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/HC/your-details');
+
+      radioInput(fixture, 'riskAddressMatches', 'no')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelectorAll('app-address-search').length,
+      ).toBe(2);
+    });
+
+    it('drops the derived risk address when the customer changes their answer to no', async () => {
+      journeyState.setSectionAnswers('HC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/HC/your-details');
+
+      radioInput(fixture, 'riskAddressMatches', 'yes')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(journeyState.sectionAnswers('HC', 'your-details', 'address')['riskAddressLine1']).toBe(
+        RESOLVED_ADDRESS.addressLine1,
+      );
+
+      radioInput(fixture, 'riskAddressMatches', 'no')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const stored = journeyState.sectionAnswers('HC', 'your-details', 'address');
+      expect(stored['riskAddressLine1']).toBeUndefined();
+      expect(stored['riskAddressMatches']).toBe('no');
+    });
+
+    it('resets the risk address once the customer starts editing the correspondence address', async () => {
+      journeyState.setSectionAnswers('HC', 'your-details', 'address', RESOLVED_ADDRESS);
+      const fixture = await renderAt('/HC/your-details');
+
+      radioInput(fixture, 'riskAddressMatches', 'yes')?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      changeAddressButton(fixture)?.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+
+      const stored = journeyState.sectionAnswers('HC', 'your-details', 'address');
+      expect(stored['riskAddressMatches']).toBeUndefined();
+      expect(stored['riskAddressLine1']).toBeUndefined();
+      expect(field(fixture, 'riskAddressMatches')).toBeNull();
+    });
+  });
+
+  describe('step navigation', () => {
+    it('sends a customer who has answered nothing back to the first step', async () => {
+      await renderAtRaw('/PC/your-policy');
+
+      expect(router.url).toContain('/PC/your-details');
+    });
+
+    it('sends them to where they left off, not to the beginning', async () => {
+      journeyState.markStepComplete('PC', 'your-details');
+      journeyState.markStepComplete('PC', 'your-vehicle');
+
+      await renderAtRaw('/PC/your-quotes');
+
+      expect(router.url).toContain('/PC/additional-drivers');
+    });
+
+    it('still shows not-found for a step the journey does not have', async () => {
+      const fixture = await renderAtRaw('/PC/not-a-step');
+
+      expect(router.url).toContain('/PC/not-a-step');
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-not-found')).not.toBeNull();
+    });
+
+    it('offers no way to open a step that is still locked', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      // Step 3 is where Continue goes; step 4 is out of reach until then.
+      expect(stepButton(fixture, 4)?.getAttribute('aria-disabled')).toBe('true');
+      expect(stepButton(fixture, 3)?.getAttribute('aria-disabled')).toBeNull();
+      expect(stepButton(fixture, 2)?.getAttribute('aria-current')).toBe('step');
+      expect(stepButton(fixture, 1)?.getAttribute('aria-disabled')).toBeNull();
+    });
+
+    it('does nothing when a locked step is clicked anyway', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      stepButton(fixture, 4)?.click();
+      await fixture.whenStable();
+
+      expect(router.url).toContain('/PC/your-vehicle');
+    });
+
+    it('submits the current step when jumping forward, exactly as Continue does', async () => {
+      seedValidVehicleStep(journeyState);
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      stepButton(fixture, 3)?.click();
+      await fixture.whenStable();
+
+      expect(router.url).toContain('/PC/additional-drivers');
+      expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(true);
+    });
+
+    it('refuses to jump forward from a step that is not valid', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      stepButton(fixture, 3)?.click();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(router.url).toContain('/PC/your-vehicle');
+      expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(false);
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('is required');
+    });
+
+    it('lets the customer go back even when the current step is not valid', async () => {
+      // Nothing has been answered here, so Continue would refuse. Going back to
+      // correct an earlier answer must not be held hostage to that.
+      const fixture = await renderAt('/PC/your-vehicle');
+
+      stepButton(fixture, 1)?.click();
+      await fixture.whenStable();
+
+      expect(router.url).toContain('/PC/your-details');
+      expect(journeyState.isStepComplete('PC', 'your-vehicle')).toBe(false);
+    });
+
+    it('keeps what was typed when the customer goes back', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+      const registration = field(fixture, 'registration') as HTMLInputElement;
+
+      registration.value = 'XY19ZAB';
+      registration.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+
+      stepButton(fixture, 1)?.click();
+      await fixture.whenStable();
+
+      expect(router.url).toContain('/PC/your-details');
+      expect(
+        journeyState.sectionAnswers('PC', 'your-vehicle', 'vehicleSearch')['vehicle-regnumber'],
+      ).toBe('XY19ZAB');
+    });
+
+    it('marks completed steps and counts them on the progress dial', async () => {
+      const fixture = await renderAt('/PC/additional-drivers');
+      const host = fixture.nativeElement as HTMLElement;
+
+      expect(stepButton(fixture, 1)?.getAttribute('aria-label')).toContain('completed');
+      expect(stepButton(fixture, 2)?.getAttribute('aria-label')).toContain('completed');
+      // The small-screen dial counts position, and says so out loud.
+      expect(host.querySelector('.step-navigation__dial-label')?.textContent).toContain('3 of 5');
+      expect(host.querySelector('.step-navigation__summary')?.textContent).toContain(
+        'Next: Your policy',
+      );
+    });
+
+    it('retains downstream answers but requires resubmission after editing an earlier completed step', async () => {
+      seedValidVehicleStep(journeyState);
+      journeyState.setSectionAnswers('PC', 'your-policy', 'policy', { licenseYearsHeld: 8 });
+      for (const step of getJourneyForModule('PC')?.steps ?? []) {
+        journeyState.markStepComplete('PC', step.name);
+      }
+      const fixture = await renderAt('/PC/your-vehicle');
+      const mileage = field(fixture, 'annualMileage') as HTMLInputElement;
+      mileage.value = '15000';
+      mileage.dispatchEvent(new Event('input'));
+      await fixture.whenStable();
+      expect(journeyState.completedSteps('PC')).toEqual(['your-details']);
+      expect(journeyState.sectionAnswers('PC', 'your-policy', 'policy')['licenseYearsHeld']).toBe(8);
+      expect(stepButton(fixture, 4)?.getAttribute('aria-disabled')).toBe('true');
+
+      stepButton(fixture, 1)?.click();
+      await fixture.whenStable();
+      expect(router.url).toContain('/PC/your-details');
+    });
+
+    it('redirects an outcome URL after a previous-page answer is changed', async () => {
+      const fixture = await renderAt('/PC/your-quotes');
+      TestBed.inject(JourneyAnswersService).setSectionAnswers(
+        'PC', 'your-details', 'proposer', { dateOfBirth: '01/09/2000' },
+      );
+      await fixture.whenStable();
+      expect(router.url).toContain('/PC/your-details');
+    });
+
+    it('expands the small-screen list on demand', async () => {
+      const fixture = await renderAt('/PC/your-vehicle');
+      const host = fixture.nativeElement as HTMLElement;
+      const summary = host.querySelector('.step-navigation__summary') as HTMLButtonElement;
+      const list = host.querySelector('#journey-step-list') as HTMLElement;
+
+      expect(summary.getAttribute('aria-expanded')).toBe('false');
+      expect(list.hidden).toBe(true);
+
+      summary.click();
+      fixture.detectChanges();
+
+      expect(summary.getAttribute('aria-expanded')).toBe('true');
+      expect(list.hidden).toBe(false);
+    });
+
+    it('keeps a reload on a later step where the customer was', async () => {
+      seedValidVehicleStep(journeyState);
+      journeyState.markStepComplete('PC', 'your-details');
+      journeyState.markStepComplete('PC', 'your-vehicle');
+
+      // A reload is a fresh service reading sessionStorage back.
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [App],
+        providers: [
+          provideRouter(routes),
+          { provide: ModuleContextService, useValue: moduleContextStub },
+          { provide: JourneyPersistenceService, useValue: persistenceStub },
+        ],
+      }).compileComponents();
+
+      const reloadedRouter = TestBed.inject(Router);
+      const reloadedState = TestBed.inject(JourneyStateService);
+
+      expect(reloadedState.isStepComplete('PC', 'your-vehicle')).toBe(true);
+      expect(
+        reloadedState.sectionAnswers('PC', 'your-vehicle', 'vehicleSearch')['vehicle-regnumber'],
+      ).toBe('AB12CDE');
+
+      await reloadedRouter.navigateByUrl('/PC/additional-drivers');
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(reloadedRouter.url).toContain('/PC/additional-drivers');
+
+      reloadedState.resetAll();
+    });
+  });
+});

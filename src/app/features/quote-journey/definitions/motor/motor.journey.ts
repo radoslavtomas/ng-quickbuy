@@ -1,0 +1,150 @@
+import type { JourneyDefinition } from '../../models/journey.model';
+import { createOccupationFields } from '../shared/occupation.fields';
+import { MOTOR_YOUR_DETAILS_FIELDS } from './steps/your-details.fields';
+import { MOTOR_YOUR_VEHICLE_FIELDS } from './steps/your-vehicle.fields';
+import { VEHICLE_SEARCH_SECTION_ID } from './vehicle-field-map';
+import {
+  MOTOR_ADDITIONAL_DRIVERS_FIELDS,
+  MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS,
+} from './steps/additional-drivers.fields';
+import { MOTOR_YOUR_POLICY_FIELDS } from './steps/your-policy.fields';
+import {
+  ADDITIONAL_DRIVERS_SECTION_ID,
+  ADDITIONAL_DRIVER_SLOTS,
+  MOTOR_PAYLOAD_MAPPER,
+} from '../../persistence/journey-payload.mapper';
+
+/** The proposer's details are only worth asking for once we know where they live. */
+// function addressIsResolved(answers: StepAnswers): boolean {
+//   return hasAddressState(answers['address'] ?? {});
+// }
+
+/**
+ * Only a van may be insured by a limited company, and the motor journey is shared
+ * by car, van, breakdown and taxi, so the status list is decided per module.
+ */
+const VAN_MODULE_CODE = 'GV';
+
+/**
+ * Motor questionnaire, shared by car, van, breakdown and taxi.
+ *
+ * `storeStep` currently mirrors the route slug. The partial-store API expects its
+ * own step identifier and the values have not been confirmed by the backend yet,
+ * so they are kept as a separate field rather than derived from `name`.
+ */
+export const MOTOR_JOURNEY: JourneyDefinition = {
+  id: 'motor',
+  payloadMapper: MOTOR_PAYLOAD_MAPPER,
+  steps: [
+    {
+      name: 'your-details',
+      displayName: 'Your details',
+      icon: 'user-edit',
+      storeStep: 'your-details',
+      sections: [
+        {
+          kind: 'fields',
+          id: 'proposer',
+          title: 'Your details',
+          fields: MOTOR_YOUR_DETAILS_FIELDS,
+          // visibleWhen: addressIsResolved,
+        },
+        {
+          kind: 'custom',
+          id: 'address',
+          title: 'Correspondence address',
+          component: 'address-lookup',
+        },
+        {
+          kind: 'fields',
+          id: 'occupation',
+          title: 'Occupation',
+          fields: (moduleCode) =>
+            createOccupationFields({
+              includeLimitedCompany: moduleCode === VAN_MODULE_CODE,
+              includeSecondJob: true,
+            }),
+          // visibleWhen: addressIsResolved,
+        },
+      ],
+    },
+    {
+      name: 'your-vehicle',
+      displayName: 'Your vehicle',
+      icon: 'car',
+      storeStep: 'your-vehicle',
+      sections: [
+        {
+          kind: 'custom',
+          id: VEHICLE_SEARCH_SECTION_ID,
+          title: 'Your vehicle',
+          component: 'vehicle-search',
+        },
+        {
+          kind: 'fields',
+          id: 'vehicle',
+          title: 'Vehicle details',
+          fields: MOTOR_YOUR_VEHICLE_FIELDS,
+          defaults: {
+            vehicleUse: '',
+            annualMileage: 0,
+            overnightLocation: '',
+          },
+        },
+      ],
+    },
+    {
+      name: 'additional-drivers',
+      displayName: 'Additional drivers',
+      icon: 'users',
+      storeStep: 'additional-drivers',
+      sections: [
+        {
+          kind: 'fields',
+          id: 'drivers',
+          title: 'Additional drivers',
+          fields: MOTOR_ADDITIONAL_DRIVERS_FIELDS,
+          defaults: {
+            hasAdditionalDrivers: 'no',
+            noClaimsBonusYears: '3',
+          },
+        },
+        {
+          kind: 'repeat',
+          id: ADDITIONAL_DRIVERS_SECTION_ID,
+          title: 'Additional driver details',
+          itemLabel: 'Additional driver',
+          itemFields: MOTOR_ADDITIONAL_DRIVER_ITEM_FIELDS,
+          slots: ADDITIONAL_DRIVER_SLOTS,
+          visibleWhen: (answers) => answers['drivers']?.['hasAdditionalDrivers'] === 'yes',
+        },
+      ],
+    },
+    {
+      name: 'your-policy',
+      displayName: 'Your policy',
+      icon: 'file-alt',
+      storeStep: 'your-policy',
+      sections: [
+        {
+          kind: 'fields',
+          id: 'policy',
+          title: 'Your policy',
+          fields: MOTOR_YOUR_POLICY_FIELDS,
+          defaults: {
+            coverType: 'comprehensive',
+            voluntaryExcess: 250,
+          },
+        },
+      ],
+    },
+    {
+      name: 'your-quotes',
+      displayName: 'Your quotes',
+      icon: 'list-ol',
+      storeStep: 'your-quotes',
+      isOutcome: true,
+      sections: [{ kind: 'custom', id: 'quotes', component: 'quote-results' }],
+    },
+  ],
+};

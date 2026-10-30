@@ -4,7 +4,7 @@ import { App } from './app';
 import { routes } from './app.routes';
 import { BRAND_OVERRIDE } from './core/services/brand.service';
 import { ModuleContextService } from './core/services/module-context.service';
-import { JourneyPersistenceService } from './features/modules/journeys/journey-persistence.service';
+import { JourneyPersistenceService } from './features/quote-journey/persistence/journey-persistence.service';
 
 describe('App', () => {
   const moduleContextStub: Pick<

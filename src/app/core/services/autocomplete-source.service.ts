@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 import type { AutocompleteOption } from '../models/autocomplete-option.model';
 import type { AutocompleteEndpoint } from '../models/form-field.model';
-import { OccupationSearchService } from './occupation-search.service';
+import { OccupationSearchService } from '../api/occupation/occupation-search.service';
 
 /**
  * What a search-driven field needs from a backend.

@@ -1,4 +1,4 @@
-import type { JourneyId } from '../models/journey.model';
+import type { JourneyId } from '../models/journey-id.model';
 
 /**
  * Every insurance product the platform can sell.

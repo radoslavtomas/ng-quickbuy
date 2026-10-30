@@ -1,9 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { APP_DOMAIN } from '../config/api.config';
-import type { ModuleParametersResponse } from '../models/module-parameters.model';
+import type { ModuleParametersResponse } from '../api/modules/module-parameters.model';
 import { BrandService } from './brand.service';
-import { ModuleParametersService } from './module-parameters.service';
+import { ModuleParametersService } from '../api/modules/module-parameters.service';
 
 interface ModuleContextState {
   readonly parameters: ModuleParametersResponse | null;

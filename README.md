@@ -16,6 +16,8 @@ Angular 22 · standalone components · signals · zoneless · Tailwind CSS v4 ·
 - [Commands](#commands)
 - [Core concepts](#core-concepts)
 - [How a request becomes a screen](#how-a-request-becomes-a-screen)
+- [Step navigation and gating](#step-navigation-and-gating)
+- [Brand colours](#brand-colours)
 - [Journey configuration](#journey-configuration)
 - [The form engine](#the-form-engine)
 - [Journey state](#journey-state)
@@ -73,7 +75,7 @@ formatting commit first.
 
 ## Core concepts
 
-Five nouns explain most of the codebase:
+Six nouns explain most of the codebase:
 
 - **Brand** — a broker (`qld`, `chq`, `ajg`). Owns colours, logo, phone number, footer legal text and
   the list of module codes it is allowed to sell. Paint with `BrandService.accent` /
@@ -141,7 +143,7 @@ demand. Which one shows is decided by CSS, so there is no resize listener and no
 one. Markers, the Continue button and the dial all draw white on `BrandService.accent`, described in
 [Brand colours](#brand-colours).
 
-`journeys/journey-progress.ts` owns the rules, so the navigation and the URL cannot disagree:
+`features/quote-journey/journey-progress.ts` owns the rules, so the navigation and the URL cannot disagree:
 
 - **The frontier** is the first step the customer has not completed. `isStepUnlocked` allows that step
   and everything before it. `JourneyPageComponent` redirects a URL naming anything beyond it to
@@ -184,30 +186,35 @@ where it is painted rather than quietly shipping unreadable text.
 **`src/app/core/config/module-catalogue.ts`** is the single source of truth for what a module code
 means and which journey it runs. Nothing else maps codes to journeys.
 
-**`src/app/features/modules/journeys/`** holds the journey definitions:
+**`src/app/features/quote-journey/definitions/`** holds the journey definitions alongside their fields:
 
-- `motor.journey.ts`, `property.journey.ts` — the steps of each journey, each with its route slug,
+- `motor/motor.journey.ts`, `property/property.journey.ts` — the steps of each journey, each with its route slug,
   display name, icon, backend `storeStep` id and sections. Ordering comes from list position, so
   there are no `next`/`prev` links to keep in sync.
-- `journey-registry.ts` — the only lookup API: resolve a journey for a module, find a step, get the
-  next/previous step, list question steps. Returns `null` for an unknown module rather than guessing.
 
-**`src/app/features/modules/specific-modules/config/`** holds field schemas per journey and step
-(`motor/steps/*.fields.ts`, `property/steps/*.fields.ts`) plus `shared/common.ts` for the address
-schemas, demo quotes and helpers. Each file exports a plain array; journey definitions compose them
-into sections.
+`src/app/features/quote-journey/journey-registry.ts` is the only lookup API: resolve a journey for a
+module, find a step, get the next/previous step, and list question steps. It returns `null` for an
+unknown module rather than guessing.
 
-Field `name` values are **internal** (`forenames`, `registration`, `startDate`). They are a UI concern
-and never appear on the wire: `journey-payload.mapper.ts` translates them to insurer keys, and coded
-values with them, so `coverType: 'comprehensive'` leaves as `policy-cover: 'C'`. Renaming a field is
-therefore safe, and a contract change is confined to the mapper.
+Field schemas live beside each journey under `motor/steps/*.fields.ts` and
+`property/steps/*.fields.ts`; shared question factories and option lists live under
+`definitions/shared/`. Each file exports an array or field factory; journey definitions compose
+them into sections. Address fields and state helpers live with the address UI under
+`sections/address/`, and demo quotes live in `sections/quote-results/demo-quotes.fixture.ts`.
+
+Field `name` values are **internal** (`forenames`, `registration`, `startDate`).
+`features/quote-journey/persistence/journey-payload.mapper.ts` translates mapped names and values
+to insurer keys and codes, so `coverType: 'comprehensive'` leaves as `policy-cover: 'C'`.
+Renaming an internal field requires updating its mapper entry; a backend contract change is confined
+to the mapper. Unmapped fields currently fall back to their internal names on the wire; see
+[Known limitations](#known-limitations-and-direction).
 
 Every person answers the **same** field names — `forenames`, `employmentStatus`, `occupationCode` —
 and the mapper decides whose they are. Repeat items take their slot from position (`repeatSlots`), and
 a section that belongs to a named person declares it (`sectionSlots`), which is what turns the joint
 proposer's `surname` into `jointproposer-name-surname` rather than overwriting the customer's.
 
-`shared/occupation.fields.ts` is the one definition of the occupation questions. The proposer, each
+`definitions/shared/occupation.fields.ts` is the one definition of the occupation questions. The proposer, each
 additional driver and the joint proposer all call `createOccupationFields()`, differing only in
 whether a limited company is offered, whether a second job is asked about, and what gates the whole
 set. Occupation is not a bespoke section: it is ordinary field configuration.
@@ -339,6 +346,9 @@ Things to know before extending it:
   _already-running_ effect updates synchronously within the same `detectChanges()` call.
 
 ## Journey state
+State services live in `src/app/features/quote-journey/state/`; session management, partial-store
+orchestration, recall hydration, and payload mapping live in the adjacent `persistence/` directory.
+The transport clients remain separate under `src/app/core/api/quotes/`.
 
 `JourneyStateService` stores answers per **module → step → section**, plus which steps are complete.
 Nothing is merged into one flat object, so two steps may legitimately use the same field name without
@@ -395,6 +405,11 @@ no service hardcodes a URL. `apiInterceptor` (`src/app/core/http/api.interceptor
 20-second timeout and converts every failure into an `ApiError` with a customer-safe message. There
 is no retry yet.
 
+HTTP clients and their response contracts are grouped by capability under `src/app/core/api/`:
+`address/`, `modules/`, `occupation/`, `quotes/`, and `vehicle/`. App-wide coordination such as
+`ModuleContextService` and the form option-source registries remains in `core/services/`.
+Journey-specific persistence orchestration belongs to the feature, not to these transport clients.
+
 Services and endpoints:
 
 - `AddressLookupService` — `GET /api/miscellaneous/address/get/bypostcode`, used by the address
@@ -441,45 +456,68 @@ Still open: there is no error summary, so an invalid step reveals per-field erro
 focus.
 
 ## Project layout
+Paths in the architecture descriptions and recipes are relative to `src/app/` unless they begin
+with `src/`, `public/`, or their context explicitly names another base directory.
 
 ```
 src/app/
   core/                          cross-cutting, no UI
+    api/                         HTTP clients and response contracts, grouped by capability
+      address/
+      modules/
+      occupation/
+      quotes/
+      vehicle/
     config/                      brands, module catalogue, dev fallback, API and domain tokens
     forms/                       field config -> Signal Forms schema adapter
     http/                        interceptor and ApiError
-    models/                      shared types incl. journey and payload contracts
-    services/                    brand, journey state, journey session, module context, clock,
-                                 normalization, validation messages, dynamic options source,
-                                 HTTP clients
+    models/                      brand, field config, autocomplete and journey-id contracts
+    services/                    brand, module context, clock, normalization, validation messages,
+                                 autocomplete and dynamic options sources
+    utils/                       contrast colours and string-value helpers
     validators/                  reusable ValidatorFn implementations
   features/
     home/                        brand product grid
-    modules/
-      journeys/                  journey definitions, registry, payload mappers, persistence
+    quote-journey/
+      journey-registry.ts        resolve a journey, its steps and fields
+      journey-progress.ts        completion and navigation rules
+      journey-validation.ts      validate configured cross-field dependencies
+      definitions/
+        motor/                   motor.journey.ts, vehicle field factories/mappings and steps/
+        property/                property.journey.ts and steps/
+        shared/                  reusable question factories and lookups/
       journey-page/              the journey screen
         section-outlet.component.ts   maps a section to its renderer
-        sections/                     address, repeat and quote-results sections
         step-navigation/              progress wizard, step markers and gating UI
-      specific-modules/
-        components/              address search
-        config/                  field schemas per journey and step
-          lookups/               shared option lists, such as employment statuses
-          shared/                field factories reused by every person, such as occupation
-        services/                quote recall hydration
-  shared/components/             signal-form, autocomplete-input, step-card, header, footer,
-                                 not-found
+      models/                    journey definitions, section and payload contracts
+      persistence/               sessions, partial-store orchestration, recall hydration and mapper
+      sections/
+        address/                 section, lookup UI, fields and address-state helpers
+        vehicle-search/          section, VRM, IRIS and manual-search UI
+        repeat/                  repeating-item section
+        quote-results/           results section and demo quote fixtures
+      state/                     journey state and journey-aware answer writes
+  shared/components/             signal-form (with its input controls), step-card, header, footer,
+                                 not-found; no imports from features
 src/environments/                per-target configuration
 ```
 
-`core` must not import from `features`. `shared` holds reusable presentation only.
+`core` and `shared` must not import from `features`. `shared` holds reusable presentation only.
+The catalogue-facing `JourneyId` type stays in `core/models/journey-id.model.ts`; the full journey
+and payload contracts live in `features/quote-journey/models/`.
+Keep tests beside the code they exercise. Tests that combine journey-specific question definitions
+with the generic form renderer belong to the journey feature—for example,
+`features/quote-journey/definitions/shared/occupation-form.spec.ts`—so `shared` does not depend on
+feature configuration. Keep custom section components, their supporting lookup UI, and
+section-specific fields together under `features/quote-journey/sections/<section>/`; generic form
+controls remain under `shared/components/signal-form/`.
 
 ## Recipes
 
 ### Add a field to an existing step
 
 1. Add a `FormFieldConfig` entry to the relevant
-   `specific-modules/config/<journey>/steps/*.fields.ts`.
+   `features/quote-journey/definitions/<journey>/steps/*.fields.ts`.
 2. Give `name` a readable internal value (`annualMileage`, not `policy-totalmileage`).
 3. If the insurer expects a different key, add the mapping to `journey-payload.mapper.ts`. Without one
    the field is sent under its internal name, which is fine only while that name matches the contract.
@@ -511,9 +549,11 @@ No component changes are needed.
 
 ### Add a step to a journey
 
-1. Add the field schema in `specific-modules/config/<journey>/steps/<step>.fields.ts`.
-2. Add a step entry to `journeys/<journey>.journey.ts` in the position it should appear, with its
-   `name`, `displayName`, `icon`, `storeStep` and sections.
+Under `src/app/features/quote-journey/`:
+
+1. Add the field schema in `definitions/<journey>/steps/<step>.fields.ts`.
+2. Add a step entry to `definitions/<journey>/<journey>.journey.ts` in the position it should appear,
+   with its `name`, `displayName`, `icon`, `storeStep` and sections.
 
 That is the whole change: ordering, routing, progress display, prev/next and validation all follow
 from the definition.
@@ -558,7 +598,7 @@ Prefer field configuration: a custom section cannot be reused by another person 
 occupation was one until it became a `createOccupationFields()` call. Reach for this only when the
 generic renderer genuinely cannot draw the UI, as with address lookup.
 
-1. Write the component under `journey-page/sections/`, exposing
+1. Write the component under `features/quote-journey/sections/<section>/`, exposing
    `collect(): { valid: boolean; values: Record<string, unknown> }` and writing its values to
    `JourneyAnswersService` (the journey-aware write boundary over `JourneyStateService`).
 2. Add a `@case` for its key in `section-outlet.component.ts`.

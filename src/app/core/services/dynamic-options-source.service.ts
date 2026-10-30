@@ -2,14 +2,14 @@ import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 import { map, of } from 'rxjs';
 import type { DynamicSelectEndpoint, FormFieldOption } from '../models/form-field.model';
-import type { IrisModule } from '../models/vehicle-search.model';
+import type { IrisModule } from '../api/vehicle/vehicle-search.model';
 import {
   VehicleIrisService,
   matchesForYear,
   toDescendingYearOptions,
   toEditionOption,
   toSortedNameOptions,
-} from './vehicle-iris.service';
+} from '../api/vehicle/vehicle-iris.service';
 
 /** What a `dynamic-select` field asks its source to resolve into options. */
 export interface DynamicOptionsRequest {

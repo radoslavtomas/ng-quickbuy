@@ -6,9 +6,9 @@ import type {
   IrisMakesResponse,
   IrisModelsResponse,
   IrisSearchResponse,
-} from '../models/vehicle-search.model';
+} from '../api/vehicle/vehicle-search.model';
 import { DynamicOptionsSourceService } from './dynamic-options-source.service';
-import { VehicleIrisService } from './vehicle-iris.service';
+import { VehicleIrisService } from '../api/vehicle/vehicle-iris.service';
 
 type VehicleIrisStub = Pick<
   VehicleIrisService,

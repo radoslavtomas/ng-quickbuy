@@ -10,7 +10,7 @@ NG QuickBuy renders multi-step insurance quote journeys for several brands. Jour
 data, not components. Read `README.md` for the full picture; these are the rules that matter when
 changing code:
 
-- There is ONE journey screen (`features/modules/journey-page/`). Do NOT add per-module, per-step or
+- There is ONE journey screen (`features/quote-journey/journey-page/`). Do NOT add per-module, per-step or
   per-brand components. A new step is a new entry in a `*.journey.ts` definition; a new question is a
   new entry in a `steps/*.fields.ts` array.
 - `core/config/module-catalogue.ts` is the ONLY place mapping a module code to a journey. Brands list

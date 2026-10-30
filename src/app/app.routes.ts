@@ -3,7 +3,7 @@ import { findModuleByCode } from './core/config/module-catalogue';
 
 const loadHomeComponent = () => import('./features/home/home').then((m) => m.HomeComponent);
 const loadJourneyPageComponent = () =>
-  import('./features/modules/journey-page/journey-page').then((m) => m.JourneyPageComponent);
+  import('./features/quote-journey/journey-page/journey-page').then((m) => m.JourneyPageComponent);
 const loadNotFoundComponent = () =>
   import('./shared/components/not-found/not-found').then((m) => m.NotFoundComponent);
 
